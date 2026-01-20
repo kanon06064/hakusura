@@ -1,7 +1,6 @@
 ﻿  Dungeon.cpp
-C:\Users\G2343\source\repos\HaxSlaGame\HaxSlaGame\Dungeon.cpp(74,16): warning C4244: '初期化中': 'double' から 'int' への変換です。データが失われる可能性があります。
-C:\Users\G2343\source\repos\HaxSlaGame\HaxSlaGame\Dungeon.cpp(75,16): warning C4244: '初期化中': 'double' から 'int' への変換です。データが失われる可能性があります。
+  Enemy.cpp
   Player.cpp
   main.cpp
   コードを生成中...
-  HaxSlaGame.vcxproj -> C:\Users\G2343\source\repos\HaxSlaGame\x64\Debug\HaxSlaGame.exe
+  HaxSlaGame.vcxproj -> C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\x64\Debug\HaxSlaGame.exe
