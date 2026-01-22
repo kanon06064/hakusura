@@ -7,93 +7,94 @@
 #include <time.h>
 
 int main() {
-    InitWindow(1280, 720, "3D Hack & Slash - Debug & Spawning");
-    SetTargetFPS(60);
-    srand((unsigned int)time(NULL));
+    const int screenWidth = 1280, screenHeight = 720;
+    InitWindow(screenWidth, screenHeight, "3D Hack & Slash - Alpha");
+    SetTargetFPS(60); srand((unsigned int)time(NULL));
 
-    Dungeon dungeon;
-    Player player(dungeon.GetStartPosition());
-
-    // --- 敵の設定 ---
-    std::vector<Enemy> enemies;
-    const float safeDistance = 15.0f;
+    Dungeon dungeon; Player player(dungeon.GetStartPosition());
+    std::vector<Enemy> enemies; std::vector<DamageText> dmgTexts; std::vector<Projectile> enemyProj;
     bool debugMode = false;
 
-    // 初期エネミー生成
-    for (int i = 0; i < 6; i++) {
-        Vector3 spawnPos;
-        do { spawnPos = dungeon.GetRandomFloorPos(); } while (Vector3Distance(spawnPos, player.position) < safeDistance);
-        enemies.push_back(Enemy(spawnPos));
-    }
+    auto Spawn = [&](int count) {
+        for (int i = 0; i < count; i++) {
+            Vector3 p; do { p = dungeon.GetRandomFloorPos(); } while (Vector3Distance(p, player.position) < 15.0f);
+            enemies.push_back(Enemy(p, (EnemyType)GetRandomValue(0, 5)));
+        }
+        };
+    Spawn(10);
 
-    Camera3D camera = { 0 };
-    camera.position = { 10.0f, 10.0f, 10.0f };
-    camera.target = player.position;
-    camera.up = { 0.0f, 1.0f, 0.0f };
-    camera.fovy = 45.0f;
-    camera.projection = CAMERA_PERSPECTIVE;
+    Camera3D camera = { {player.position.x + 15, 15, player.position.z + 15}, player.position, {0,1,0}, 45.0f, CAMERA_PERSPECTIVE };
 
     while (!WindowShouldClose()) {
-        Vector3 offset = Vector3Subtract(camera.position, camera.target);
-
-        // 更新
-        player.Update(camera, dungeon);
+        Vector3 cameraOffset = Vector3Subtract(camera.position, camera.target);
+        player.Update(camera, dungeon, enemies, dmgTexts);
         dungeon.UpdateVisibility(player.position);
-        for (auto& enemy : enemies) enemy.Update(player, dungeon);
 
-        // カメラ更新
-        camera.target = player.position;
-        camera.position = Vector3Add(camera.target, offset);
+        for (int i = (int)enemies.size() - 1; i >= 0; i--) {
+            enemies[i].Update(player, dungeon, enemyProj);
+            if (enemies[i].hp <= 0) enemies.erase(enemies.begin() + i);
+        }
+        for (int i = (int)enemyProj.size() - 1; i >= 0; i--) {
+            enemyProj[i].pos = Vector3Add(enemyProj[i].pos, Vector3Scale(enemyProj[i].vel, GetFrameTime()));
+            if (Vector3Distance(enemyProj[i].pos, player.position) < (enemyProj[i].radius + player.radius)) {
+                player.hp -= 5.0f; enemyProj.erase(enemyProj.begin() + i);
+            }
+            else if (dungeon.IsWall(enemyProj[i].pos.x, enemyProj[i].pos.z)) enemyProj.erase(enemyProj.begin() + i);
+        }
+        for (int i = (int)dmgTexts.size() - 1; i >= 0; i--) {
+            dmgTexts[i].life -= GetFrameTime(); dmgTexts[i].pos.y += 0.05f;
+            if (dmgTexts[i].life <= 0) dmgTexts.erase(dmgTexts.begin() + i);
+        }
+
+        camera.target = player.position; camera.position = Vector3Add(camera.target, cameraOffset);
         if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT) || GetMouseWheelMove() != 0) UpdateCamera(&camera, CAMERA_THIRD_PERSON);
 
-        // --- 入力判定 ---
-
-        // F1: デバッグモード切り替え
         if (IsKeyPressed(KEY_F1)) debugMode = !debugMode;
-
-        // E: エネミーを1体スポーン
-        if (IsKeyPressed(KEY_E)) {
-            Vector3 spawnPos;
-            do { spawnPos = dungeon.GetRandomFloorPos(); } while (Vector3Distance(spawnPos, player.position) < safeDistance);
-            enemies.push_back(Enemy(spawnPos));
-        }
-
-        // R: マップリセット
-        if (IsKeyPressed(KEY_R)) {
-            dungeon.Generate();
-            player.position = dungeon.GetStartPosition();
-            enemies.clear();
-            for (int i = 0; i < 6; i++) {
-                Vector3 spawnPos;
-                do { spawnPos = dungeon.GetRandomFloorPos(); } while (Vector3Distance(spawnPos, player.position) < safeDistance);
-                enemies.push_back(Enemy(spawnPos));
-            }
-        }
+        if (IsKeyPressed(KEY_E)) Spawn(1);
+        if (IsKeyPressed(KEY_R)) { dungeon.Generate(); player.position = dungeon.GetStartPosition(); enemies.clear(); enemyProj.clear(); dmgTexts.clear(); Spawn(10); }
 
         BeginDrawing();
         ClearBackground(BLACK);
         BeginMode3D(camera);
         dungeon.Draw();
-
-        // 敵の描画
-        for (auto& enemy : enemies) {
-            // デバッグモードがON、または発見済みのエリアにいる場合のみ描画
-            if (debugMode || dungeon.IsDiscovered(enemy.position.x, enemy.position.z)) {
-                enemy.Draw();
-            }
-        }
-
+        for (auto& e : enemies) if (debugMode || dungeon.IsDiscovered(e.position.x, e.position.z)) e.Draw();
+        for (auto& p : enemyProj) DrawSphere(p.pos, p.radius, RED);
         player.Draw();
         EndMode3D();
 
-        // UI
-        DrawRectangle(10, 10, 450, 100, Fade(SKYBLUE, 0.5f));
-        DrawText(TextFormat("Debug Mode: %s (F1 to toggle)", debugMode ? "ON" : "OFF"), 20, 20, 20, debugMode ? RED : WHITE);
-        DrawText("E: Spawn Enemy / R: Reset Map", 20, 45, 20, WHITE);
-        DrawText(TextFormat("Enemies count: %d", (int)enemies.size()), 20, 70, 20, YELLOW);
+        // HPバー・HUD描画（既存のものを維持）
+        for (auto& e : enemies) if (debugMode || dungeon.IsDiscovered(e.position.x, e.position.z)) {
+            Vector2 sPos = GetWorldToScreen({ e.position.x, 1.8f, e.position.z }, camera);
+            DrawRectangle((int)sPos.x - 20, (int)sPos.y, 40, 4, DARKGRAY);
+            DrawRectangle((int)sPos.x - 20, (int)sPos.y, (int)(40 * (e.hp / e.maxHp)), 4, RED);
+        }
+        int hudX = screenWidth - 260, tCount = 0;
+        const char* eNames[] = { "SWORD", "SPEAR", "AXE", "ARCHER", "MAGE", "TRAP" };
+        for (auto& e : enemies) if (e.hudTimer > 0) {
+            int cY = 20 + (tCount * 65);
+            DrawRectangle(hudX, cY, 240, 60, Fade(BLACK, 0.6f));
+            DrawRectangle(hudX + 10, cY + 35, (int)(220 * (e.hp / e.maxHp)), 12, RED);
+            DrawText(TextFormat("[%s ENEMY]", eNames[e.type]), hudX + 10, cY + 10, 16, GOLD);
+            tCount++; if (tCount >= 5) break;
+        }
+        for (auto& dt : dmgTexts) { Vector2 sPos = GetWorldToScreen(dt.pos, camera); DrawText(TextFormat("%d", dt.amount), (int)sPos.x - 10, (int)sPos.y, 22, YELLOW); }
+
+        // 左下プレイヤーHP
+        DrawRectangle(20, screenHeight - 50, 250, 30, Fade(BLACK, 0.5f));
+        DrawRectangle(25, screenHeight - 45, (int)(240 * (fmax(0, player.hp) / player.maxHp)), 20, GREEN);
+        DrawText(TextFormat("PLAYER HP: %.0f/100", player.hp), 35, screenHeight - 42, 18, WHITE);
+
+        // --- 右下デバッグ・操作情報 ---
+        int boxW = 220, boxH = 100;
+        int startX = screenWidth - boxW - 10;
+        int startY = screenHeight - boxH - 10;
+        DrawRectangle(startX, startY, boxW, boxH, Fade(BLACK, 0.6f));
+        DrawRectangleLines(startX, startY, boxW, boxH, DARKGRAY);
+        DrawText(TextFormat("[F1] DEBUG: %s", debugMode ? "ON" : "OFF"), startX + 10, startY + 15, 18, debugMode ? RED : GREEN);
+        DrawText("[ E ] SPAWN ENEMY", startX + 10, startY + 40, 18, RAYWHITE);
+        DrawText("[ R ] RESET MAP", startX + 10, startY + 65, 18, RAYWHITE);
 
         EndDrawing();
     }
-    CloseWindow();
-    return 0;
+    CloseWindow(); return 0;
 }

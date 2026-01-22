@@ -61,9 +61,8 @@ void Dungeon::DigCorridor(int x1, int y1, int x2, int y2) {
 void Dungeon::UpdateVisibility(Vector3 playerPos) {
     int px = (int)floor((playerPos.x + TILE_SIZE / 2.0f) / TILE_SIZE);
     int pz = (int)floor((playerPos.z + TILE_SIZE / 2.0f) / TILE_SIZE);
-    int radius = 3;
-    for (int y = pz - radius; y <= pz + radius; y++) {
-        for (int x = px - radius; x <= px + radius; x++) {
+    for (int y = pz - 4; y <= pz + 4; y++) {
+        for (int x = px - 4; x <= px + 4; x++) {
             if (x >= 0 && x < MAP_WIDTH && y >= 0 && y < MAP_HEIGHT) discovered[x][y] = true;
         }
     }
@@ -94,9 +93,7 @@ void Dungeon::Draw() {
                     DrawCubeWires(pos, TILE_SIZE, 2.0f, TILE_SIZE, DARKGRAY);
                 }
             }
-            else {
-                DrawPlane(pos, { TILE_SIZE, TILE_SIZE }, DARKGREEN);
-            }
+            else DrawPlane(pos, { TILE_SIZE, TILE_SIZE }, DARKGREEN);
         }
     }
 }
@@ -109,22 +106,17 @@ bool Dungeon::IsWall(float x, float z) {
 }
 
 bool Dungeon::CheckCollisionRadius(Vector3 pos, float radius) {
-    float checkX[] = { pos.x - radius, pos.x + radius };
-    float checkZ[] = { pos.z - radius, pos.z + radius };
-    for (float cx : checkX) {
-        for (float cz : checkZ) { if (IsWall(cx, cz)) return true; }
-    }
+    float cx[] = { pos.x - radius, pos.x + radius }, cz[] = { pos.z - radius, pos.z + radius };
+    for (float x : cx) for (float z : cz) if (IsWall(x, z)) return true;
     return false;
 }
 
 bool Dungeon::HasLineOfSight(Vector3 start, Vector3 end) {
     float dist = Vector3Distance(start, end);
     Vector3 dir = Vector3Normalize(Vector3Subtract(end, start));
-    float step = 1.0f; float currentDist = step;
-    while (currentDist < dist) {
-        Vector3 checkPos = Vector3Add(start, Vector3Scale(dir, currentDist));
-        if (IsWall(checkPos.x, checkPos.z)) return false;
-        currentDist += step;
+    for (float d = 0.5f; d < dist; d += 0.5f) {
+        Vector3 p = Vector3Add(start, Vector3Scale(dir, d));
+        if (IsWall(p.x, p.z)) return false;
     }
     return true;
 }
@@ -137,11 +129,7 @@ bool Dungeon::IsDiscovered(float x, float z) {
 }
 
 Vector3 Dungeon::GetStartPosition() { return { rooms[0].x * TILE_SIZE, 0.5f, rooms[0].y * TILE_SIZE }; }
-
 Vector3 Dungeon::GetRandomFloorPos() {
-    if (rooms.empty()) return { 0, 0.5f, 0 };
     int r = GetRandomValue(0, (int)rooms.size() - 1);
-    int rx = GetRandomValue(rooms[r].x, rooms[r].x + rooms[r].width - 1);
-    int ry = GetRandomValue(rooms[r].y, rooms[r].y + rooms[r].height - 1);
-    return { rx * TILE_SIZE, 0.5f, ry * TILE_SIZE };
+    return { GetRandomValue(rooms[r].x, rooms[r].x + rooms[r].width - 1) * TILE_SIZE, 0.5f, GetRandomValue(rooms[r].y, rooms[r].y + rooms[r].height - 1) * TILE_SIZE };
 }
