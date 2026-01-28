@@ -1,0 +1,322 @@
+[
+  {
+    "id": 1,
+    "name": "薄汚れた布",
+    "type": "MATERIAL",
+    "dropChance": 0.4
+  },
+  {
+    "id": 2,
+    "name": "ヒーリングキノコ",
+    "type": "CONSUMABLE",
+    "heal": 30,
+    "dropChance": 0.25
+  },
+  {
+    "id": 3,
+    "name": "壊れた剣片",
+    "type": "MATERIAL",
+    "dropChance": 0.3
+  },
+  {
+    "id": 4,
+    "name": "マナキノコ",
+    "type": "CONSUMABLE",
+    "heal": 0,
+    "dropChance": 0.25
+  },
+  {
+    "id": 5,
+    "name": "獣の皮",
+    "type": "MATERIAL",
+    "dropChance": 0.35
+  },
+  {
+    "id": 6,
+    "name": "骨",
+    "type": "MATERIAL",
+    "dropChance": 0.4
+  },
+  {
+    "id": 7,
+    "name": "骨片",
+    "type": "MATERIAL",
+    "dropChance": 0.4
+  },
+  {
+    "id": 8,
+    "name": "ライフフラワー",
+    "type": "CONSUMABLE",
+    "heal": 60,
+    "dropChance": 0.2
+  },
+  {
+    "id": 9,
+    "name": "マナフラワー",
+    "type": "CONSUMABLE",
+    "heal": 0,
+    "dropChance": 0.2
+  },
+  {
+    "id": 10,
+    "name": "丈夫な布",
+    "type": "MATERIAL",
+    "dropChance": 0.3
+  },
+  {
+    "id": 11,
+    "name": "ライフクリスタル",
+    "type": "CONSUMABLE",
+    "heal": 120,
+    "dropChance": 0.15
+  },
+  {
+    "id": 12,
+    "name": "マナクリスタル",
+    "type": "CONSUMABLE",
+    "heal": 0,
+    "dropChance": 0.15
+  },
+  {
+    "id": 13,
+    "name": "オークの肉",
+    "type": "CONSUMABLE",
+    "heal": 100,
+    "dropChance": 0.1
+  },
+  {
+    "id": 14,
+    "name": "ライフコア",
+    "type": "MATERIAL",
+    "dropChance": 0.1
+  },
+  {
+    "id": 15,
+    "name": "マナコア",
+    "type": "MATERIAL",
+    "dropChance": 0.1
+  },
+  {
+    "id": 16,
+    "name": "魔鋼鉄",
+    "type": "MATERIAL",
+    "dropChance": 0.1
+  },
+  {
+    "id": 17,
+    "name": "魔水晶",
+    "type": "MATERIAL",
+    "dropChance": 0.1
+  },
+  {
+    "id": 18,
+    "name": "ライフスター",
+    "type": "CONSUMABLE",
+    "heal": 300,
+    "dropChance": 0.05
+  },
+  {
+    "id": 19,
+    "name": "マナスター",
+    "type": "CONSUMABLE",
+    "heal": 0,
+    "dropChance": 0.05
+  },
+  {
+    "id": 20,
+    "name": "オリハルコン",
+    "type": "MATERIAL",
+    "dropChance": 0.05
+  },
+  {
+    "id": 21,
+    "name": "アダマンタイト",
+    "type": "MATERIAL",
+    "dropChance": 0.05
+  },
+  {
+    "id": 22,
+    "name": "茨の繊維",
+    "type": "MATERIAL",
+    "dropChance": 0.3
+  },
+  {
+    "id": 23,
+    "name": "呪いの棘",
+    "type": "MATERIAL",
+    "dropChance": 0.25
+  },
+  {
+    "id": 24,
+    "name": "丈夫な繊維",
+    "type": "MATERIAL",
+    "dropChance": 0.2
+  },
+  {
+    "id": 25,
+    "name": "生命の蕾",
+    "type": "CONSUMABLE",
+    "heal": 200,
+    "dropChance": 0.1
+  },
+  {
+    "id": 101,
+    "name": "略奪者の剣",
+    "type": "EQUIP",
+    "atkBonus": 5,
+    "weaponSubtype": 0,
+    "dropChance": 0.05
+  },
+  {
+    "id": 102,
+    "name": "略奪者の槍",
+    "type": "EQUIP",
+    "atkBonus": 6,
+    "weaponSubtype": 1,
+    "dropChance": 0.05
+  },
+  {
+    "id": 103,
+    "name": "略奪者の斧",
+    "type": "EQUIP",
+    "atkBonus": 8,
+    "weaponSubtype": 2,
+    "dropChance": 0.05
+  },
+  {
+    "id": 104,
+    "name": "略奪者の弓",
+    "type": "EQUIP",
+    "atkBonus": 4,
+    "weaponSubtype": 3,
+    "dropChance": 0.05
+  },
+  {
+    "id": 105,
+    "name": "略奪者の杖",
+    "type": "EQUIP",
+    "atkBonus": 6,
+    "weaponSubtype": 4,
+    "dropChance": 0.05
+  },
+  {
+    "id": 201,
+    "name": "魂のナイトブレード",
+    "type": "EQUIP",
+    "atkBonus": 15,
+    "weaponSubtype": 0,
+    "dropChance": 0.03
+  },
+  {
+    "id": 202,
+    "name": "魂のランス",
+    "type": "EQUIP",
+    "atkBonus": 16,
+    "weaponSubtype": 1,
+    "dropChance": 0.03
+  },
+  {
+    "id": 203,
+    "name": "魂の戦斧",
+    "type": "EQUIP",
+    "atkBonus": 20,
+    "weaponSubtype": 2,
+    "dropChance": 0.03
+  },
+  {
+    "id": 204,
+    "name": "魂のロングボウ",
+    "type": "EQUIP",
+    "atkBonus": 12,
+    "weaponSubtype": 3,
+    "dropChance": 0.03
+  },
+  {
+    "id": 205,
+    "name": "魂のウィッチスタッフ",
+    "type": "EQUIP",
+    "atkBonus": 18,
+    "weaponSubtype": 4,
+    "dropChance": 0.03
+  },
+  {
+    "id": 301,
+    "name": "魔鋼鉄の剣",
+    "type": "EQUIP",
+    "atkBonus": 40,
+    "weaponSubtype": 0,
+    "dropChance": 0.015
+  },
+  {
+    "id": 302,
+    "name": "魔鋼鉄の重槍",
+    "type": "EQUIP",
+    "atkBonus": 45,
+    "weaponSubtype": 1,
+    "dropChance": 0.015
+  },
+  {
+    "id": 303,
+    "name": "魔鋼鉄の大斧",
+    "type": "EQUIP",
+    "atkBonus": 55,
+    "weaponSubtype": 2,
+    "dropChance": 0.015
+  },
+  {
+    "id": 304,
+    "name": "魔鋼鉄の強弓",
+    "type": "EQUIP",
+    "atkBonus": 25,
+    "weaponSubtype": 3,
+    "dropChance": 0.015
+  },
+  {
+    "id": 305,
+    "name": "魔鋼鉄の魔杖",
+    "type": "EQUIP",
+    "atkBonus": 50,
+    "weaponSubtype": 4,
+    "dropChance": 0.015
+  },
+  {
+    "id": 401,
+    "name": "機神の聖剣",
+    "type": "EQUIP",
+    "atkBonus": 100,
+    "weaponSubtype": 0,
+    "dropChance": 0.005
+  },
+  {
+    "id": 402,
+    "name": "機神の神槍",
+    "type": "EQUIP",
+    "atkBonus": 110,
+    "weaponSubtype": 1,
+    "dropChance": 0.005
+  },
+  {
+    "id": 403,
+    "name": "機神の滅斧",
+    "type": "EQUIP",
+    "atkBonus": 140,
+    "weaponSubtype": 2,
+    "dropChance": 0.005
+  },
+  {
+    "id": 404,
+    "name": "機神の轟弓",
+    "type": "EQUIP",
+    "atkBonus": 90,
+    "weaponSubtype": 3,
+    "dropChance": 0.005
+  },
+  {
+    "id": 405,
+    "name": "機神の零杖",
+    "type": "EQUIP",
+    "atkBonus": 120,
+    "weaponSubtype": 4,
+    "dropChance": 0.005
+  }
+]

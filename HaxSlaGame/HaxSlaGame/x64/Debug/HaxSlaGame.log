@@ -1,2 +1,9 @@
-﻿  Dungeon.cpp
+﻿  DataManager.cpp
+  Dungeon.cpp
+  Enemy.cpp
+  main.cpp
+  Player.cpp
+  UI.cpp
+  コードを生成中...
+LINK : warning LNK4098: defaultlib 'MSVCRT' は他のライブラリの使用と競合しています。/NODEFAULTLIB:library を使用してください。
   HaxSlaGame.vcxproj -> C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\x64\Debug\HaxSlaGame.exe
