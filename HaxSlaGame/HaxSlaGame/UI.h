@@ -1,9 +1,7 @@
 #pragma once
 #include "Definitions.h"
 
-class Player;
-class Enemy;
-class Dungeon;
+class Player; class Enemy; class Dungeon;
 
 class UI {
 public:

@@ -53,11 +53,19 @@ void Enemy::Update(Player& p, Dungeon& d, std::vector<Projectile>& proj) {
             if (type == E_ARCHER) { proj.push_back({ position, Vector3Scale(lastAttackDir, 18), 0.2f, true, 0 }); attackTimer = 1.8f; }
             else if (type == E_MAGE) { proj.push_back({ position, Vector3Scale(lastAttackDir, 8), 0.6f, true, 1 }); attackTimer = 2.2f; }
             else {
-                float k = (type == E_SPEAR) ? 1.4f : 0.6f;
-                p.hp -= fmaxf(1.0f, (10.0f + (float)level * 2.0f) - p.defense);
-                Vector3 pkb = Vector3Scale(lastAttackDir, k);
-                if (!d.CheckCollisionRadius(Vector3Add(p.position, { pkb.x,0,0 }), p.radius)) p.position.x += pkb.x;
-                if (!d.CheckCollisionRadius(Vector3Add(p.position, { 0,0,pkb.z }), p.radius)) p.position.z += pkb.z;
+                bool hit = false; float knk = (type == E_SPEAR) ? 1.5f : 0.8f;
+                if (type == E_AXE) { if (Vector3Distance(p.position, Vector3Add(position, Vector3Scale(lastAttackDir, 2))) < 2.5f) hit = true; }
+                else if (type == E_SPEAR) {
+                    Vector3 v = Vector3Subtract(p.position, position);
+                    if (Vector3DotProduct(v, lastAttackDir) > 0 && Vector3DotProduct(v, lastAttackDir) < 4.5f && fabsf(Vector3DotProduct(v, { -lastAttackDir.z,0,lastAttackDir.x })) < 0.6f) hit = true;
+                }
+                else { if (dist < 2.5f && Vector3DotProduct(lastAttackDir, Vector3Normalize(Vector3Subtract(p.position, position))) > cosf(60 * DEG2RAD)) hit = true; }
+                if (hit) {
+                    p.hp -= fmaxf(1.0f, (10.0f + (float)level * 2) - p.defense);
+                    Vector3 pkb = Vector3Scale(lastAttackDir, knk);
+                    if (!d.CheckCollisionRadius(Vector3Add(p.position, { pkb.x,0,0 }), p.radius)) p.position.x += pkb.x;
+                    if (!d.CheckCollisionRadius(Vector3Add(p.position, { 0,0,pkb.z }), p.radius)) p.position.z += pkb.z;
+                }
                 attackTimer = 1.5f;
             }
         }
@@ -69,8 +77,7 @@ void Enemy::Update(Player& p, Dungeon& d, std::vector<Projectile>& proj) {
 }
 void Enemy::Draw() {
     Color c = (type == E_SWORD) ? MAROON : (type == E_SPEAR) ? ORANGE : (type == E_AXE) ? PURPLE : (type == E_ARCHER) ? DARKBLUE : (type == E_MAGE) ? PINK : GRAY;
-    DrawCube(position, 1, (type == E_TRAP ? 2 : 1.2f), 1, c);
-    DrawCubeWires(position, 1, (type == E_TRAP ? 2 : 1.2f), 1, BLACK);
+    DrawCube(position, 1, (type == E_TRAP ? 2 : 1.2f), 1, c); DrawCubeWires(position, 1, (type == E_TRAP ? 2 : 1.2f), 1, BLACK);
     if (visualTimer > 0) {
         float b = atan2f(lastAttackDir.z, lastAttackDir.x);
         if (type == E_SWORD) { for (int i = -60; i <= 60; i += 15) DrawLine3D(position, Vector3Add(position, Vector3Scale({ cosf(b + (float)i * DEG2RAD), 0, sinf(b + (float)i * DEG2RAD) }, 2.5f)), RED); }

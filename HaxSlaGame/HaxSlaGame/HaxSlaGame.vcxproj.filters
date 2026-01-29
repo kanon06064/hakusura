@@ -22,6 +22,9 @@
     <None Include="items.json">
       <Filter>ソース ファイル</Filter>
     </None>
+    <None Include="ui_text.json">
+      <Filter>ソース ファイル</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -62,5 +65,8 @@
     <ClInclude Include="DataManager.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Font Include="..\..\..\..\..\Downloads\Noto_Sans_JP\static\jp_font.ttf" />
   </ItemGroup>
 </Project>

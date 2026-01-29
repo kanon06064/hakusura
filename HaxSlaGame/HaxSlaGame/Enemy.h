@@ -1,15 +1,12 @@
 #pragma once
 #include "Definitions.h"
 
-class Player;
-class Dungeon;
+class Player; class Dungeon;
 
 class Enemy {
 public:
     Vector3 position, lastAttackDir, lastPos, patrolTarget;
-    EnemyState state;
-    EnemyType type;
-    EnemyData data;
+    EnemyState state; EnemyType type; EnemyData data;
     float hp, maxHp, speed, radius, detectRange, attackRange, attackTimer, hudTimer, visualTimer;
     int stuckFrames, level, expValue;
 
