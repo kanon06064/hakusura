@@ -6,5 +6,12 @@
   "NO": "いいえ",
   "FLOOR": "現在の階層",
   "ATK": "攻撃力",
-  "USE": "使う"
+  "DEF": "防御力",
+  "USE": "使う",
+  "SKILL_ATK": "攻撃力アップ (+5)",
+  "SKILL_DEF": "防御力アップ (+3)",
+  "SKILL_HP": "最大HPアップ (+50)",
+  "INVENTORY_TITLE": "所持品一覧",
+  "LEVEL_UP": "レベルアップ!!",
+  "STORAGE": "倉庫"
 }

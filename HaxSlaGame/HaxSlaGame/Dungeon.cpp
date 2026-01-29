@@ -5,12 +5,13 @@
 bool Room::Contains(int gx, int gy) { return (gx >= x && gx < x + width && gy >= y && gy < y + height); }
 Dungeon::Dungeon() { Generate(true); }
 void Dungeon::Generate(bool homeMode) {
-    isHome = homeMode; rooms.clear(); stairsDownPos = { -999,-999,-999 }; stairsUpPos = { -999,-999,-999 };
+    isHome = homeMode; rooms.clear(); stairsDownPos = Vector3{ -999,-999,-999 }; stairsUpPos = Vector3{ -999,-999,-999 }; storageBoxPos = Vector3{ -999,-999,-999 };
     for (int y = 0; y < MAP_HEIGHT; y++) for (int x = 0; x < MAP_WIDTH; x++) { map[x][y] = 1; discovered[x][y] = homeMode; }
     if (homeMode) {
         Room c = { 15, 15, 10, 10 }; rooms.push_back(c);
         for (int ry = c.y; ry < c.y + c.height; ry++) for (int rx = c.x; rx < c.x + c.width; rx++) map[rx][ry] = 0;
-        stairsDownPos = { 20 * TILE_SIZE, 0.1f, 20 * TILE_SIZE };
+        stairsDownPos = Vector3{ 20.0f * TILE_SIZE, 0.1f, 24.0f * TILE_SIZE };
+        storageBoxPos = Vector3{ 16.0f * TILE_SIZE, 0.5f, 16.0f * TILE_SIZE };
     }
     else {
         for (int i = 0; i < 8; i++) {
@@ -21,8 +22,8 @@ void Dungeon::Generate(bool homeMode) {
             if (!rooms.empty()) DigCorridor(rooms.back().x + rooms.back().width / 2, rooms.back().y + rooms.back().height / 2, x + w / 2, y + h / 2);
             rooms.push_back(nr);
         }
-        stairsUpPos = { (float)rooms[0].x * TILE_SIZE + 1.2f, 0.1f, (float)rooms[0].y * TILE_SIZE + 1.2f };
-        stairsDownPos = { (float)rooms.back().x * TILE_SIZE + 1.2f, 0.1f, (float)rooms.back().y * TILE_SIZE + 1.2f };
+        stairsUpPos = Vector3{ (float)rooms[0].x * TILE_SIZE + 1.2f, 0.1f, (float)rooms[0].y * TILE_SIZE + 1.2f };
+        stairsDownPos = Vector3{ (float)rooms.back().x * TILE_SIZE + 1.2f, 0.1f, (float)rooms.back().y * TILE_SIZE + 1.2f };
     }
 }
 void Dungeon::DigCorridor(int x1, int y1, int x2, int y2) {
@@ -33,17 +34,17 @@ void Dungeon::UpdateVisibility(Vector3 p) {
     if (isHome) return;
     int gx = (int)floorf((p.x + TILE_SIZE / 2.0f) / TILE_SIZE), gz = (int)floorf((p.z + TILE_SIZE / 2.0f) / TILE_SIZE);
     for (int y = gz - 4; y <= gz + 4; y++) for (int x = gx - 4; x <= gx + 4; x++) if (x >= 0 && x < MAP_WIDTH && y >= 0 && y < MAP_HEIGHT) discovered[x][y] = true;
-    for (auto& r : rooms) if (r.Contains(gx, gz)) for (int ry = r.y; ry < r.y + r.height; ry++) for (int rx = r.x; rx < r.x + r.width; rx++) discovered[rx][ry] = true;
 }
 void Dungeon::Draw() {
     for (int y = 0; y < MAP_HEIGHT; y++) for (int x = 0; x < MAP_WIDTH; x++) {
         if (!discovered[x][y]) continue;
-        Vector3 pos = { x * TILE_SIZE, 0, y * TILE_SIZE };
+        Vector3 pos = Vector3{ x * TILE_SIZE, 0.0f, y * TILE_SIZE };
         if (map[x][y] == 1) DrawCube(pos, TILE_SIZE, 2.0f, TILE_SIZE, GRAY);
-        else DrawPlane(pos, { TILE_SIZE, TILE_SIZE }, isHome ? DARKBLUE : DARKGREEN);
+        else DrawPlane(pos, Vector2{ TILE_SIZE, TILE_SIZE }, isHome ? DARKBLUE : DARKGREEN);
     }
-    if (stairsDownPos.x != -999 && IsDiscovered(stairsDownPos.x, stairsDownPos.z)) { DrawCube(stairsDownPos, 1.2f, 0.1f, 1.2f, GOLD); DrawCubeWires(stairsDownPos, 1.2f, 0.1f, 1.2f, ORANGE); }
-    if (stairsUpPos.x != -999 && IsDiscovered(stairsUpPos.x, stairsUpPos.z)) { DrawCube(stairsUpPos, 1.2f, 0.1f, 1.2f, SKYBLUE); DrawCubeWires(stairsUpPos, 1.2f, 0.1f, 1.2f, BLUE); }
+    if (stairsDownPos.x != -999 && IsDiscovered(stairsDownPos.x, stairsDownPos.z)) DrawCube(stairsDownPos, 1.2f, 0.1f, 1.2f, GOLD);
+    if (stairsUpPos.x != -999 && IsDiscovered(stairsUpPos.x, stairsUpPos.z)) DrawCube(stairsUpPos, 1.2f, 0.1f, 1.2f, SKYBLUE);
+    if (isHome) { DrawCube(storageBoxPos, 1.2f, 1.0f, 1.2f, BROWN); DrawCubeWires(storageBoxPos, 1.2f, 1.0f, 1.2f, BLACK); }
 }
 bool Dungeon::IsWall(float x, float z) {
     int gx = (int)floorf((x + TILE_SIZE / 2.0f) / TILE_SIZE), gz = (int)floorf((z + TILE_SIZE / 2.0f) / TILE_SIZE);
@@ -60,8 +61,8 @@ bool Dungeon::IsDiscovered(float x, float z) {
     int gx = (int)floorf((x + TILE_SIZE / 2.0f) / TILE_SIZE), gz = (int)floorf((z + TILE_SIZE / 2.0f) / TILE_SIZE);
     return (gx >= 0 && gx < MAP_WIDTH && gz >= 0 && gz < MAP_HEIGHT) ? discovered[gx][gz] : false;
 }
-Vector3 Dungeon::GetStartPosition() { return { (float)rooms[0].x * TILE_SIZE + 1.0f, 0.5f, (float)rooms[0].y * TILE_SIZE + 1.0f }; }
+Vector3 Dungeon::GetStartPosition() { return Vector3{ (float)rooms[0].x * TILE_SIZE + 1.0f, 0.5f, (float)rooms[0].y * TILE_SIZE + 1.0f }; }
 Vector3 Dungeon::GetRandomFloorPos() {
     int r = GetRandomValue(0, (int)rooms.size() - 1);
-    return { (float)GetRandomValue(rooms[r].x, rooms[r].x + rooms[r].width - 1) * TILE_SIZE, 0.5f, (float)GetRandomValue(rooms[r].y, rooms[r].y + rooms[r].height - 1) * TILE_SIZE };
+    return Vector3{ (float)GetRandomValue(rooms[r].x, rooms[r].x + rooms[r].width - 1) * TILE_SIZE, 0.5f, (float)GetRandomValue(rooms[r].y, rooms[r].y + rooms[r].height - 1) * TILE_SIZE };
 }

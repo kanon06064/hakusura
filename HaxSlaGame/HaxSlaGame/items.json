@@ -10,7 +10,7 @@
     "name": "ヒーリングキノコ",
     "type": "CONSUMABLE",
     "heal": 30,
-    "dropChance": 0.25
+    "dropChance": 0.3
   },
   {
     "id": 3,
@@ -23,7 +23,7 @@
     "name": "マナキノコ",
     "type": "CONSUMABLE",
     "heal": 0,
-    "dropChance": 0.25
+    "dropChance": 0.3
   },
   {
     "id": 5,
@@ -159,6 +159,7 @@
     "heal": 200,
     "dropChance": 0.1
   },
+
   {
     "id": 101,
     "name": "略奪者の剣",
@@ -199,6 +200,7 @@
     "weaponSubtype": 4,
     "dropChance": 0.05
   },
+
   {
     "id": 201,
     "name": "魂のナイトブレード",
@@ -239,6 +241,7 @@
     "weaponSubtype": 4,
     "dropChance": 0.03
   },
+
   {
     "id": 301,
     "name": "魔鋼鉄の剣",
@@ -279,6 +282,7 @@
     "weaponSubtype": 4,
     "dropChance": 0.015
   },
+
   {
     "id": 401,
     "name": "機神の聖剣",

@@ -5,7 +5,7 @@ struct Room { int x, y, width, height; bool Contains(int gx, int gy); };
 
 class Dungeon {
 public:
-    Vector3 stairsDownPos, stairsUpPos;
+    Vector3 stairsDownPos, stairsUpPos, storageBoxPos;
     bool isHome;
     Dungeon();
     void Generate(bool homeMode);
