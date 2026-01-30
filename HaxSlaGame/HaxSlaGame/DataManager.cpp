@@ -5,6 +5,7 @@
 std::vector<EnemyData> DataManager::allEnemyData;
 std::vector<ItemData> DataManager::itemConfigs;
 std::map<std::string, std::string> DataManager::uiStrings;
+
 void DataManager::LoadAllData() {
     using json = nlohmann::json;
     try {
@@ -12,7 +13,7 @@ void DataManager::LoadAllData() {
         std::ifstream iF("items.json"); if (iF.is_open()) { json j; iF >> j; for (auto& i : j) { ItemData d; d.id = i["id"]; d.name = i["name"]; d.type = i["type"]; d.dropChance = i["dropChance"]; d.heal = i.value("heal", 0.0f); d.atkBonus = i.value("atkBonus", 0.0f); d.weaponSubtype = i.value("weaponSubtype", -1); itemConfigs.push_back(d); } }
         std::ifstream uF("ui_text.json"); if (uF.is_open()) { json j; uF >> j; for (auto& el : j.items()) { uiStrings[el.key()] = el.value().get<std::string>(); } }
     }
-    catch (const json::parse_error& e) { std::cerr << "JSON Error: " << e.what() << std::endl; }
+    catch (const std::exception& e) { std::cerr << "JSON Load Error: " << e.what() << std::endl; }
 }
 EnemyData DataManager::GetRandomEnemyForFloor(int floor) {
     std::vector<EnemyData> c; for (auto& e : allEnemyData) if (floor >= e.minFloor) c.push_back(e);

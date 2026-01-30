@@ -5,13 +5,14 @@
 bool Room::Contains(int gx, int gy) { return (gx >= x && gx < x + width && gy >= y && gy < y + height); }
 Dungeon::Dungeon() { Generate(true); }
 void Dungeon::Generate(bool homeMode) {
-    isHome = homeMode; rooms.clear(); stairsDownPos = Vector3{ -999,-999,-999 }; stairsUpPos = Vector3{ -999,-999,-999 }; storageBoxPos = Vector3{ -999,-999,-999 };
+    isHome = homeMode; rooms.clear();
+    stairsDownPos = Vector3{ -999,-999,-999 }; stairsUpPos = Vector3{ -999,-999,-999 }; storageBoxPos = Vector3{ -999,-999,-999 };
     for (int y = 0; y < MAP_HEIGHT; y++) for (int x = 0; x < MAP_WIDTH; x++) { map[x][y] = 1; discovered[x][y] = homeMode; }
     if (homeMode) {
         Room c = { 15, 15, 10, 10 }; rooms.push_back(c);
         for (int ry = c.y; ry < c.y + c.height; ry++) for (int rx = c.x; rx < c.x + c.width; rx++) map[rx][ry] = 0;
         stairsDownPos = Vector3{ 20.0f * TILE_SIZE, 0.1f, 24.0f * TILE_SIZE };
-        storageBoxPos = Vector3{ 16.0f * TILE_SIZE, 0.5f, 16.0f * TILE_SIZE };
+        storageBoxPos = Vector3{ 17.0f * TILE_SIZE, 0.5f, 17.0f * TILE_SIZE };
     }
     else {
         for (int i = 0; i < 8; i++) {
@@ -44,14 +45,14 @@ void Dungeon::Draw() {
     }
     if (stairsDownPos.x != -999 && IsDiscovered(stairsDownPos.x, stairsDownPos.z)) DrawCube(stairsDownPos, 1.2f, 0.1f, 1.2f, GOLD);
     if (stairsUpPos.x != -999 && IsDiscovered(stairsUpPos.x, stairsUpPos.z)) DrawCube(stairsUpPos, 1.2f, 0.1f, 1.2f, SKYBLUE);
-    if (isHome) { DrawCube(storageBoxPos, 1.2f, 1.0f, 1.2f, BROWN); DrawCubeWires(storageBoxPos, 1.2f, 1.0f, 1.2f, BLACK); }
+    if (isHome && storageBoxPos.x != -999) { DrawCube(storageBoxPos, 1.0f, 1.0f, 1.0f, BROWN); DrawCubeWires(storageBoxPos, 1.0f, 1.0f, 1.0f, BLACK); }
 }
 bool Dungeon::IsWall(float x, float z) {
     int gx = (int)floorf((x + TILE_SIZE / 2.0f) / TILE_SIZE), gz = (int)floorf((z + TILE_SIZE / 2.0f) / TILE_SIZE);
     if (gx < 0 || gx >= MAP_WIDTH || gz < 0 || gz >= MAP_HEIGHT) return true;
     return map[gx][gz] == 1;
 }
-bool Dungeon::CheckCollisionRadius(Vector3 p, float r) { return IsWall(p.x - r, p.z - r) || IsWall(p.x + r, p.z - r) || IsWall(p.x - r, p.z + r) || IsWall(p.x + r, p.z + r); }
+bool Dungeon::CheckCollisionRadius(Vector3 p, float r) { return IsWall(p.x - r, p.z) || IsWall(p.x + r, p.z) || IsWall(p.x, p.z - r) || IsWall(p.x, p.z + r); }
 bool Dungeon::HasLineOfSight(Vector3 s, Vector3 e) {
     float dist = Vector3Distance(s, e); Vector3 dir = Vector3Normalize(Vector3Subtract(e, s));
     for (float d = 0.5f; d < dist; d += 0.5f) { Vector3 p = Vector3Add(s, Vector3Scale(dir, d)); if (IsWall(p.x, p.z)) return false; }

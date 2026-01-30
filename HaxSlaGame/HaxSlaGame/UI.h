@@ -10,5 +10,5 @@ public:
     static void DrawLogs(std::vector<GameLog>& logs, Font font);
     static void DrawNearbyItems(class Player& p, std::vector<DroppedItem>& di, Camera3D& cam, Font font);
 private:
-    static int itemPage, equipPage, itemSubTab;
+    static int itemPage, equipPage, debugPage, storageInvPage, storageBoxPage, itemSubTab;
 };

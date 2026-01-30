@@ -6,7 +6,7 @@ class Player; class Dungeon;
 class Enemy {
 public:
     Vector3 position, lastAttackDir, lastPos, patrolTarget;
-    EnemyState state; EnemyType enemy_type; EnemyData data;
+    EnemyState state; EnemyType eType; EnemyData data;
     float hp, maxHp, speed, radius, detectRange, attackRange, attackTimer, hudTimer, visualTimer;
     int stuckFrames, level, expValue;
 

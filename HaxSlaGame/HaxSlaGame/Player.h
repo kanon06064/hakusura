@@ -12,6 +12,7 @@ public:
     std::vector<Projectile> projectiles;
     std::vector<ItemData> inventoryItems;
     std::vector<ItemData> inventoryEquip;
+    std::vector<SkillNode> skillTree;
 
     Player(Vector3 startPos);
     void Update(Camera3D& cam, class Dungeon& d, std::vector<class Enemy>& enemies, std::vector<DamageText>& dt, bool stopMove);
@@ -19,9 +20,12 @@ public:
     void AddExp(int amount, std::vector<DamageText>& dt);
     bool AddToInventory(ItemData item);
     void UseItem(int index);
-    void EquipWeapon(int index, int slot);
+    void EquipWeapon(int invIndex, int slot);
     void UpgradeStat(int type);
+    void UnlockSkill(int id);
+    bool IsSkillAvailable(int id);
 private:
     void PerformAttack(Vector3 ad, std::vector<class Enemy>& enemies, class Dungeon& d, std::vector<DamageText>& dt);
     void LevelUp(std::vector<DamageText>& dt);
+    void InitSkillTree();
 };
