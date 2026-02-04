@@ -1,5 +1,13 @@
 ﻿[
   {
+    "id": 0,
+    "name": "木の剣",
+    "type": "EQUIP",
+    "atkBonus": 5,
+    "weaponSubtype": 0,
+    "dropChance": 0
+  },
+  {
     "id": 1,
     "name": "薄汚れた布",
     "type": "MATERIAL",
@@ -158,6 +166,14 @@
     "type": "CONSUMABLE",
     "heal": 200,
     "dropChance": 0.1
+  },
+  {
+    "id": 100,
+    "name": "木の弓",
+    "type": "EQUIP",
+    "atkBonus": 3,
+    "weaponSubtype": 3,
+    "dropChance": 0
   },
   {
     "id": 101,

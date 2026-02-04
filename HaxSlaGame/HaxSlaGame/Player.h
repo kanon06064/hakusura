@@ -1,31 +1,40 @@
 #pragma once
 #include "Definitions.h"
+#include <vector>
+
+// ëOï˚êÈåæ
+class Dungeon;
+class Enemy;
+class EffectManager;
 
 class Player {
 public:
     Vector3 position, lastAimDir;
-    float speed, radius, attackTimer, visualTimer, hp, maxHp, attackPower, defense;
+    float speed, radius, attackTimer, hp, maxHp, attackPower, defense;
     int level, exp, expToNext, skillPoints, activeSlot;
     WeaponType equippedWeapons[2], currentWeapon;
     ItemData equippedData[2];
     bool isAttacking;
-    std::vector<Projectile> projectiles;
+
     std::vector<ItemData> inventoryItems;
     std::vector<ItemData> inventoryEquip;
     std::vector<SkillNode> skillTree;
 
-    Player(Vector3 startPos);
-    void Update(Camera3D& cam, class Dungeon& d, std::vector<class Enemy>& enemies, std::vector<DamageText>& dt, bool stopMove);
-    void Draw();
-    void AddExp(int amount, std::vector<DamageText>& dt);
+    Player(Vector3 sp);
+
+    // EffectManagerÇéÛÇØéÊÇÈ
+    void Update(Camera3D& cam, Dungeon& d, std::vector<Enemy>& enemies, EffectManager& fx, bool stop);
+    void Draw(bool debug);
+
+    void AddExp(int a, EffectManager& fx);
     bool AddToInventory(ItemData item);
-    void UseItem(int index);
-    void EquipWeapon(int invIndex, int slot);
-    void UpgradeStat(int type);
+    void UseItem(int idx);
+    void EquipWeapon(int invIdx, int slot);
+    void UnequipWeapon(int slot);
     void UnlockSkill(int id);
     bool IsSkillAvailable(int id);
 private:
-    void PerformAttack(Vector3 ad, std::vector<class Enemy>& enemies, class Dungeon& d, std::vector<DamageText>& dt);
-    void LevelUp(std::vector<DamageText>& dt);
+    void PerformAttack(Vector3 ad, std::vector<Enemy>& enemies, Dungeon& d, EffectManager& fx);
+    void LevelUp(EffectManager& fx);
     void InitSkillTree();
 };

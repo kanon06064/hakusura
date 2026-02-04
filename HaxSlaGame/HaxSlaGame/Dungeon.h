@@ -1,5 +1,6 @@
 #pragma once
 #include "Definitions.h"
+#include "raymath.h"
 
 struct Room { int x, y, width, height; bool Contains(int gx, int gy); };
 
