@@ -8,6 +8,7 @@
     "minFloor": 1,
     "exp": 20,
     "atkRange": 2.2,
+    "gold": 10,
     "drops": [ 1, 2, 3, 4, 101 ]
   },
   {
@@ -19,6 +20,7 @@
     "minFloor": 1,
     "exp": 22,
     "atkRange": 4.5,
+    "gold": 12,
     "drops": [ 1, 2, 102 ]
   },
   {
@@ -30,6 +32,7 @@
     "minFloor": 2,
     "exp": 25,
     "atkRange": 12.0,
+    "gold": 15,
     "drops": [ 1, 4, 104 ]
   },
   {
@@ -41,6 +44,7 @@
     "minFloor": 2,
     "exp": 30,
     "atkRange": 2.6,
+    "gold": 20,
     "drops": [ 3, 2, 103 ]
   },
   {
@@ -52,6 +56,7 @@
     "minFloor": 3,
     "exp": 40,
     "atkRange": 10.0,
+    "gold": 30,
     "drops": [ 4, 17, 105 ]
   },
   {
@@ -63,6 +68,7 @@
     "minFloor": 2,
     "exp": 60,
     "atkRange": 10.0,
+    "gold": 50,
     "drops": [ 2, 8, 9, 22, 23 ]
   },
   {
@@ -74,6 +80,7 @@
     "minFloor": 4,
     "exp": 35,
     "atkRange": 2.2,
+    "gold": 25,
     "drops": [ 5, 2 ]
   },
   {
@@ -85,6 +92,7 @@
     "minFloor": 5,
     "exp": 50,
     "atkRange": 4.5,
+    "gold": 40,
     "drops": [ 5, 6, 7 ]
   },
   {
@@ -96,6 +104,7 @@
     "minFloor": 6,
     "exp": 120,
     "atkRange": 10.0,
+    "gold": 100,
     "drops": [ 2, 8, 9, 22, 23 ]
   },
   {
@@ -107,6 +116,7 @@
     "minFloor": 7,
     "exp": 70,
     "atkRange": 2.2,
+    "gold": 60,
     "drops": [ 6, 7, 8, 9, 201 ]
   },
   {
@@ -118,6 +128,7 @@
     "minFloor": 8,
     "exp": 65,
     "atkRange": 12.0,
+    "gold": 65,
     "drops": [ 6, 9, 204 ]
   },
   {
@@ -129,6 +140,7 @@
     "minFloor": 9,
     "exp": 90,
     "atkRange": 2.6,
+    "gold": 80,
     "drops": [ 7, 6, 203 ]
   },
   {
@@ -140,6 +152,7 @@
     "minFloor": 9,
     "exp": 100,
     "atkRange": 10.0,
+    "gold": 120,
     "drops": [ 9, 17, 205 ]
   },
   {
@@ -151,6 +164,7 @@
     "minFloor": 12,
     "exp": 180,
     "atkRange": 2.2,
+    "gold": 150,
     "drops": [ 10, 11, 12, 13 ]
   },
   {
@@ -162,6 +176,7 @@
     "minFloor": 12,
     "exp": 300,
     "atkRange": 12.0,
+    "gold": 250,
     "drops": [ 11, 12, 14, 15, 24 ]
   },
   {
@@ -173,6 +188,7 @@
     "minFloor": 15,
     "exp": 400,
     "atkRange": 4.5,
+    "gold": 300,
     "drops": [ 14, 15, 16, 17, 302 ]
   },
   {
@@ -184,6 +200,7 @@
     "minFloor": 15,
     "exp": 350,
     "atkRange": 15.0,
+    "gold": 280,
     "drops": [ 14, 15, 16, 304 ]
   },
   {
@@ -195,6 +212,7 @@
     "minFloor": 16,
     "exp": 450,
     "atkRange": 2.6,
+    "gold": 350,
     "drops": [ 14, 15, 16, 17, 303 ]
   },
   {
@@ -206,6 +224,7 @@
     "minFloor": 16,
     "exp": 500,
     "atkRange": 12.0,
+    "gold": 400,
     "drops": [ 14, 15, 16, 17, 305 ]
   },
   {
@@ -217,6 +236,7 @@
     "minFloor": 20,
     "exp": 1500,
     "atkRange": 2.5,
+    "gold": 1000,
     "drops": [ 18, 19, 20, 21, 401 ]
   },
   {
@@ -228,6 +248,7 @@
     "minFloor": 21,
     "exp": 1800,
     "atkRange": 5.0,
+    "gold": 1200,
     "drops": [ 18, 19, 20, 21, 402 ]
   },
   {
@@ -239,6 +260,7 @@
     "minFloor": 22,
     "exp": 1600,
     "atkRange": 18.0,
+    "gold": 1100,
     "drops": [ 18, 19, 20, 21, 404 ]
   },
   {
@@ -250,6 +272,7 @@
     "minFloor": 22,
     "exp": 2000,
     "atkRange": 3.0,
+    "gold": 1500,
     "drops": [ 18, 19, 20, 21, 403 ]
   },
   {
@@ -261,6 +284,7 @@
     "minFloor": 23,
     "exp": 2200,
     "atkRange": 12.0,
+    "gold": 2000,
     "drops": [ 18, 19, 20, 21, 405 ]
   },
   {
@@ -272,6 +296,7 @@
     "minFloor": 22,
     "exp": 1000,
     "atkRange": 15.0,
+    "gold": 800,
     "drops": [ 11, 12, 14, 15, 24, 25 ]
   }
 ]

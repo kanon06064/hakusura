@@ -126,6 +126,7 @@
   <ItemGroup>
     <None Include="enemies.json" />
     <None Include="items.json" />
+    <None Include="modifiers.json" />
     <None Include="packages.config" />
     <None Include="ui_text.json" />
   </ItemGroup>

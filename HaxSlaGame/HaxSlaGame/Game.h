@@ -25,9 +25,8 @@ private:
     int screenHeight = 720;
     Font font;
 
-    // ゲームオブジェクト
     Dungeon dungeon;
-    Player* player; // ポインタ管理
+    Player* player;
     EffectManager fxManager;
     std::vector<Enemy> enemies;
     std::vector<DroppedItem> droppedItems;
@@ -35,13 +34,13 @@ private:
     std::vector<ItemData> storageItems;
     std::vector<ItemData> storageEquip;
 
-    // ステート管理
     Camera3D camera;
     GameState state;
     int floor;
     bool debugMode;
     bool showMenu;
     bool showStorage;
+    bool showReforgeMenu;
     bool showPrompt;
     MenuTab currentTab;
     float sceneTimer;

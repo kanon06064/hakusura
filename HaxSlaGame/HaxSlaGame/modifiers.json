@@ -1,0 +1,42 @@
+﻿[
+  {
+    "id": 0,
+    "name": "",
+    "atkBonusAdd": 0.0
+  },
+  {
+    "id": 1,
+    "name": "壊れた",
+    "atkBonusAdd": -5.0
+  },
+  {
+    "id": 2,
+    "name": "粗悪な",
+    "atkBonusAdd": -3.0
+  },
+  {
+    "id": 3,
+    "name": "鈍い",
+    "atkBonusAdd": -2.0
+  },
+  {
+    "id": 4,
+    "name": "鋭い",
+    "atkBonusAdd": 2.0
+  },
+  {
+    "id": 5,
+    "name": "強力な",
+    "atkBonusAdd": 4.0
+  },
+  {
+    "id": 6,
+    "name": "達人の",
+    "atkBonusAdd": 7.0
+  },
+  {
+    "id": 7,
+    "name": "伝説の",
+    "atkBonusAdd": 12.0
+  }
+]

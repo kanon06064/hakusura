@@ -31,5 +31,9 @@
   "OFF": "はずす",
   "GET": "獲得",
   "CONSUMABLE": "消耗品",
-  "MATERIAL": "素材"
+  "MATERIAL": "素材",
+  "DASH": "ダッシュ",
+  "SMASH": "強撃",
+  "HIDE": "隠密",
+  "STEALTH": "ステルス"
 }
