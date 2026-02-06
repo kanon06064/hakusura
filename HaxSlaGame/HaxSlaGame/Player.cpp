@@ -11,7 +11,6 @@ Player::Player(Vector3 sp) : position(sp), baseSpeed(0.15f), radius(0.45f), atta
     activeSlot = 0; equippedData[0].id = -1; equippedData[1].id = -1;
     equippedWeapons[0] = NONE; equippedWeapons[1] = NONE;
 
-    // スキルタイマー初期化
     dashTimer = 0; dashCooldownTimer = 0;
     smashCooldownTimer = 0;
     stealthTimer = 0; stealthCooldownTimer = 0;
@@ -38,25 +37,38 @@ float Player::GetItemTotalAtkBonus(const ItemData& item) {
 }
 
 void Player::InitSkillTree() {
-    // UI座標は 1280x720 の画面を想定して配置
-    // 中央下からスタート
+    // ヘルパー: キーが存在すれば翻訳された文字列を、なければキーをそのまま返す
+    auto GetStr = [](const char* key) -> std::string {
+        if (DataManager::uiStrings.count(key)) return DataManager::uiStrings[key];
+        return key;
+        };
+
     skillTree.push_back({ 0, "START", {640, 650}, {}, true, 0 });
 
     // --- 左ルート: 防御 & ステルス ---
     skillTree.push_back({ 1, "HP I",  {500, 550}, {0}, false, 1, 0, 0, 30, SKILL_PASSIVE });
     skillTree.push_back({ 2, "DEF I", {400, 480}, {1}, false, 1, 0, 3, 0, SKILL_PASSIVE });
-    skillTree.push_back({ 3, "ステルス", {300, 400}, {2}, false, 3, 0, 0, 0, SKILL_ACTIVE_STEALTH, 15.0f }); // CD 15秒
+
+    // 【修正】日本語直書きをやめてJSONキーを使用
+    skillTree.push_back({ 3, GetStr("STEALTH"), {300, 400}, {2}, false, 3, 0, 0, 0, SKILL_ACTIVE_STEALTH, 15.0f });
+
     skillTree.push_back({ 4, "HP II", {300, 300}, {3}, false, 2, 0, 0, 50, SKILL_PASSIVE });
 
     // --- 中央ルート: 攻撃 & 強撃 ---
     skillTree.push_back({ 5, "ATK I", {640, 500}, {0}, false, 1, 5, 0, 0, SKILL_PASSIVE });
-    skillTree.push_back({ 6, "強撃",   {640, 400}, {5}, false, 2, 0, 0, 0, SKILL_ACTIVE_SMASH, 5.0f }); // CD 5秒
+
+    // 【修正】日本語直書きをやめてJSONキーを使用
+    skillTree.push_back({ 6, GetStr("SMASH"),   {640, 400}, {5}, false, 2, 0, 0, 0, SKILL_ACTIVE_SMASH, 5.0f });
+
     skillTree.push_back({ 7, "ATK II", {640, 300}, {6}, false, 3, 10, 0, 0, SKILL_PASSIVE });
     skillTree.push_back({ 8, "ATK III",{640, 200}, {7}, false, 5, 20, 0, 0, SKILL_PASSIVE });
 
     // --- 右ルート: 移動 & ダッシュ ---
-    skillTree.push_back({ 9,  "SPD I", {780, 550}, {0}, false, 1, 0, 0, 0, SKILL_PASSIVE }); // 今回速度UPパッシブは未実装だがノードとして配置
-    skillTree.push_back({ 10, "ダッシュ", {880, 480}, {9}, false, 2, 0, 0, 0, SKILL_ACTIVE_DASH, 3.0f }); // CD 3秒
+    skillTree.push_back({ 9,  "SPD I", {780, 550}, {0}, false, 1, 0, 0, 0, SKILL_PASSIVE });
+
+    // 【修正】日本語直書きをやめてJSONキーを使用
+    skillTree.push_back({ 10, GetStr("DASH"), {880, 480}, {9}, false, 2, 0, 0, 0, SKILL_ACTIVE_DASH, 3.0f });
+
     skillTree.push_back({ 11, "DEF II", {980, 400}, {10}, false, 2, 0, 5, 0, SKILL_PASSIVE });
 }
 
@@ -70,7 +82,6 @@ bool Player::IsSkillAvailable(int id) {
 void Player::UnlockSkill(int id) {
     if (IsSkillAvailable(id) && skillPoints >= skillTree[id].cost) {
         skillPoints -= skillTree[id].cost; skillTree[id].unlocked = true;
-        // パッシブ効果の即時適用
         attackPower += skillTree[id].atkAdd;
         defense += skillTree[id].defAdd;
         maxHp += skillTree[id].hpAdd;
@@ -78,7 +89,6 @@ void Player::UnlockSkill(int id) {
     }
 }
 
-// スキル解放状態チェック
 bool Player::IsSkillUnlocked(SkillType type) {
     for (auto& node : skillTree) {
         if (node.type == type && node.unlocked) return true;
@@ -86,7 +96,6 @@ bool Player::IsSkillUnlocked(SkillType type) {
     return false;
 }
 
-// クールダウンタイマー取得（UI表示用）
 float Player::GetSkillCooldown(SkillType type) {
     switch (type) {
     case SKILL_ACTIVE_DASH: return dashCooldownTimer;
@@ -96,7 +105,6 @@ float Player::GetSkillCooldown(SkillType type) {
     }
 }
 
-// 最大クールダウン取得
 float Player::GetSkillMaxCooldown(SkillType type) {
     for (auto& node : skillTree) {
         if (node.type == type) return node.maxCooldown;
@@ -141,26 +149,21 @@ void Player::UnequipWeapon(int slot) {
 void Player::Update(Camera3D& cam, Dungeon& d, std::vector<Enemy>& enemies, EffectManager& fx, bool stop) {
     if (stop) return;
 
-    // クールダウン更新
     float dt = GetFrameTime();
     if (dashCooldownTimer > 0) dashCooldownTimer -= dt;
     if (smashCooldownTimer > 0) smashCooldownTimer -= dt;
     if (stealthCooldownTimer > 0) stealthCooldownTimer -= dt;
 
-    // スキル効果時間更新
     if (dashTimer > 0) dashTimer -= dt;
     if (stealthTimer > 0) stealthTimer -= dt; else isStealth = false;
 
-    // --- スキル入力 ---
-    // [1] ダッシュ
+    // スキル入力
     if (IsKeyPressed(KEY_ONE) && IsSkillUnlocked(SKILL_ACTIVE_DASH) && dashCooldownTimer <= 0) {
-        dashTimer = 0.2f; // ダッシュ時間
+        dashTimer = 0.2f;
         dashCooldownTimer = GetSkillMaxCooldown(SKILL_ACTIVE_DASH);
-        fx.SpawnEffect(position, { 0,1,0 }, FX_HIT, WHITE); // エフェクト
+        fx.SpawnEffect(position, { 0,1,0 }, FX_HIT, WHITE);
     }
-    // [2] 強撃
     if (IsKeyPressed(KEY_TWO) && IsSkillUnlocked(SKILL_ACTIVE_SMASH) && smashCooldownTimer <= 0 && currentWeapon != NONE && attackTimer <= 0) {
-        // 強撃発動
         Ray ray = GetMouseRay(GetMousePosition(), cam);
         if (ray.direction.y != 0) {
             float t = (position.y - ray.position.y) / ray.direction.y;
@@ -170,26 +173,22 @@ void Player::Update(Camera3D& cam, Dungeon& d, std::vector<Enemy>& enemies, Effe
         }
         PerformSmash(lastAimDir, enemies, d, fx);
         smashCooldownTimer = GetSkillMaxCooldown(SKILL_ACTIVE_SMASH);
-        attackTimer = 0.8f; // 硬直
+        attackTimer = 0.8f;
     }
-    // [3] ステルス
     if (IsKeyPressed(KEY_THREE) && IsSkillUnlocked(SKILL_ACTIVE_STEALTH) && stealthCooldownTimer <= 0) {
         isStealth = true;
-        stealthTimer = 10.0f; // 10秒間透明
+        stealthTimer = 10.0f;
         stealthCooldownTimer = GetSkillMaxCooldown(SKILL_ACTIVE_STEALTH);
         fx.SpawnEffect(position, { 0,1,0 }, FX_HIT, BLUE);
     }
 
-    // 武器切り替え
     if (IsKeyPressed(KEY_Q)) { activeSlot = 1 - activeSlot; currentWeapon = equippedWeapons[activeSlot]; }
 
-    // 移動処理
     Vector3 cf = Vector3Normalize(Vector3Subtract(cam.target, cam.position)); cf.y = 0; cf = Vector3Normalize(cf);
     Vector3 cr = { -cf.z, 0, cf.x }, md = { 0,0,0 };
     if (IsKeyDown(KEY_W)) md = Vector3Add(md, cf); if (IsKeyDown(KEY_S)) md = Vector3Subtract(md, cf);
     if (IsKeyDown(KEY_A)) md = Vector3Subtract(md, cr); if (IsKeyDown(KEY_D)) md = Vector3Add(md, cr);
 
-    // ダッシュ中は速度3倍
     float currentSpeed = (dashTimer > 0) ? baseSpeed * 3.0f : baseSpeed;
 
     if (Vector3Length(md) > 0) {
@@ -198,7 +197,6 @@ void Player::Update(Camera3D& cam, Dungeon& d, std::vector<Enemy>& enemies, Effe
         if (!d.CheckCollisionRadius(Vector3Add(position, { 0, 0, v.z }), radius)) position.z += v.z;
     }
 
-    // エイム計算
     Ray ray = GetMouseRay(GetMousePosition(), cam);
     if (ray.direction.y != 0) {
         float t = (position.y - ray.position.y) / ray.direction.y;
@@ -210,7 +208,6 @@ void Player::Update(Camera3D& cam, Dungeon& d, std::vector<Enemy>& enemies, Effe
 
     if (attackTimer > 0) attackTimer -= GetFrameTime();
 
-    // 通常攻撃
     if (IsMouseButtonPressed(0) && attackTimer <= 0 && currentWeapon != NONE) {
         PerformAttack(lastAimDir, enemies, d, fx);
         attackTimer = (currentWeapon >= BOW) ? 0.35f : 0.5f;
@@ -255,29 +252,25 @@ void Player::PerformAttack(Vector3 ad, std::vector<Enemy>& enemies, Dungeon& d, 
                 e.ApplyKnockback(ad, knk, d);
                 fx.SpawnDamageText(e.position, dmg);
                 fx.SpawnEffect(e.position, { 0,0,0 }, FX_HIT, ORANGE);
-                // 攻撃を当てたらステルス解除
                 isStealth = false; stealthTimer = 0;
             }
         }
     }
 }
 
-// 【追加】強撃スキル
 void Player::PerformSmash(Vector3 ad, std::vector<Enemy>& enemies, Dungeon& d, EffectManager& fx) {
     Vector3 attackOrigin = Vector3Add(position, { 0, 0.8f, 0 });
-    fx.SpawnEffect(attackOrigin, ad, FX_SMASH, RED); // 派手なエフェクト
+    fx.SpawnEffect(attackOrigin, ad, FX_SMASH, RED);
 
     for (auto& e : enemies) {
         if (!d.HasLineOfSight(position, e.position)) continue;
 
-        // 斧のような範囲攻撃判定（広め）
         if (Vector3Distance(e.position, Vector3Add(position, Vector3Scale(ad, 3.5f))) < 4.5f) {
             float totalBonus = GetItemTotalAtkBonus(equippedData[activeSlot]);
-            // ダメージ2.5倍
             int dmg = (int)((attackPower + totalBonus) * 2.5f) + GetRandomValue(5, 10);
             e.hp -= (float)dmg;
             e.hudTimer = 5;
-            e.ApplyKnockback(ad, 3.0f, d); // 強いノックバック
+            e.ApplyKnockback(ad, 3.0f, d);
             fx.SpawnDamageText(e.position, dmg);
             fx.SpawnEffect(e.position, { 0,0,0 }, FX_HIT, PURPLE);
 
@@ -288,7 +281,7 @@ void Player::PerformSmash(Vector3 ad, std::vector<Enemy>& enemies, Dungeon& d, E
 
 void Player::Draw(bool debug) {
     Color bodyColor = RED;
-    if (isStealth) bodyColor = Fade(BLUE, 0.3f); // ステルス中は半透明の青
+    if (isStealth) bodyColor = Fade(BLUE, 0.3f);
 
     DrawCube(position, 1, 1, 1, bodyColor);
     DrawCubeWires(position, 1, 1, 1, MAROON);

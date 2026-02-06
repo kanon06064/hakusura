@@ -23,7 +23,6 @@ bool UI::DrawButton(Rectangle r, const char* label, Font font, Color col) {
 void UI::DrawHUD(Player& p, std::vector<Enemy>& enemies, Dungeon& d, Camera3D& cam, int floor, bool debug, Font font) {
     int sw = GetScreenWidth(), sh = GetScreenHeight();
 
-    // ... (敵HPバー表示などは省略せずそのまま記述)
     int listCount = 0;
     for (auto& e : enemies) {
         if (e.hudTimer > 0) {
@@ -46,7 +45,6 @@ void UI::DrawHUD(Player& p, std::vector<Enemy>& enemies, Dungeon& d, Camera3D& c
         }
     }
 
-    // プレイヤー情報
     DrawRectangle(10, sh - 120, 320, 110, Fade(BLACK, 0.6f));
     DrawTextEx(font, TextFormat("Lv: %d   EXP: %d/%d", p.level, p.exp, p.expToNext), { 20, (float)sh - 110 }, 18, 1, SKYBLUE);
     DrawRectangle(20, sh - 85, 280, 18, DARKGRAY);
@@ -57,7 +55,7 @@ void UI::DrawHUD(Player& p, std::vector<Enemy>& enemies, Dungeon& d, Camera3D& c
     DrawTextEx(font, TextFormat("ATK: %.1f   Gold: %d", p.attackPower + totalAtkBonus, p.gold), { 20, (float)sh - 60 }, 18, 1, WHITE);
     DrawTextEx(font, TextFormat("SP: %d", p.skillPoints), { 20, (float)sh - 35 }, 18, 1, WHITE);
 
-    // 【追加】スキルクールダウン表示 (HUD右下)
+    // スキルクールダウン表示
     int iconSize = 40;
     int startX = sw - 150;
     int startY = sh - 60;
@@ -66,7 +64,7 @@ void UI::DrawHUD(Player& p, std::vector<Enemy>& enemies, Dungeon& d, Camera3D& c
     SkillIcon icons[] = {
         { SKILL_ACTIVE_DASH, "DASH", "1" },
         { SKILL_ACTIVE_SMASH, "SMASH", "2" },
-        { SKILL_ACTIVE_STEALTH, "HIDE", "3" }
+        { SKILL_ACTIVE_STEALTH, "STEALTH", "3" }
     };
 
     for (int i = 0; i < 3; i++) {
@@ -82,13 +80,16 @@ void UI::DrawHUD(Player& p, std::vector<Enemy>& enemies, Dungeon& d, Camera3D& c
             float cd = p.GetSkillCooldown(icons[i].type);
             float maxCd = p.GetSkillMaxCooldown(icons[i].type);
             if (cd > 0) {
-                // クールダウン中のマスク
                 float ratio = cd / maxCd;
                 DrawRectangle(x, startY + (int)(iconSize * (1.0f - ratio)), iconSize, (int)(iconSize * ratio), Fade(RED, 0.7f));
                 DrawTextEx(font, TextFormat("%.1f", cd), { (float)x + 5, (float)startY + 15 }, 14, 1, YELLOW);
             }
             else {
-                DrawTextEx(font, "OK", { (float)x + 10, (float)startY + 25 }, 12, 1, GREEN);
+                // 【修正】HUDのアイコンラベルも翻訳する
+                std::string label = icons[i].label;
+                if (DataManager::uiStrings.count(label)) label = DataManager::uiStrings[label];
+                // フォントサイズを調整（日本語だと入りきらない可能性があるため小さめに）
+                DrawTextEx(font, label.c_str(), { (float)x + 2, (float)startY + 25 }, 10, 1, GREEN);
             }
         }
         else {
@@ -98,7 +99,6 @@ void UI::DrawHUD(Player& p, std::vector<Enemy>& enemies, Dungeon& d, Camera3D& c
 }
 
 void UI::DrawMenu(Player& p, Dungeon& d, MenuTab& tab, Font font) {
-    // ... (共通部分は省略せず記述)
     int sw = GetScreenWidth(), sh = GetScreenHeight();
     DrawRectangle(100, 50, sw - 200, sh - 100, Fade(DARKGRAY, 0.95f));
     const char* tKeys[] = { "EQUIP", "SKILL", "MAP", "ITEMS", "DEBUG" };
@@ -113,7 +113,6 @@ void UI::DrawMenu(Player& p, Dungeon& d, MenuTab& tab, Font font) {
     }
 
     if (tab == EQUIP) {
-        // ... (既存のEQUIP処理)
         DrawTextEx(font, DataManager::uiStrings["ACTIVE_SLOTS"].c_str(), { 120, 130 }, 20, 1, GOLD);
         for (int i = 0; i < 2; i++) {
             int y = 160 + i * 105; bool isEmpty = (p.equippedData[i].id == -1);
@@ -139,7 +138,6 @@ void UI::DrawMenu(Player& p, Dungeon& d, MenuTab& tab, Font font) {
         if (UI::DrawButton({ 510, 530, 80, 30 }, ">>", font, GRAY) && equipPage < maxP - 1) equipPage++;
     }
     else if (tab == INVENTORY) {
-        // ... (既存のINVENTORY処理)
         const char* subK[] = { "CONSUMABLE", "MATERIAL" };
         for (int i = 0; i < 2; i++) {
             Rectangle r = { 120.0f + i * 210, 120, 200, 35 }; if (CheckCollisionPointRec(GetMousePosition(), r) && IsMouseButtonPressed(0)) { itemSubTab = i; itemPage = 0; }
@@ -162,14 +160,10 @@ void UI::DrawMenu(Player& p, Dungeon& d, MenuTab& tab, Font font) {
         if (UI::DrawButton({ 230, 600, 100, 30 }, ">>", font, GRAY) && itemPage < maxP - 1) itemPage++;
     }
     else if (tab == SKILL) {
-        // ライン描画
         for (auto& node : p.skillTree) for (int reqId : node.reqIds) DrawLineEx(node.uiPos, p.skillTree[reqId].uiPos, 3, node.unlocked ? GOLD : DARKGRAY);
-
-        // ノード描画
         for (int i = 0; i < (int)p.skillTree.size(); i++) {
             auto& node = p.skillTree[i]; bool available = p.IsSkillAvailable(i);
 
-            // スキルタイプによって色を変える
             Color nodeColor = node.unlocked ? YELLOW : (available ? GREEN : DARKGRAY);
             if (node.type != SKILL_PASSIVE) {
                 nodeColor = node.unlocked ? ORANGE : (available ? PURPLE : DARKGRAY);
@@ -179,7 +173,6 @@ void UI::DrawMenu(Player& p, Dungeon& d, MenuTab& tab, Font font) {
             DrawPolyLines(node.uiPos, 6, 35, 0, RAYWHITE);
             DrawTextEx(font, node.name.c_str(), { node.uiPos.x - 28, node.uiPos.y - 8 }, 12, 1, node.unlocked ? BLACK : WHITE);
 
-            // コスト表示
             if (!node.unlocked) {
                 DrawTextEx(font, TextFormat("SP:%d", node.cost), { node.uiPos.x - 15, node.uiPos.y + 15 }, 10, 1, WHITE);
             }
@@ -188,7 +181,6 @@ void UI::DrawMenu(Player& p, Dungeon& d, MenuTab& tab, Font font) {
         }
     }
     else if (tab == DEBUG_TAB) {
-        // ... (既存のDEBUG処理)
         const int perP = 10; int total = (int)DataManager::itemConfigs.size(); int maxP = (int)ceil((float)total / perP);
         for (int i = 0; i < perP; i++) {
             int idx = debugPage * perP + i; if (idx >= total) break;
@@ -201,7 +193,6 @@ void UI::DrawMenu(Player& p, Dungeon& d, MenuTab& tab, Font font) {
         if (UI::DrawButton({ 680, 160, 180, 50 }, "SP +999", font, BLUE)) p.skillPoints += 999;
     }
     else if (tab == MAP_TAB) {
-        // ... (既存のMAP処理)
         float sc = 12.0f; float offX = (sw / 2.0f) - (d.currentWidth * sc / 2.0f); float offY = (sh / 2.0f) - (d.currentHeight * sc / 2.0f);
         DrawRectangle(offX - 5, offY - 5, d.currentWidth * sc + 10, d.currentHeight * sc + 10, BLACK);
         for (int y = 0; y < d.currentHeight; y++) for (int x = 0; x < d.currentWidth; x++) if (d.IsDiscovered((float)x * TILE_SIZE, (float)y * TILE_SIZE)) DrawRectangle(offX + x * sc, offY + y * sc, sc - 1, sc - 1, d.IsWall((float)x * TILE_SIZE, (float)y * TILE_SIZE) ? GRAY : DARKGREEN);
@@ -209,7 +200,6 @@ void UI::DrawMenu(Player& p, Dungeon& d, MenuTab& tab, Font font) {
     }
 }
 
-// ... (以下 Storage, ReforgeMenu, Logs, NearbyItems, DrawPrompt は既存のまま)
 void UI::DrawStorage(Player& p, Font font, bool& isOpen, std::vector<ItemData>& sItems, std::vector<ItemData>& sEquip) {
     int sw = GetScreenWidth(), sh = GetScreenHeight();
     DrawRectangle(50, 50, sw - 100, sh - 100, Fade(BLACK, 0.95f)); DrawRectangleLinesEx({ 50, 50, (float)sw - 100, (float)sh - 100 }, 3, GOLD);
