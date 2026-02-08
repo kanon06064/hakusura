@@ -14,7 +14,7 @@ const int MAX_ITEM_STACK = 99;
 const int MAX_EQUIP_INV = 20;
 
 // óÒãìå^
-enum GameState { STATE_TITLE, STATE_HOME, STATE_DUNGEON };
+enum GameState { STATE_TITLE, STATE_HOME, STATE_DUNGEON, STATE_GAMEOVER }; // ÅyèCê≥ÅzSTATE_GAMEOVER í«â¡
 enum WeaponType { SWORD, SPEAR, AXE, BOW, WAND, NONE };
 enum ArmorType { HEAD, CHEST, GAUNTLET, LEGS, BOOTS };
 enum EnemyType { E_SWORD, E_SPEAR, E_AXE, E_ARCHER, E_MAGE, E_TRAP };
@@ -24,7 +24,7 @@ enum EffectType { FX_SLASH, FX_THRUST, FX_SMASH, FX_HIT };
 enum RoomType { RT_NORMAL, RT_SMALL, RT_LARGE, RT_TREASURE, RT_HEAL, RT_BOSS };
 enum SkillType { SKILL_PASSIVE, SKILL_ACTIVE_DASH, SKILL_ACTIVE_SMASH, SKILL_ACTIVE_STEALTH };
 
-// ç\ë¢ëÃ (ÉÅÉìÉoèâä˙âªÇí«â¡)
+// ç\ë¢ëÃ
 struct Projectile {
     Vector3 pos = { 0.0f, 0.0f, 0.0f };
     Vector3 vel = { 0.0f, 0.0f, 0.0f };

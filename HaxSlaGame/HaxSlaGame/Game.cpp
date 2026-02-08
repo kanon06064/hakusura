@@ -8,7 +8,7 @@
 Game::Game()
     : screenWidth(1280), screenHeight(720), player(nullptr), camera({ 0 }), state(STATE_TITLE), floor(0), maxReachedFloor(0), currentSlot(0),
     debugMode(false), showMenu(false), showStorage(false), showReforgeMenu(false), showWarpMenu(false),
-    showCraftMenu(false), // Init
+    showCraftMenu(false),
     showPrompt(false), currentTab(EQUIP), sceneTimer(0.0f), bossDefeated(false)
 {
     InitWindow(screenWidth, screenHeight, "3D Hack and Slash RPG Refactored");
@@ -63,11 +63,20 @@ void Game::Run() { while (!WindowShouldClose()) { Update(); Draw(); } }
 void Game::Update() {
     float dt = GetFrameTime();
     if (state == STATE_TITLE) return;
+
+    // 【追加】ゲームオーバー時の処理
+    if (state == STATE_GAMEOVER) {
+        // クリックかスペースキーで復帰
+        if (IsMouseButtonPressed(0) || IsKeyPressed(KEY_SPACE)) {
+            ApplyDeathPenalty();
+        }
+        return;
+    }
+
     if (IsKeyPressed(KEY_F1)) debugMode = !debugMode;
     if (IsKeyPressed(KEY_TAB)) showMenu = !showMenu;
     if (debugMode) { if (IsKeyPressed(KEY_N)) NextFloor(); if (IsKeyPressed(KEY_R)) ReturnHome(); }
 
-    // UI表示中は操作停止
     bool stopPlayer = showMenu || showPrompt || showStorage || showReforgeMenu || showWarpMenu || showCraftMenu;
 
     Vector3 offset = Vector3Subtract(camera.position, camera.target); camera.target = player->position; camera.position = Vector3Add(player->position, offset);
@@ -77,6 +86,13 @@ void Game::Update() {
     fxManager.Update(dt, dungeon); fxManager.CheckProjectileCollisions(enemies, *player, dungeon); dungeon.UpdateVisibility(player->position);
 
     if (!stopPlayer) {
+        // 【追加】死亡判定 (HPが0以下かつ、まだゲームオーバー状態でない場合)
+        if (player->hp <= 0 && state != STATE_HOME) {
+            state = STATE_GAMEOVER;
+            // プレイヤーの動きを止めるため、ここでreturnしても良いが
+            // エフェクトなどは動かし続けたいので続行しつつ、入力を受け付けないように制御
+        }
+
         for (int i = (int)enemies.size() - 1; i >= 0; i--) {
             enemies[i].Update(*player, dungeon, fxManager);
             if (enemies[i].hp <= 0) {
@@ -111,7 +127,6 @@ void Game::Update() {
             if (Vector3Distance(player->position, dungeon.storageBoxPos) < 2.0f && IsMouseButtonPressed(0)) showStorage = true;
             if (Vector3Distance(player->position, dungeon.reforgeStationPos) < 2.0f && IsMouseButtonPressed(0)) showReforgeMenu = true;
             if (dungeon.portalPos.x != -999 && Vector3Distance(player->position, dungeon.portalPos) < 2.0f && IsMouseButtonPressed(0)) showWarpMenu = true;
-            // クラフト
             if (dungeon.craftStationPos.x != -999 && Vector3Distance(player->position, dungeon.craftStationPos) < 2.0f && IsMouseButtonPressed(0)) showCraftMenu = true;
         }
     }
@@ -123,6 +138,14 @@ void Game::Draw() {
     if (state == STATE_TITLE) {
         int slot = UI::DrawTitleScreen(font);
         if (slot > 0) { SaveHeader h = DataManager::GetSaveHeader(slot); if (h.exists) LoadAndStart(slot); else NewGameAndStart(slot); }
+    }
+    // 【追加】ゲームオーバー画面
+    else if (state == STATE_GAMEOVER) {
+        ClearBackground(BLACK);
+        // 背景として薄くゲーム画面を描画してもよいが、ここではシンプルに黒背景
+        DrawTextEx(font, "YOU DIED", { (float)screenWidth / 2 - 100, (float)screenHeight / 2 - 50 }, 60, 2, RED);
+        DrawTextEx(font, "素材と消耗品を失って帰還します...", { (float)screenWidth / 2 - 180, (float)screenHeight / 2 + 30 }, 24, 1, WHITE);
+        DrawTextEx(font, "Click to Continue", { (float)screenWidth / 2 - 80, (float)screenHeight / 2 + 80 }, 20, 1, LIGHTGRAY);
     }
     else {
         ClearBackground(BLACK); BeginMode3D(camera);
@@ -168,6 +191,24 @@ void Game::Draw() {
         }
     }
     EndDrawing();
+}
+
+// 【追加】死亡ペナルティ処理
+void Game::ApplyDeathPenalty() {
+    // インベントリのアイテム（素材・消耗品）を全削除
+    // 装備品(inventoryEquip)は残す
+    player->inventoryItems.clear();
+
+    // HP全回復
+    player->hp = player->maxHp;
+
+    // ログ表示
+    logs.clear();
+    logs.insert(logs.begin(), { "Returned to Home...", 5.0f, WHITE });
+    logs.insert(logs.begin(), { "Lost materials.", 5.0f, RED });
+
+    // ホームへ戻る
+    ReturnHome();
 }
 
 void Game::NextFloor() {

@@ -21,6 +21,11 @@ private:
     void SpawnEnemies(int count);
     void NextFloor();
     void ReturnHome();
+
+    // Åyí«â¡ÅzÉQÅ[ÉÄÉIÅ[ÉoÅ[ä÷òA
+    void ApplyDeathPenalty();
+    void DrawGameOver();
+
     void SaveCurrentSlot();
     void LoadAndStart(int slot);
     void NewGameAndStart(int slot);
@@ -49,7 +54,7 @@ private:
     bool showStorage;
     bool showReforgeMenu;
     bool showWarpMenu;
-    bool showCraftMenu; // Åyí«â¡Åz
+    bool showCraftMenu;
     bool showPrompt;
     MenuTab currentTab;
     float sceneTimer;

@@ -108,81 +108,15 @@
             "weaponSubtype": 3
         }
     ],
-    "inventoryItems": [
-        {
-            "atkBonus": 0.0,
-            "count": 3,
-            "defBonus": 0.0,
-            "heal": 0.0,
-            "hpBonus": 0.0,
-            "id": 1,
-            "modifierId": 0,
-            "name": "薄汚れた布",
-            "speedBonus": 0.0,
-            "type": "MATERIAL",
-            "weaponSubtype": -1
-        },
-        {
-            "atkBonus": 0.0,
-            "count": 1,
-            "defBonus": 0.0,
-            "heal": 60.0,
-            "hpBonus": 0.0,
-            "id": 8,
-            "modifierId": 0,
-            "name": "ライフフラワー",
-            "speedBonus": 0.0,
-            "type": "CONSUMABLE",
-            "weaponSubtype": -1
-        },
-        {
-            "atkBonus": 0.0,
-            "count": 1,
-            "defBonus": 0.0,
-            "heal": 30.0,
-            "hpBonus": 0.0,
-            "id": 2,
-            "modifierId": 0,
-            "name": "ヒーリングキノコ",
-            "speedBonus": 0.0,
-            "type": "CONSUMABLE",
-            "weaponSubtype": -1
-        },
-        {
-            "atkBonus": 0.0,
-            "count": 2,
-            "defBonus": 0.0,
-            "heal": 0.0,
-            "hpBonus": 0.0,
-            "id": 9,
-            "modifierId": 0,
-            "name": "マナフラワー",
-            "speedBonus": 0.0,
-            "type": "CONSUMABLE",
-            "weaponSubtype": -1
-        },
-        {
-            "atkBonus": 0.0,
-            "count": 1,
-            "defBonus": 0.0,
-            "heal": 0.0,
-            "hpBonus": 0.0,
-            "id": 4,
-            "modifierId": 0,
-            "name": "マナキノコ",
-            "speedBonus": 0.0,
-            "type": "CONSUMABLE",
-            "weaponSubtype": -1
-        }
-    ],
-    "maxReachedFloor": 5,
+    "inventoryItems": [],
+    "maxReachedFloor": 108,
     "player": {
         "attackPower": 37.0,
         "defense": 61.5,
         "exp": 270,
         "expToNext": 757,
         "gold": 1087,
-        "hp": 410.0,
+        "hp": 200.0,
         "level": 6,
         "maxHp": 410.0,
         "skillPoints": 15
