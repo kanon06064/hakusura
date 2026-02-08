@@ -14,7 +14,6 @@ public:
     int gold;
     bool isAttacking;
 
-    // Åyí«â¡ÅzÉXÉLÉãèÛë‘ä«óù
     float dashTimer, dashCooldownTimer;
     float smashCooldownTimer;
     float stealthTimer, stealthCooldownTimer;
@@ -22,6 +21,8 @@ public:
 
     WeaponType equippedWeapons[2], currentWeapon;
     ItemData equippedData[2];
+    ItemData equippedArmor[5]; // ñhãÔ
+
     std::vector<ItemData> inventoryItems;
     std::vector<ItemData> inventoryEquip;
     std::vector<SkillNode> skillTree;
@@ -34,20 +35,22 @@ public:
     void UseItem(int idx);
     void EquipWeapon(int invIdx, int slot);
     void UnequipWeapon(int slot);
+    void EquipArmor(int invIdx, int slot);
+    void UnequipArmor(int slot);
     void UnlockSkill(int id);
     bool IsSkillAvailable(int id);
-
-    // Åyí«â¡ÅzÉXÉLÉãî≠ìÆÉ`ÉFÉbÉN
     bool IsSkillUnlocked(SkillType type);
     float GetSkillCooldown(SkillType type);
     float GetSkillMaxCooldown(SkillType type);
+
+    void RecalculateStats();
 
     static std::string GetFullItemName(const ItemData& item);
     static float GetItemTotalAtkBonus(const ItemData& item);
 
 private:
     void PerformAttack(Vector3 ad, std::vector<Enemy>& enemies, Dungeon& d, EffectManager& fx);
-    void PerformSmash(Vector3 ad, std::vector<Enemy>& enemies, Dungeon& d, EffectManager& fx); // Åyí«â¡Åz
+    void PerformSmash(Vector3 ad, std::vector<Enemy>& enemies, Dungeon& d, EffectManager& fx);
     void LevelUp(EffectManager& fx);
     void InitSkillTree();
 };

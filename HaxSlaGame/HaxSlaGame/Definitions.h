@@ -14,91 +14,118 @@ const int MAX_ITEM_STACK = 99;
 const int MAX_EQUIP_INV = 20;
 
 // 列挙型
-enum GameState { STATE_HOME, STATE_DUNGEON };
+enum GameState { STATE_TITLE, STATE_HOME, STATE_DUNGEON };
 enum WeaponType { SWORD, SPEAR, AXE, BOW, WAND, NONE };
+enum ArmorType { HEAD, CHEST, GAUNTLET, LEGS, BOOTS };
 enum EnemyType { E_SWORD, E_SPEAR, E_AXE, E_ARCHER, E_MAGE, E_TRAP };
 enum EnemyState { STATE_PATROL, STATE_CHASE, STATE_ATTACK };
-enum MenuTab { EQUIP, SKILL, MAP_TAB, INVENTORY, DEBUG_TAB };
+enum MenuTab { EQUIP, SKILL, MAP_TAB, INVENTORY, DEBUG_TAB, SYSTEM_TAB };
 enum EffectType { FX_SLASH, FX_THRUST, FX_SMASH, FX_HIT };
-enum RoomType { RT_NORMAL, RT_SMALL, RT_LARGE, RT_TREASURE, RT_HEAL };
+enum RoomType { RT_NORMAL, RT_SMALL, RT_LARGE, RT_TREASURE, RT_HEAL, RT_BOSS };
+enum SkillType { SKILL_PASSIVE, SKILL_ACTIVE_DASH, SKILL_ACTIVE_SMASH, SKILL_ACTIVE_STEALTH };
 
-// 【追加】スキルタイプ
-enum SkillType {
-    SKILL_PASSIVE,
-    SKILL_ACTIVE_DASH,    // 高速移動
-    SKILL_ACTIVE_SMASH,   // 強攻撃
-    SKILL_ACTIVE_STEALTH  // 隠密
-};
-
-// 構造体
+// 構造体 (メンバ初期化を追加)
 struct Projectile {
-    Vector3 pos;
-    Vector3 vel;
-    float radius;
-    bool active;
-    int type;
-    bool isPlayer;
+    Vector3 pos = { 0.0f, 0.0f, 0.0f };
+    Vector3 vel = { 0.0f, 0.0f, 0.0f };
+    float radius = 0.0f;
+    bool active = false;
+    int type = 0;
+    bool isPlayer = false;
 };
 
 struct VisualEffect {
-    Vector3 pos;
-    Vector3 dir;
-    EffectType type;
-    float life;
-    float maxLife;
-    Color color;
+    Vector3 pos = { 0.0f, 0.0f, 0.0f };
+    Vector3 dir = { 0.0f, 0.0f, 0.0f };
+    EffectType type = FX_SLASH;
+    float life = 0.0f;
+    float maxLife = 0.0f;
+    Color color = WHITE;
 };
 
 struct DamageText {
-    Vector3 pos;
-    int amount;
-    float life;
+    Vector3 pos = { 0.0f, 0.0f, 0.0f };
+    int amount = 0;
+    float life = 0.0f;
 };
 
 struct GameLog {
-    std::string message;
-    float life;
-    Color color;
+    std::string message = "";
+    float life = 0.0f;
+    Color color = WHITE;
 };
 
 struct Modifier {
-    int id;
-    std::string name;
-    float atkBonusAdd;
+    int id = 0;
+    std::string name = "";
+    float atk = 0.0f;
+    float def = 0.0f;
+    float hp = 0.0f;
+    float spd = 0.0f;
 };
 
 struct ItemData {
     int id = -1;
     std::string name = "";
     std::string type = "";
-    float heal = 0.0f, atkBonus = 0.0f, dropChance = 0.0f;
+    float heal = 0.0f;
+    float atkBonus = 0.0f;
+    float defBonus = 0.0f;
+    float hpBonus = 0.0f;
+    float speedBonus = 0.0f;
+    float dropChance = 0.0f;
     int weaponSubtype = -1;
     int count = 1;
     int modifierId = 0;
 };
 
 struct DroppedItem {
-    Vector3 pos;
+    Vector3 pos = { 0.0f, 0.0f, 0.0f };
     ItemData data;
 };
 
 struct EnemyData {
-    int id = 0; std::string name = ""; int type = 0;
-    float hp = 0, speed = 0, detect = 12.0f, atkRange = 2.0f;
-    int minFloor = 1, exp = 20; std::vector<int> drops;
+    int id = 0;
+    std::string name = "";
+    int type = 0;
+    float hp = 0.0f;
+    float speed = 0.0f;
+    float detect = 12.0f;
+    float atkRange = 2.0f;
+    int minFloor = 1;
+    int exp = 20;
+    std::vector<int> drops;
     int gold = 0;
 };
 
 struct SkillNode {
-    int id;
-    std::string name;
-    Vector2 uiPos;
+    int id = 0;
+    std::string name = "";
+    Vector2 uiPos = { 0.0f, 0.0f };
     std::vector<int> reqIds;
     bool unlocked = false;
     int cost = 1;
-    float atkAdd = 0, defAdd = 0, hpAdd = 0;
-
-    // 【追加】スキル属性
+    float atkAdd = 0.0f;
+    float defAdd = 0.0f;
+    float hpAdd = 0.0f;
     SkillType type = SKILL_PASSIVE;
-    float maxCooldown = 0.0f; // アクティブスキル用
+    float maxCooldown = 0.0f;
+};
+
+struct SaveHeader {
+    bool exists = false;
+    int playerLevel = 1;
+    int floor = 0;
+    std::string timestamp = "";
+};
+
+struct CraftMaterial {
+    int itemId = 0;
+    int count = 0;
+};
+
+struct CraftRecipe {
+    int resultItemId = 0;
+    std::vector<CraftMaterial> materials;
+    int cost = 0;
 };

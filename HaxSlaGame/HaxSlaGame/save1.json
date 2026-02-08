@@ -1,0 +1,195 @@
+{
+    "armor": [
+        {
+            "atkBonus": 0.0,
+            "count": 1,
+            "defBonus": 10.0,
+            "heal": 0.0,
+            "hpBonus": 50.0,
+            "id": 530,
+            "modifierId": 0,
+            "name": "オリハルコンヘルム",
+            "speedBonus": 0.0,
+            "type": "ARMOR",
+            "weaponSubtype": 0
+        },
+        {
+            "atkBonus": 0.0,
+            "count": 1,
+            "defBonus": 15.0,
+            "heal": 0.0,
+            "hpBonus": 100.0,
+            "id": 531,
+            "modifierId": 0,
+            "name": "オリハルコンメイル",
+            "speedBonus": 0.0,
+            "type": "ARMOR",
+            "weaponSubtype": 1
+        },
+        {
+            "atkBonus": 15.0,
+            "count": 1,
+            "defBonus": 8.0,
+            "heal": 0.0,
+            "hpBonus": 0.0,
+            "id": 532,
+            "modifierId": 0,
+            "name": "オリハルコンアーム",
+            "speedBonus": 0.0,
+            "type": "ARMOR",
+            "weaponSubtype": 2
+        },
+        {
+            "atkBonus": 0.0,
+            "count": 1,
+            "defBonus": 10.0,
+            "heal": 0.0,
+            "hpBonus": 60.0,
+            "id": 533,
+            "modifierId": 0,
+            "name": "オリハルコンレッグ",
+            "speedBonus": 0.0,
+            "type": "ARMOR",
+            "weaponSubtype": 3
+        },
+        {
+            "atkBonus": 0.0,
+            "count": 1,
+            "defBonus": 6.0,
+            "heal": 0.0,
+            "hpBonus": 0.0,
+            "id": 534,
+            "modifierId": 0,
+            "name": "オリハルコンブーツ",
+            "speedBonus": 0.05000000074505806,
+            "type": "ARMOR",
+            "weaponSubtype": 4
+        }
+    ],
+    "equipped0": {
+        "atkBonus": 5.0,
+        "count": 1,
+        "defBonus": 0.0,
+        "heal": 0.0,
+        "hpBonus": 0.0,
+        "id": 0,
+        "modifierId": 0,
+        "name": "木の剣",
+        "speedBonus": 0.0,
+        "type": "EQUIP",
+        "weaponSubtype": 0
+    },
+    "equipped1": {
+        "atkBonus": 3.0,
+        "count": 1,
+        "defBonus": 0.0,
+        "heal": 0.0,
+        "hpBonus": 0.0,
+        "id": 100,
+        "modifierId": 0,
+        "name": "木の弓",
+        "speedBonus": 0.0,
+        "type": "EQUIP",
+        "weaponSubtype": 3
+    },
+    "floor": 0,
+    "inventoryEquip": [
+        {
+            "atkBonus": 4.0,
+            "count": 1,
+            "defBonus": 0.0,
+            "heal": 0.0,
+            "hpBonus": 0.0,
+            "id": 104,
+            "modifierId": 4,
+            "name": "略奪者の弓",
+            "speedBonus": 0.0,
+            "type": "EQUIP",
+            "weaponSubtype": 3
+        }
+    ],
+    "inventoryItems": [
+        {
+            "atkBonus": 0.0,
+            "count": 3,
+            "defBonus": 0.0,
+            "heal": 0.0,
+            "hpBonus": 0.0,
+            "id": 1,
+            "modifierId": 0,
+            "name": "薄汚れた布",
+            "speedBonus": 0.0,
+            "type": "MATERIAL",
+            "weaponSubtype": -1
+        },
+        {
+            "atkBonus": 0.0,
+            "count": 1,
+            "defBonus": 0.0,
+            "heal": 60.0,
+            "hpBonus": 0.0,
+            "id": 8,
+            "modifierId": 0,
+            "name": "ライフフラワー",
+            "speedBonus": 0.0,
+            "type": "CONSUMABLE",
+            "weaponSubtype": -1
+        },
+        {
+            "atkBonus": 0.0,
+            "count": 1,
+            "defBonus": 0.0,
+            "heal": 30.0,
+            "hpBonus": 0.0,
+            "id": 2,
+            "modifierId": 0,
+            "name": "ヒーリングキノコ",
+            "speedBonus": 0.0,
+            "type": "CONSUMABLE",
+            "weaponSubtype": -1
+        },
+        {
+            "atkBonus": 0.0,
+            "count": 2,
+            "defBonus": 0.0,
+            "heal": 0.0,
+            "hpBonus": 0.0,
+            "id": 9,
+            "modifierId": 0,
+            "name": "マナフラワー",
+            "speedBonus": 0.0,
+            "type": "CONSUMABLE",
+            "weaponSubtype": -1
+        },
+        {
+            "atkBonus": 0.0,
+            "count": 1,
+            "defBonus": 0.0,
+            "heal": 0.0,
+            "hpBonus": 0.0,
+            "id": 4,
+            "modifierId": 0,
+            "name": "マナキノコ",
+            "speedBonus": 0.0,
+            "type": "CONSUMABLE",
+            "weaponSubtype": -1
+        }
+    ],
+    "maxReachedFloor": 5,
+    "player": {
+        "attackPower": 37.0,
+        "defense": 61.5,
+        "exp": 270,
+        "expToNext": 757,
+        "gold": 1087,
+        "hp": 410.0,
+        "level": 6,
+        "maxHp": 410.0,
+        "skillPoints": 15
+    },
+    "storageEquip": [],
+    "storageItems": [],
+    "unlockedSkills": [
+        0
+    ]
+}

@@ -167,6 +167,7 @@
     "heal": 200,
     "dropChance": 0.1
   },
+
   {
     "id": 100,
     "name": "木の弓",
@@ -215,6 +216,7 @@
     "weaponSubtype": 4,
     "dropChance": 0.05
   },
+
   {
     "id": 201,
     "name": "魂のナイトブレード",
@@ -255,6 +257,7 @@
     "weaponSubtype": 4,
     "dropChance": 0.03
   },
+
   {
     "id": 301,
     "name": "魔鋼鉄の剣",
@@ -295,6 +298,7 @@
     "weaponSubtype": 4,
     "dropChance": 0.015
   },
+
   {
     "id": 401,
     "name": "機神の聖剣",
@@ -334,5 +338,235 @@
     "atkBonus": 120,
     "weaponSubtype": 4,
     "dropChance": 0.005
+  },
+
+  {
+    "id": 500,
+    "name": "革の帽子",
+    "type": "ARMOR",
+    "weaponSubtype": 0,
+    "defBonus": 1,
+    "hpBonus": 5,
+    "dropChance": 0
+  },
+  {
+    "id": 501,
+    "name": "革の鎧",
+    "type": "ARMOR",
+    "weaponSubtype": 1,
+    "defBonus": 2,
+    "hpBonus": 10,
+    "dropChance": 0
+  },
+  {
+    "id": 502,
+    "name": "革の手袋",
+    "type": "ARMOR",
+    "weaponSubtype": 2,
+    "defBonus": 1,
+    "atkBonus": 1,
+    "dropChance": 0
+  },
+  {
+    "id": 503,
+    "name": "革のレギンス",
+    "type": "ARMOR",
+    "weaponSubtype": 3,
+    "defBonus": 1,
+    "hpBonus": 5,
+    "dropChance": 0
+  },
+  {
+    "id": 504,
+    "name": "革のブーツ",
+    "type": "ARMOR",
+    "weaponSubtype": 4,
+    "defBonus": 1,
+    "speedBonus": 0.01,
+    "dropChance": 0
+  },
+
+  {
+    "id": 510,
+    "name": "ボーンヘルム",
+    "type": "ARMOR",
+    "weaponSubtype": 0,
+    "defBonus": 3,
+    "hpBonus": 10,
+    "dropChance": 0
+  },
+  {
+    "id": 511,
+    "name": "ボーンメイル",
+    "type": "ARMOR",
+    "weaponSubtype": 1,
+    "defBonus": 5,
+    "hpBonus": 20,
+    "dropChance": 0
+  },
+  {
+    "id": 512,
+    "name": "ボーンガントレット",
+    "type": "ARMOR",
+    "weaponSubtype": 2,
+    "defBonus": 2,
+    "atkBonus": 3,
+    "dropChance": 0
+  },
+  {
+    "id": 513,
+    "name": "ボーンレギンス",
+    "type": "ARMOR",
+    "weaponSubtype": 3,
+    "defBonus": 3,
+    "hpBonus": 10,
+    "dropChance": 0
+  },
+  {
+    "id": 514,
+    "name": "ボーングリーブ",
+    "type": "ARMOR",
+    "weaponSubtype": 4,
+    "defBonus": 2,
+    "speedBonus": 0.01,
+    "dropChance": 0
+  },
+
+  {
+    "id": 520,
+    "name": "封魔の冠",
+    "type": "ARMOR",
+    "weaponSubtype": 0,
+    "defBonus": 5,
+    "hpBonus": 20,
+    "dropChance": 0
+  },
+  {
+    "id": 521,
+    "name": "封魔の装束",
+    "type": "ARMOR",
+    "weaponSubtype": 1,
+    "defBonus": 8,
+    "hpBonus": 50,
+    "dropChance": 0
+  },
+  {
+    "id": 522,
+    "name": "封魔の籠手",
+    "type": "ARMOR",
+    "weaponSubtype": 2,
+    "defBonus": 4,
+    "atkBonus": 8,
+    "dropChance": 0
+  },
+  {
+    "id": 523,
+    "name": "封魔の脚衣",
+    "type": "ARMOR",
+    "weaponSubtype": 3,
+    "defBonus": 5,
+    "hpBonus": 25,
+    "dropChance": 0
+  },
+  {
+    "id": 524,
+    "name": "封魔の靴",
+    "type": "ARMOR",
+    "weaponSubtype": 4,
+    "defBonus": 3,
+    "speedBonus": 0.03,
+    "dropChance": 0
+  },
+
+  {
+    "id": 530,
+    "name": "オリハルコンヘルム",
+    "type": "ARMOR",
+    "weaponSubtype": 0,
+    "defBonus": 10,
+    "hpBonus": 50,
+    "dropChance": 0
+  },
+  {
+    "id": 531,
+    "name": "オリハルコンメイル",
+    "type": "ARMOR",
+    "weaponSubtype": 1,
+    "defBonus": 15,
+    "hpBonus": 100,
+    "dropChance": 0
+  },
+  {
+    "id": 532,
+    "name": "オリハルコンアーム",
+    "type": "ARMOR",
+    "weaponSubtype": 2,
+    "defBonus": 8,
+    "atkBonus": 15,
+    "dropChance": 0
+  },
+  {
+    "id": 533,
+    "name": "オリハルコンレッグ",
+    "type": "ARMOR",
+    "weaponSubtype": 3,
+    "defBonus": 10,
+    "hpBonus": 60,
+    "dropChance": 0
+  },
+  {
+    "id": 534,
+    "name": "オリハルコンブーツ",
+    "type": "ARMOR",
+    "weaponSubtype": 4,
+    "defBonus": 6,
+    "speedBonus": 0.05,
+    "dropChance": 0
+  },
+
+  {
+    "id": 540,
+    "name": "アダマンヘルム",
+    "type": "ARMOR",
+    "weaponSubtype": 0,
+    "defBonus": 15,
+    "hpBonus": 80,
+    "dropChance": 0
+  },
+  {
+    "id": 541,
+    "name": "アダマンアーマー",
+    "type": "ARMOR",
+    "weaponSubtype": 1,
+    "defBonus": 25,
+    "hpBonus": 150,
+    "dropChance": 0
+  },
+  {
+    "id": 542,
+    "name": "アダマンガントレット",
+    "type": "ARMOR",
+    "weaponSubtype": 2,
+    "defBonus": 12,
+    "atkBonus": 25,
+    "dropChance": 0
+  },
+  {
+    "id": 543,
+    "name": "アダマンレギンス",
+    "type": "ARMOR",
+    "weaponSubtype": 3,
+    "defBonus": 15,
+    "hpBonus": 100,
+    "dropChance": 0
+  },
+  {
+    "id": 544,
+    "name": "アダマンブーツ",
+    "type": "ARMOR",
+    "weaponSubtype": 4,
+    "defBonus": 10,
+    "speedBonus": 0.02,
+    "dropChance": 0
   }
 ]

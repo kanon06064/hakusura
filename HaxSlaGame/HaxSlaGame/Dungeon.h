@@ -3,12 +3,7 @@
 #include "raymath.h"
 #include <vector>
 
-struct Room {
-    int x, y, width, height;
-    RoomType type;
-    bool Contains(int gx, int gy);
-    Vector3 GetCenter() const;
-};
+struct Room { int x, y, width, height; RoomType type; bool Contains(int gx, int gy); Vector3 GetCenter() const; };
 
 class Dungeon {
 public:
@@ -16,6 +11,8 @@ public:
     Vector3 portalPos;
     Vector3 healStationPos;
     Vector3 reforgeStationPos;
+    Vector3 craftStationPos; // クラフトステーション
+    Vector3 bossSpawnPos;
     std::vector<Vector3> treasureSpots;
 
     bool isHome;
@@ -34,8 +31,12 @@ public:
     Vector3 GetRandomFloorPos();
 
 private:
-    int map[MAX_MAP_WIDTH][MAX_MAP_HEIGHT];
-    bool discovered[MAX_MAP_WIDTH][MAX_MAP_HEIGHT];
+    std::vector<std::vector<int>> map;
+    std::vector<std::vector<bool>> discovered;
     std::vector<Room> rooms;
+    void GenerateRestFloor();
+    void GenerateBossFloor();
+    void GenerateNormalFloor(int floor);
+    void OptimizeMap();
     void DigCorridor(int x1, int y1, int x2, int y2);
 };

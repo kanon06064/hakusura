@@ -1,0 +1,31 @@
+﻿[
+  { "resultId": 500, "cost": 50, "materials": [ { "id": 5, "count": 2 } ] },
+  { "resultId": 501, "cost": 100, "materials": [ { "id": 5, "count": 5 } ] },
+  { "resultId": 502, "cost": 50, "materials": [ { "id": 5, "count": 2 } ] },
+  { "resultId": 503, "cost": 80, "materials": [ { "id": 5, "count": 3 } ] },
+  { "resultId": 504, "cost": 50, "materials": [ { "id": 5, "count": 2 } ] },
+
+  { "resultId": 510, "cost": 150, "materials": [ { "id": 6, "count": 3 }, { "id": 7, "count": 2 } ] },
+  { "resultId": 511, "cost": 300, "materials": [ { "id": 6, "count": 5 }, { "id": 7, "count": 5 } ] },
+  { "resultId": 512, "cost": 150, "materials": [ { "id": 6, "count": 2 }, { "id": 7, "count": 3 } ] },
+  { "resultId": 513, "cost": 200, "materials": [ { "id": 6, "count": 3 }, { "id": 7, "count": 3 } ] },
+  { "resultId": 514, "cost": 150, "materials": [ { "id": 6, "count": 2 }, { "id": 7, "count": 2 } ] },
+
+  { "resultId": 520, "cost": 500, "materials": [ { "id": 16, "count": 2 }, { "id": 17, "count": 1 } ] },
+  { "resultId": 521, "cost": 1000, "materials": [ { "id": 16, "count": 5 }, { "id": 17, "count": 3 } ] },
+  { "resultId": 522, "cost": 500, "materials": [ { "id": 16, "count": 2 }, { "id": 17, "count": 2 } ] },
+  { "resultId": 523, "cost": 800, "materials": [ { "id": 16, "count": 3 }, { "id": 17, "count": 2 } ] },
+  { "resultId": 524, "cost": 500, "materials": [ { "id": 16, "count": 2 }, { "id": 17, "count": 1 } ] },
+
+  { "resultId": 530, "cost": 2000, "materials": [ { "id": 20, "count": 3 } ] },
+  { "resultId": 531, "cost": 5000, "materials": [ { "id": 20, "count": 8 } ] },
+  { "resultId": 532, "cost": 2000, "materials": [ { "id": 20, "count": 3 } ] },
+  { "resultId": 533, "cost": 3500, "materials": [ { "id": 20, "count": 5 } ] },
+  { "resultId": 534, "cost": 2000, "materials": [ { "id": 20, "count": 3 } ] },
+
+  { "resultId": 540, "cost": 3000, "materials": [ { "id": 21, "count": 3 } ] },
+  { "resultId": 541, "cost": 8000, "materials": [ { "id": 21, "count": 8 } ] },
+  { "resultId": 542, "cost": 3000, "materials": [ { "id": 21, "count": 3 } ] },
+  { "resultId": 543, "cost": 5000, "materials": [ { "id": 21, "count": 5 } ] },
+  { "resultId": 544, "cost": 3000, "materials": [ { "id": 21, "count": 3 } ] }
+]

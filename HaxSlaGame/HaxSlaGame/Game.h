@@ -12,6 +12,7 @@ public:
     Game();
     ~Game();
     void Run();
+    void WarpToFloor(int targetFloor);
 
 private:
     void InitGame();
@@ -20,6 +21,9 @@ private:
     void SpawnEnemies(int count);
     void NextFloor();
     void ReturnHome();
+    void SaveCurrentSlot();
+    void LoadAndStart(int slot);
+    void NewGameAndStart(int slot);
 
     int screenWidth = 1280;
     int screenHeight = 720;
@@ -37,11 +41,18 @@ private:
     Camera3D camera;
     GameState state;
     int floor;
+    int maxReachedFloor;
+    int currentSlot;
+
     bool debugMode;
     bool showMenu;
     bool showStorage;
     bool showReforgeMenu;
+    bool showWarpMenu;
+    bool showCraftMenu; // Åyí«â¡Åz
     bool showPrompt;
     MenuTab currentTab;
     float sceneTimer;
+
+    bool bossDefeated;
 };
