@@ -106,9 +106,36 @@
             "speedBonus": 0.0,
             "type": "EQUIP",
             "weaponSubtype": 3
+        },
+        {
+            "atkBonus": 5.0,
+            "count": 1,
+            "defBonus": 0.0,
+            "heal": 0.0,
+            "hpBonus": 0.0,
+            "id": 0,
+            "modifierId": 0,
+            "name": "木の剣",
+            "speedBonus": 0.0,
+            "type": "EQUIP",
+            "weaponSubtype": 0
         }
     ],
-    "inventoryItems": [],
+    "inventoryItems": [
+        {
+            "atkBonus": 0.0,
+            "count": 9,
+            "defBonus": 0.0,
+            "heal": 0.0,
+            "hpBonus": 0.0,
+            "id": 5,
+            "modifierId": 0,
+            "name": "獣の皮",
+            "speedBonus": 0.0,
+            "type": "MATERIAL",
+            "weaponSubtype": -1
+        }
+    ],
     "maxReachedFloor": 108,
     "player": {
         "attackPower": 37.0,

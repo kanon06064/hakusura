@@ -21,17 +21,18 @@ private:
     void SpawnEnemies(int count);
     void NextFloor();
     void ReturnHome();
-
-    // 【追加】ゲームオーバー関連
     void ApplyDeathPenalty();
-    void DrawGameOver();
-
     void SaveCurrentSlot();
     void LoadAndStart(int slot);
     void NewGameAndStart(int slot);
 
-    int screenWidth = 1280;
-    int screenHeight = 720;
+    // 【修正】画面サイズとレンダーターゲット
+    int windowWidth;
+    int windowHeight;
+    int gameWidth;
+    int gameHeight;
+    RenderTexture2D renderTarget;
+
     Font font;
 
     Dungeon dungeon;
@@ -59,5 +60,6 @@ private:
     MenuTab currentTab;
     float sceneTimer;
 
+    float menuInputDelay;
     bool bossDefeated;
 };
