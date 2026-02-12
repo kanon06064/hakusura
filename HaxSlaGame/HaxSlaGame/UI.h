@@ -23,8 +23,11 @@ public:
     static int DrawPrompt(const char* label, int sw, int sh, Font font);
     static void DrawLogs(std::vector<GameLog>& logs, class Player& p, Camera3D& cam, Font font, int screenW, int screenH);
 
-    // 【修正】DrawNearbyItems を削除し、DrawOverheadUI を追加
+    // DrawNearbyItems を廃止し、DrawOverheadUI に統合
     static void DrawOverheadUI(class Player& p, std::vector<class Enemy>& enemies, std::vector<DroppedItem>& di, class Dungeon& d, Camera3D& cam, Font font, int screenW, int screenH);
+
+    // 座標変換ヘルパー
+    static Vector2 GetWorldToScreenScaled(Vector3 position, Camera3D camera, int width, int height);
 
     static int itemPage, equipPage, debugPage, storageInvPage, storageBoxPage, itemSubTab;
 
@@ -35,6 +38,7 @@ private:
     static int warpScroll;
     static int craftingScroll;
     static Vector2 skillOffset;
+    static Vector2 mapOffset; // マップ移動用
 
     static bool showDetail;
     static ItemData detailItem;
@@ -43,6 +47,8 @@ private:
     static int storageSelectedIndex;
     static bool storageIsDeposit;
     static int storageTransferCount;
+
+    static int deleteTargetSlot; // 削除確認用
 
     static bool DrawButton(Rectangle rect, const char* label, Font font, Color baseCol, bool active = true);
 };

@@ -7,12 +7,14 @@
 #include "raymath.h"
 #include <math.h>
 
+// 静的メンバ変数の初期化
 int UI::itemPage = 0; int UI::equipPage = 0; int UI::debugPage = 0;
 int UI::storageInvPage = 0; int UI::storageBoxPage = 0; int UI::itemSubTab = 0;
 int UI::reforgeItemIdx = -1;
 int UI::warpScroll = 0;
 int UI::craftingScroll = 0;
 Vector2 UI::skillOffset = { 0.0f, 0.0f };
+Vector2 UI::mapOffset = { 0.0f, 0.0f };
 
 bool UI::showDetail = false;
 ItemData UI::detailItem;
@@ -21,6 +23,21 @@ double UI::timeOnOpen = 0.0;
 int UI::storageSelectedIndex = -1;
 bool UI::storageIsDeposit = true;
 int UI::storageTransferCount = 1;
+int UI::deleteTargetSlot = 0;
+
+// 解像度指定でワールド座標をスクリーン座標に変換する関数
+Vector2 UI::GetWorldToScreenScaled(Vector3 position, Camera3D camera, int width, int height) {
+    Matrix matView = GetCameraMatrix(camera);
+    Matrix matProj = MatrixPerspective(camera.fovy * DEG2RAD, (double)width / (double)height, 0.01, 1000.0);
+    Matrix matViewProj = MatrixMultiply(matView, matProj);
+
+    Vector3 result = Vector3Transform(position, matViewProj);
+
+    float x = (result.x * 0.5f + 0.5f) * width;
+    float y = (1.0f - (result.y * 0.5f + 0.5f)) * height;
+
+    return { x, y };
+}
 
 bool UI::DrawButton(Rectangle r, const char* label, Font font, Color col, bool active) {
     if (!active) {
@@ -83,15 +100,43 @@ int UI::DrawTitleScreen(Font font, int screenW, int screenH) {
     const char* title = "3D Hack & Slash";
     Vector2 tSize = MeasureTextEx(font, title, 100, 2);
     DrawTextEx(font, title, { (float)(screenW - tSize.x) / 2, 150.0f }, 100, 2, GOLD);
+
+    bool active = (deleteTargetSlot == 0);
     int selectedSlot = 0;
+
     for (int i = 1; i <= 3; i++) {
         SaveHeader h = DataManager::GetSaveHeader(i);
         float y = 450.0f + (float)(i - 1) * 140.0f;
-        Rectangle r = { (float)screenW / 2 - 300, y, 600.0f, 100.0f };
+
+        Rectangle rMain = { (float)screenW / 2 - 300, y, 500.0f, 100.0f };
         std::string label; Color c;
         if (h.exists) { label = TextFormat("Slot %d: Lv.%d  Floor %d", i, h.playerLevel, h.floor); c = DARKGREEN; }
         else { label = TextFormat("Slot %d: (NO DATA)", i); c = DARKGRAY; }
-        if (DrawButton(r, label.c_str(), font, c, true)) { selectedSlot = i; }
+
+        if (DrawButton(rMain, label.c_str(), font, c, active)) { selectedSlot = i; }
+
+        if (h.exists) {
+            Rectangle rDel = { (float)screenW / 2 + 220, y, 100.0f, 100.0f };
+            if (DrawButton(rDel, "削除", font, RED, active)) { deleteTargetSlot = i; }
+        }
+    }
+
+    if (deleteTargetSlot != 0) {
+        DrawRectangle(0, 0, screenW, screenH, Fade(BLACK, 0.7f));
+        int dw = 600, dh = 300;
+        int dx = (screenW - dw) / 2, dy = (screenH - dh) / 2;
+        DrawRectangle(dx, dy, dw, dh, DARKGRAY); DrawRectangleLines(dx, dy, dw, dh, RED);
+
+        DrawTextEx(font, "データを削除しますか？", { (float)dx + 50, (float)dy + 60 }, 40, 1, WHITE);
+        DrawTextEx(font, "この操作は取り消せません", { (float)dx + 100, (float)dy + 120 }, 24, 1, RED);
+
+        if (DrawButton({ (float)dx + 50, (float)dy + 200, 200, 60 }, "はい", font, RED, true)) {
+            DataManager::DeleteSaveData(deleteTargetSlot);
+            deleteTargetSlot = 0;
+        }
+        if (DrawButton({ (float)dx + 350, (float)dy + 200, 200, 60 }, "いいえ", font, BLUE, true)) {
+            deleteTargetSlot = 0;
+        }
     }
     return selectedSlot;
 }
@@ -103,6 +148,7 @@ void UI::DrawHUD(Player& p, std::vector<Enemy>& enemies, Dungeon& d, Camera3D& c
     DrawRectangle(30, 30, (int)fSize.x + 40, 60, Fade(BLACK, 0.6f));
     DrawTextEx(font, floorText.c_str(), { 50, 36 }, 48, 1, WHITE);
 
+    // 右上のリスト型HPバー
     int listCount = 0;
     for (auto& e : enemies) {
         if (e.hudTimer > 0) {
@@ -117,17 +163,19 @@ void UI::DrawHUD(Player& p, std::vector<Enemy>& enemies, Dungeon& d, Camera3D& c
 
     DrawRectangle(20, screenH - 220, 500, 200, Fade(BLACK, 0.6f));
     DrawTextEx(font, TextFormat("Lv: %d   EXP: %d/%d", p.level, p.exp, p.expToNext), { 40, (float)screenH - 200 }, 36, 1, SKYBLUE);
-
     DrawRectangle(40, screenH - 150, 460, 30, DARKGRAY);
     DrawRectangle(40, screenH - 150, (int)(460 * (fmaxf(0.0f, p.hp) / p.maxHp)), 30, GREEN);
     DrawTextEx(font, TextFormat("HP: %.0f/%.0f", p.hp, p.maxHp), { 50, (float)screenH - 152 }, 24, 1, WHITE);
-
     DrawTextEx(font, TextFormat("ATK: %.1f  DEF: %.1f", p.attackPower, p.defense), { 40, (float)screenH - 100 }, 32, 1, WHITE);
     DrawTextEx(font, TextFormat("Gold: %d  SP: %d", p.gold, p.skillPoints), { 40, (float)screenH - 60 }, 32, 1, WHITE);
 
-    int iconSize = 100; int startX = screenW - 350; int startY = screenH - 130;
+    int iconSize = 100;
+    int startX = screenW - 350;
+    int startY = screenH - 130;
+
     struct SkillIcon { SkillType type; const char* label; const char* key; };
     SkillIcon icons[] = { { SKILL_ACTIVE_DASH, "DASH", "1" }, { SKILL_ACTIVE_SMASH, "SMASH", "2" }, { SKILL_ACTIVE_STEALTH, "STEALTH", "3" } };
+
     for (int i = 0; i < 3; i++) {
         int x = startX + i * (iconSize + 15); bool unlocked = p.IsSkillUnlocked(icons[i].type); Color baseCol = unlocked ? DARKBLUE : DARKGRAY;
         DrawRectangle(x, startY, iconSize, iconSize, baseCol); DrawRectangleLines(x, startY, iconSize, iconSize, RAYWHITE); DrawTextEx(font, icons[i].key, { (float)x + 5, (float)startY + 5 }, 24, 1, WHITE);
@@ -202,7 +250,10 @@ void UI::DrawMenu(Player& p, Dungeon& d, MenuTab& tab, Font font, int screenW, i
         if (active && IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) { Vector2 delta = GetMouseDelta(); skillOffset = Vector2Add(skillOffset, delta); }
         BeginScissorMode((int)viewArea.x, (int)viewArea.y, (int)viewArea.width, (int)viewArea.height);
         for (auto& node : p.skillTree) { Vector2 startPos = Vector2Add(node.uiPos, skillOffset); for (int reqId : node.reqIds) { Vector2 endPos = Vector2Add(p.skillTree[reqId].uiPos, skillOffset); DrawLineEx(startPos, endPos, 4, node.unlocked ? GOLD : DARKGRAY); } }
-        for (int i = 0; i < (int)p.skillTree.size(); i++) { auto& node = p.skillTree[i]; bool available = p.IsSkillAvailable(i); Vector2 drawPos = Vector2Add(node.uiPos, skillOffset); Color nodeColor = node.unlocked ? YELLOW : (available ? GREEN : DARKGRAY); if (node.type != SKILL_PASSIVE) { nodeColor = node.unlocked ? ORANGE : (available ? PURPLE : DARKGRAY); } DrawPoly(drawPos, 6, 55, 0, nodeColor); DrawPolyLines(drawPos, 6, 55, 0, RAYWHITE); DrawTextEx(font, node.name.c_str(), { drawPos.x - 40, drawPos.y - 12 }, 16, 1, node.unlocked ? BLACK : WHITE); if (!node.unlocked) { DrawTextEx(font, TextFormat("SP:%d", node.cost), { drawPos.x - 25, drawPos.y + 25 }, 16, 1, WHITE); } if (CheckCollisionPointRec(GetMousePosition(), viewArea)) { if (active && available && CheckCollisionPointCircle(GetMousePosition(), drawPos, 55) && IsMouseButtonPressed(0)) { p.UnlockSkill(i); } } }
+        for (int i = 0; i < (int)p.skillTree.size(); i++) {
+            auto& node = p.skillTree[i]; bool available = p.IsSkillAvailable(i); Vector2 drawPos = Vector2Add(node.uiPos, skillOffset); Color nodeColor = node.unlocked ? YELLOW : (available ? GREEN : DARKGRAY); if (node.type != SKILL_PASSIVE) { nodeColor = node.unlocked ? ORANGE : (available ? PURPLE : DARKGRAY); } DrawPoly(drawPos, 6, 55, 0, nodeColor); DrawPolyLines(drawPos, 6, 55, 0, RAYWHITE); DrawTextEx(font, node.name.c_str(), { drawPos.x - 40, drawPos.y - 12 }, 16, 1, node.unlocked ? BLACK : WHITE); if (!node.unlocked) { DrawTextEx(font, TextFormat("SP:%d", node.cost), { drawPos.x - 25, drawPos.y + 25 }, 16, 1, WHITE); }
+            if (active && CheckCollisionPointRec(GetMousePosition(), viewArea)) { if (available && CheckCollisionPointCircle(GetMousePosition(), drawPos, 55) && IsMouseButtonPressed(0)) { p.UnlockSkill(i); } }
+        }
         EndScissorMode();
     }
     else if (tab == INVENTORY) {
@@ -229,9 +280,15 @@ void UI::DrawMenu(Player& p, Dungeon& d, MenuTab& tab, Font font, int screenW, i
         if (UI::DrawButton({ 120, 800, 120, 50 }, "<<", font, GRAY, active) && debugPage > 0) debugPage--; if (UI::DrawButton({ 260, 800, 120, 50 }, ">>", font, GRAY, active) && debugPage < maxP - 1) debugPage++; if (UI::DrawButton({ 900, 160, 200, 60 }, "SP +999", font, BLUE, active)) p.skillPoints += 999;
     }
     else if (tab == MAP_TAB) {
-        float sc = 15.0f; float offX = (screenW / 2.0f) - (d.currentWidth * sc / 2.0f); float offY = (screenH / 2.0f) - (d.currentHeight * sc / 2.0f); DrawRectangle((int)offX - 10, (int)offY - 10, (int)(d.currentWidth * sc) + 20, (int)(d.currentHeight * sc) + 20, BLACK);
+        float sc = 15.0f; float offX = (screenW / 2.0f) - (d.currentWidth * sc / 2.0f) + mapOffset.x; float offY = (screenH / 2.0f) - (d.currentHeight * sc / 2.0f) + mapOffset.y;
+        if (active && IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) { Vector2 delta = GetMouseDelta(); mapOffset = Vector2Add(mapOffset, delta); }
+        Rectangle viewArea = { 100, 150, (float)screenW - 200, (float)screenH - 250 };
+        BeginScissorMode((int)viewArea.x, (int)viewArea.y, (int)viewArea.width, (int)viewArea.height);
+        DrawRectangle((int)offX - 10, (int)offY - 10, (int)(d.currentWidth * sc) + 20, (int)(d.currentHeight * sc) + 20, BLACK);
         for (int y = 0; y < d.currentHeight; y++) for (int x = 0; x < d.currentWidth; x++) if (d.IsDiscovered((float)x * TILE_SIZE, (float)y * TILE_SIZE)) DrawRectangle((int)(offX + x * sc), (int)(offY + y * sc), (int)sc - 1, (int)sc - 1, d.IsWall((float)x * TILE_SIZE, (float)y * TILE_SIZE) ? GRAY : DARKGREEN);
         DrawCircle((int)(offX + (p.position.x / TILE_SIZE) * sc), (int)(offY + (p.position.z / TILE_SIZE) * sc), 8, RED);
+        EndScissorMode();
+        DrawTextEx(font, "右クリックドラッグで地図移動", { 150, (float)screenH - 80 }, 24, 1, LIGHTGRAY);
     }
     else if (tab == SYSTEM_TAB) {
         DrawTextEx(font, "システムメニュー", { 150, 150 }, 36, 1, WHITE);
@@ -412,7 +469,7 @@ int UI::DrawWarpMenu(int maxFloor, Font font, bool& isOpen, bool inputEnabled, i
 }
 
 void UI::DrawLogs(std::vector<GameLog>& logs, Player& p, Camera3D& cam, Font font, int screenW, int screenH) {
-    Vector3 headPos = Vector3Add(p.position, { 0, 2.0f, 0 }); Vector2 screenPos = GetWorldToScreen(headPos, cam);
+    Vector3 headPos = Vector3Add(p.position, { 0, 2.0f, 0 }); Vector2 screenPos = GetWorldToScreenScaled(headPos, cam, screenW, screenH);
     if (screenPos.x < 0 || screenPos.y < 0 || screenPos.x > screenW || screenPos.y > screenH) return;
     for (int i = 0; i < (int)logs.size(); i++) {
         float a = fminf(1.0f, logs[i].life * 2.0f); float moveUp = (4.0f - logs[i].life) * 15.0f; float yOffset = (i * 35.0f) + moveUp;
@@ -421,47 +478,57 @@ void UI::DrawLogs(std::vector<GameLog>& logs, Player& p, Camera3D& cam, Font fon
     }
 }
 
-// 【修正】DrawOverheadUI を実装 (DrawNearbyItems を置換)
+// 頭上UIの描画関数
 void UI::DrawOverheadUI(Player& p, std::vector<Enemy>& enemies, std::vector<DroppedItem>& di, Dungeon& d, Camera3D& cam, Font font, int screenW, int screenH) {
-    // 敵HPバー
+    // 1. 敵の頭上UI
     for (auto& e : enemies) {
         if (!d.IsDiscovered((float)e.position.x, (float)e.position.z)) continue;
         float dist = Vector3Distance(p.position, e.position);
         if (dist > 20.0f) continue;
+
         Vector3 headPos = Vector3Add(e.position, { 0.0f, 1.8f, 0.0f });
-        Vector2 screenPos = GetWorldToScreen(headPos, cam);
+        Vector2 screenPos = GetWorldToScreenScaled(headPos, cam, screenW, screenH);
+
         if (screenPos.x < -100 || screenPos.x > screenW + 100 || screenPos.y < -100 || screenPos.y > screenH + 100) continue;
-        float barWidth = 80.0f; float barHeight = 10.0f; float barX = screenPos.x - barWidth / 2; float barY = screenPos.y;
+
+        float barWidth = 80.0f; float barHeight = 10.0f;
+        float barX = screenPos.x - barWidth / 2; float barY = screenPos.y;
         DrawRectangle((int)barX - 2, (int)barY - 2, (int)barWidth + 4, (int)barHeight + 4, BLACK);
         DrawRectangle((int)barX, (int)barY, (int)barWidth, (int)barHeight, Fade(RED, 0.3f));
         float hpRatio = e.hp / e.maxHp;
         DrawRectangle((int)barX, (int)barY, (int)(barWidth * hpRatio), (int)barHeight, RED);
+
         std::string nameText = TextFormat("Lv.%d %s", e.level, e.data.name.c_str());
         Vector2 textSize = MeasureTextEx(font, nameText.c_str(), 20, 1);
         DrawTextEx(font, nameText.c_str(), { screenPos.x - textSize.x / 2, barY - 22 }, 20, 1, WHITE);
     }
-    // アイテム名
+
+    // 2. アイテムの頭上UI
     for (auto& item : di) {
         if (!d.IsDiscovered((float)item.pos.x, (float)item.pos.z)) continue;
         float dist = Vector3Distance(p.position, item.pos);
         if (dist > 15.0f) continue;
+
         Vector3 labelPos = Vector3Add(item.pos, { 0.0f, 0.8f, 0.0f });
-        Vector2 screenPos = GetWorldToScreen(labelPos, cam);
+        Vector2 screenPos = GetWorldToScreenScaled(labelPos, cam, screenW, screenH);
         if (screenPos.x < -50 || screenPos.x > screenW + 50 || screenPos.y < -50 || screenPos.y > screenH + 50) continue;
+
         std::string name = Player::GetFullItemName(item.data);
         Color nameCol = WHITE;
         if (item.data.type == "EQUIP" || item.data.type == "ARMOR") nameCol = GOLD;
         else if (item.data.type == "CONSUMABLE") nameCol = GREEN;
         else nameCol = LIGHTGRAY;
+
         int fontSize = (dist < 3.0f) ? 24 : 18;
         Vector2 textSize = MeasureTextEx(font, name.c_str(), (float)fontSize, 1);
         DrawRectangle((int)(screenPos.x - textSize.x / 2 - 4), (int)(screenPos.y - 4), (int)textSize.x + 8, (int)textSize.y + 8, Fade(BLACK, 0.4f));
         DrawTextEx(font, name.c_str(), { screenPos.x - textSize.x / 2, screenPos.y }, (float)fontSize, 1, nameCol);
     }
-    // プレイヤーHPバー
+
+    // 3. プレイヤーの頭上UI (HPバー)
     {
         Vector3 headPos = Vector3Add(p.position, { 0.0f, 2.2f, 0.0f });
-        Vector2 screenPos = GetWorldToScreen(headPos, cam);
+        Vector2 screenPos = GetWorldToScreenScaled(headPos, cam, screenW, screenH);
         if (screenPos.x >= 0 && screenPos.x <= screenW && screenPos.y >= 0 && screenPos.y <= screenH) {
             float barWidth = 100.0f; float barHeight = 12.0f;
             float barX = screenPos.x - barWidth / 2; float barY = screenPos.y;
@@ -470,11 +537,6 @@ void UI::DrawOverheadUI(Player& p, std::vector<Enemy>& enemies, std::vector<Drop
             DrawRectangle((int)barX, (int)barY, (int)(barWidth * hpRatio), (int)barHeight, GREEN);
         }
     }
-}
-
-// DrawNearbyItems は DrawOverheadUI に統合したためダミー化 (または削除)
-void UI::DrawNearbyItems(Player& p, std::vector<DroppedItem>& di, Dungeon& d, Camera3D& cam, Font font) {
-    // 削除済み
 }
 
 int UI::DrawPrompt(const char* label, int sw, int sh, Font font) {
