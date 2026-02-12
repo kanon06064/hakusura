@@ -180,27 +180,34 @@ void Game::Draw() {
         EndMode3D();
 
         fxManager.Draw2D(font, camera);
+        // UIには常に内部解像度(1920x1080)を渡す
         UI::DrawHUD(*player, enemies, dungeon, camera, floor, debugMode, font, gameWidth, gameHeight);
         UI::DrawLogs(logs, *player, camera, font, gameWidth, gameHeight);
-        UI::DrawNearbyItems(*player, droppedItems, dungeon, camera, font);
+        // 【修正】DrawOverheadUI を呼ぶ
+        UI::DrawOverheadUI(*player, enemies, droppedItems, dungeon, camera, font, gameWidth, gameHeight);
+
+        // 【重要】詳細ウィンドウが開いているかどうかをチェック
+        bool detailOpen = UI::IsDetailOpen();
+        bool inputEnabled = !detailOpen;
 
         if (showMenu) {
-            UI::DrawMenu(*player, dungeon, currentTab, font, gameWidth, gameHeight);
-            if (currentTab == SYSTEM_TAB) {
-                Rectangle saveBtn = { 120, 200, 200, 60 };
+            // 【修正】inputEnabledを渡す
+            UI::DrawMenu(*player, dungeon, currentTab, font, gameWidth, gameHeight, inputEnabled);
+            if (currentTab == SYSTEM_TAB && inputEnabled) {
+                Rectangle saveBtn = { 120, 250, 300, 80 };
                 if (CheckCollisionPointRec(GetMousePosition(), saveBtn) && IsMouseButtonPressed(0) && dungeon.isHome) { SaveCurrentSlot(); logs.insert(logs.begin(), { "GAME SAVED!", 3.0f, GREEN }); }
-                Rectangle titleBtn = { 120, 300, 200, 60 };
+                Rectangle titleBtn = { 120, 400, 300, 80 };
                 if (CheckCollisionPointRec(GetMousePosition(), titleBtn) && IsMouseButtonPressed(0)) state = STATE_TITLE;
             }
         }
-        if (showStorage) UI::DrawStorage(*player, font, showStorage, storageItems, storageEquip, gameWidth, gameHeight);
-        if (showReforgeMenu) UI::DrawReforgeMenu(*player, font, showReforgeMenu, gameWidth, gameHeight);
+        if (showStorage) UI::DrawStorage(*player, font, showStorage, storageItems, storageEquip, gameWidth, gameHeight, inputEnabled);
+        if (showReforgeMenu) UI::DrawReforgeMenu(*player, font, showReforgeMenu, gameWidth, gameHeight, inputEnabled);
 
         if (showWarpMenu) {
-            int sf = UI::DrawWarpMenu(maxReachedFloor, font, showWarpMenu, (menuInputDelay <= 0), gameWidth, gameHeight);
+            int sf = UI::DrawWarpMenu(maxReachedFloor, font, showWarpMenu, (menuInputDelay <= 0 && inputEnabled), gameWidth, gameHeight);
             if (sf > 0) WarpToFloor(sf);
         }
-        if (showCraftMenu) UI::DrawCraftingMenu(*player, font, showCraftMenu, gameWidth, gameHeight);
+        if (showCraftMenu) UI::DrawCraftingMenu(*player, font, showCraftMenu, gameWidth, gameHeight, inputEnabled);
 
         if (showPrompt) {
             const char* m = "UNKNOWN";
@@ -213,7 +220,7 @@ void Game::Draw() {
             else if (res == 2) { showPrompt = false; sceneTimer = 1.0f; }
         }
 
-        // 【追加】最前面に詳細ウィンドウを描画
+        // 【重要】詳細ウィンドウを一番最後に描画 (最前面)
         UI::DrawItemDetail(font, gameWidth, gameHeight);
     }
     EndTextureMode();

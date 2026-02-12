@@ -3,6 +3,7 @@
 #include "raylib.h"
 #include <fstream>
 #include <iostream>
+#include <cstdio> // remove関数用
 #include <nlohmann/json.hpp>
 
 using json = nlohmann::json;
@@ -13,7 +14,7 @@ std::map<std::string, std::string> DataManager::uiStrings;
 std::vector<Modifier> DataManager::modifiers;
 std::vector<CraftRecipe> DataManager::recipes;
 
-// JSON変換ヘルパー (staticにして内部リンケージにする)
+// JSON変換ヘルパー
 static json ItemToJson(const ItemData& item) {
     return {
         {"id", item.id}, {"name", item.name}, {"type", item.type},
@@ -142,6 +143,12 @@ bool DataManager::LoadGame(int slot, Player* p, int& currentFloor, int& maxReach
         return true;
     }
     catch (...) { return false; }
+}
+
+// 【追加】データ削除
+void DataManager::DeleteSaveData(int slot) {
+    std::string filename = "save" + std::to_string(slot) + ".json";
+    remove(filename.c_str());
 }
 
 SaveHeader DataManager::GetSaveHeader(int slot) {
