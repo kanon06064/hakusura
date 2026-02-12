@@ -23,7 +23,7 @@ public:
     static int DrawPrompt(const char* label, int sw, int sh, Font font);
     static void DrawLogs(std::vector<GameLog>& logs, class Player& p, Camera3D& cam, Font font, int screenW, int screenH);
 
-    // yC³z“ªãUI•`‰æ—pŠÖ” (NearbyItems‚ğ“‡EŠg’£)
+    // yC³zDrawNearbyItems ‚ğíœ‚µADrawOverheadUI ‚ğ’Ç‰Á
     static void DrawOverheadUI(class Player& p, std::vector<class Enemy>& enemies, std::vector<DroppedItem>& di, class Dungeon& d, Camera3D& cam, Font font, int screenW, int screenH);
 
     static int itemPage, equipPage, debugPage, storageInvPage, storageBoxPage, itemSubTab;

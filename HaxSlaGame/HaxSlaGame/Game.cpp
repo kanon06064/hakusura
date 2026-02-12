@@ -83,17 +83,6 @@ void Game::Run() { while (!WindowShouldClose()) { Update(); Draw(); } }
 
 void Game::Update() {
     float dt = GetFrameTime();
-
-    if (IsKeyPressed(KEY_F11)) ToggleFullscreen();
-
-    float screenW = (float)GetScreenWidth();
-    float screenH = (float)GetScreenHeight();
-    float scale = fminf(screenW / (float)gameWidth, screenH / (float)gameHeight);
-    float offsetX = (screenW - ((float)gameWidth * scale)) * 0.5f;
-    float offsetY = (screenH - ((float)gameHeight * scale)) * 0.5f;
-    SetMouseOffset(-(int)offsetX, -(int)offsetY);
-    SetMouseScale(1.0f / scale, 1.0f / scale);
-
     if (state == STATE_TITLE) return;
     if (state == STATE_GAMEOVER) { if (IsMouseButtonPressed(0) || IsKeyPressed(KEY_SPACE)) ApplyDeathPenalty(); return; }
 
@@ -180,18 +169,15 @@ void Game::Draw() {
         EndMode3D();
 
         fxManager.Draw2D(font, camera);
-        // UIには常に内部解像度(1920x1080)を渡す
         UI::DrawHUD(*player, enemies, dungeon, camera, floor, debugMode, font, gameWidth, gameHeight);
         UI::DrawLogs(logs, *player, camera, font, gameWidth, gameHeight);
-        // 【修正】DrawOverheadUI を呼ぶ
+        // DrawNearbyItems は DrawOverheadUI に置き換え
         UI::DrawOverheadUI(*player, enemies, droppedItems, dungeon, camera, font, gameWidth, gameHeight);
 
-        // 【重要】詳細ウィンドウが開いているかどうかをチェック
         bool detailOpen = UI::IsDetailOpen();
         bool inputEnabled = !detailOpen;
 
         if (showMenu) {
-            // 【修正】inputEnabledを渡す
             UI::DrawMenu(*player, dungeon, currentTab, font, gameWidth, gameHeight, inputEnabled);
             if (currentTab == SYSTEM_TAB && inputEnabled) {
                 Rectangle saveBtn = { 120, 250, 300, 80 };
@@ -220,7 +206,7 @@ void Game::Draw() {
             else if (res == 2) { showPrompt = false; sceneTimer = 1.0f; }
         }
 
-        // 【重要】詳細ウィンドウを一番最後に描画 (最前面)
+        // 【重要】詳細ウィンドウを最後に描画
         UI::DrawItemDetail(font, gameWidth, gameHeight);
     }
     EndTextureMode();

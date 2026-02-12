@@ -91,14 +91,7 @@ int UI::DrawTitleScreen(Font font, int screenW, int screenH) {
         std::string label; Color c;
         if (h.exists) { label = TextFormat("Slot %d: Lv.%d  Floor %d", i, h.playerLevel, h.floor); c = DARKGREEN; }
         else { label = TextFormat("Slot %d: (NO DATA)", i); c = DARKGRAY; }
-
         if (DrawButton(r, label.c_str(), font, c, true)) { selectedSlot = i; }
-
-        if (h.exists) {
-            // ※削除機能はGame.cpp等で制御が必要だが、ここでは描画のみ
-            // Rectangle rDel = { (float)screenW/2 + 220, y, 100.0f, 100.0f };
-            // if (DrawButton(rDel, "削除", font, RED, active)) { deleteTargetSlot = i; }
-        }
     }
     return selectedSlot;
 }
@@ -110,7 +103,6 @@ void UI::DrawHUD(Player& p, std::vector<Enemy>& enemies, Dungeon& d, Camera3D& c
     DrawRectangle(30, 30, (int)fSize.x + 40, 60, Fade(BLACK, 0.6f));
     DrawTextEx(font, floorText.c_str(), { 50, 36 }, 48, 1, WHITE);
 
-    // 右上のリスト型HPバー
     int listCount = 0;
     for (auto& e : enemies) {
         if (e.hudTimer > 0) {
@@ -125,44 +117,26 @@ void UI::DrawHUD(Player& p, std::vector<Enemy>& enemies, Dungeon& d, Camera3D& c
 
     DrawRectangle(20, screenH - 220, 500, 200, Fade(BLACK, 0.6f));
     DrawTextEx(font, TextFormat("Lv: %d   EXP: %d/%d", p.level, p.exp, p.expToNext), { 40, (float)screenH - 200 }, 36, 1, SKYBLUE);
+
     DrawRectangle(40, screenH - 150, 460, 30, DARKGRAY);
     DrawRectangle(40, screenH - 150, (int)(460 * (fmaxf(0.0f, p.hp) / p.maxHp)), 30, GREEN);
     DrawTextEx(font, TextFormat("HP: %.0f/%.0f", p.hp, p.maxHp), { 50, (float)screenH - 152 }, 24, 1, WHITE);
+
     DrawTextEx(font, TextFormat("ATK: %.1f  DEF: %.1f", p.attackPower, p.defense), { 40, (float)screenH - 100 }, 32, 1, WHITE);
     DrawTextEx(font, TextFormat("Gold: %d  SP: %d", p.gold, p.skillPoints), { 40, (float)screenH - 60 }, 32, 1, WHITE);
 
-    int iconSize = 100;
-    int startX = screenW - 350;
-    int startY = screenH - 130;
-
+    int iconSize = 100; int startX = screenW - 350; int startY = screenH - 130;
     struct SkillIcon { SkillType type; const char* label; const char* key; };
     SkillIcon icons[] = { { SKILL_ACTIVE_DASH, "DASH", "1" }, { SKILL_ACTIVE_SMASH, "SMASH", "2" }, { SKILL_ACTIVE_STEALTH, "STEALTH", "3" } };
-
     for (int i = 0; i < 3; i++) {
-        int x = startX + i * (iconSize + 15);
-        bool unlocked = p.IsSkillUnlocked(icons[i].type);
-        Color baseCol = unlocked ? DARKBLUE : DARKGRAY;
-        DrawRectangle(x, startY, iconSize, iconSize, baseCol);
-        DrawRectangleLines(x, startY, iconSize, iconSize, RAYWHITE);
-        DrawTextEx(font, icons[i].key, { (float)x + 5, (float)startY + 5 }, 24, 1, WHITE);
-
+        int x = startX + i * (iconSize + 15); bool unlocked = p.IsSkillUnlocked(icons[i].type); Color baseCol = unlocked ? DARKBLUE : DARKGRAY;
+        DrawRectangle(x, startY, iconSize, iconSize, baseCol); DrawRectangleLines(x, startY, iconSize, iconSize, RAYWHITE); DrawTextEx(font, icons[i].key, { (float)x + 5, (float)startY + 5 }, 24, 1, WHITE);
         if (unlocked) {
-            float cd = p.GetSkillCooldown(icons[i].type);
-            float maxCd = p.GetSkillMaxCooldown(icons[i].type);
-            if (cd > 0) {
-                float ratio = cd / maxCd;
-                DrawRectangle(x, startY + (int)((float)iconSize * (1.0f - ratio)), iconSize, (int)((float)iconSize * ratio), Fade(RED, 0.7f));
-                DrawTextEx(font, TextFormat("%.1f", cd), { (float)x + 15, (float)startY + 30 }, 30, 1, YELLOW);
-            }
-            else {
-                std::string label = icons[i].label;
-                if (DataManager::uiStrings.count(label)) label = DataManager::uiStrings[label];
-                DrawTextEx(font, label.c_str(), { (float)x + 5, (float)startY + 40 }, 20, 1, GREEN);
-            }
+            float cd = p.GetSkillCooldown(icons[i].type); float maxCd = p.GetSkillMaxCooldown(icons[i].type);
+            if (cd > 0) { float ratio = cd / maxCd; DrawRectangle(x, startY + (int)((float)iconSize * (1.0f - ratio)), iconSize, (int)((float)iconSize * ratio), Fade(RED, 0.7f)); DrawTextEx(font, TextFormat("%.1f", cd), { (float)x + 15, (float)startY + 30 }, 30, 1, YELLOW); }
+            else { std::string label = icons[i].label; if (DataManager::uiStrings.count(label)) label = DataManager::uiStrings[label]; DrawTextEx(font, label.c_str(), { (float)x + 5, (float)startY + 40 }, 20, 1, GREEN); }
         }
-        else {
-            DrawTextEx(font, "LOCK", { (float)x + 15, (float)startY + 40 }, 20, 1, GRAY);
-        }
+        else { DrawTextEx(font, "LOCK", { (float)x + 15, (float)startY + 40 }, 20, 1, GRAY); }
     }
 }
 
@@ -182,14 +156,10 @@ void UI::DrawMenu(Player& p, Dungeon& d, MenuTab& tab, Font font, int screenW, i
     if (tab == EQUIP) {
         DrawTextEx(font, DataManager::uiStrings["ACTIVE_SLOTS"].c_str(), { 150, 150 }, 32, 1, GOLD);
         for (int i = 0; i < 2; i++) {
-            int y = 200 + i * 160;
-            bool isEmpty = (p.equippedData[i].id == -1);
+            int y = 200 + i * 160; bool isEmpty = (p.equippedData[i].id == -1);
             DrawRectangle(150, y, 400, 140, (p.activeSlot == i) ? MAROON : BLACK);
             Rectangle detailsRect = { 150, (float)y, 250, 140 };
-            if (active && !isEmpty && CheckCollisionPointRec(GetMousePosition(), detailsRect) && IsMouseButtonPressed(0)) {
-                showDetail = true; detailItem = p.equippedData[i]; timeOnOpen = GetTime();
-            }
-
+            if (active && !isEmpty && CheckCollisionPointRec(GetMousePosition(), detailsRect) && IsMouseButtonPressed(0)) { showDetail = true; detailItem = p.equippedData[i]; timeOnOpen = GetTime(); }
             if (!isEmpty) {
                 DrawTextEx(font, Player::GetFullItemName(p.equippedData[i]).c_str(), { 160, (float)y + 30 }, 36, 1, WHITE);
                 float totalBonus = Player::GetItemTotalAtkBonus(p.equippedData[i]);
@@ -198,18 +168,12 @@ void UI::DrawMenu(Player& p, Dungeon& d, MenuTab& tab, Font font, int screenW, i
             }
             else DrawTextEx(font, "EMPTY", { 160, (float)y + 50 }, 36, 1, DARKGRAY);
         }
-
         const char* armorNames[] = { "HEAD", "CHEST", "HAND", "LEGS", "FEET" };
         for (int i = 0; i < 5; i++) {
-            int y = 200 + i * 110;
-            DrawTextEx(font, armorNames[i], { 580, (float)y + 30 }, 24, 1, LIGHTGRAY);
-            bool isEmpty = (p.equippedArmor[i].id == -1);
-            DrawRectangle(680, y, 300, 90, BLACK); DrawRectangleLines(680, y, 300, 90, DARKGRAY);
+            int y = 200 + i * 110; DrawTextEx(font, armorNames[i], { 580, (float)y + 30 }, 24, 1, LIGHTGRAY);
+            bool isEmpty = (p.equippedArmor[i].id == -1); DrawRectangle(680, y, 300, 90, BLACK); DrawRectangleLines(680, y, 300, 90, DARKGRAY);
             Rectangle detailsRect = { 680, (float)y, 210, 90 };
-            if (active && !isEmpty && CheckCollisionPointRec(GetMousePosition(), detailsRect) && IsMouseButtonPressed(0)) {
-                showDetail = true; detailItem = p.equippedArmor[i]; timeOnOpen = GetTime();
-            }
-
+            if (active && !isEmpty && CheckCollisionPointRec(GetMousePosition(), detailsRect) && IsMouseButtonPressed(0)) { showDetail = true; detailItem = p.equippedArmor[i]; timeOnOpen = GetTime(); }
             if (!isEmpty) {
                 DrawTextEx(font, Player::GetFullItemName(p.equippedArmor[i]).c_str(), { 690, (float)y + 20 }, 28, 1, WHITE);
                 float def = p.equippedArmor[i].defBonus + DataManager::GetModifier(p.equippedArmor[i].modifierId).def;
@@ -218,35 +182,19 @@ void UI::DrawMenu(Player& p, Dungeon& d, MenuTab& tab, Font font, int screenW, i
             }
             else { DrawTextEx(font, "EMPTY", { 690, (float)y + 35 }, 28, 1, DARKGRAY); }
         }
-
         DrawTextEx(font, DataManager::uiStrings["OWNED_EQUIP"].c_str(), { 1050, 150 }, 32, 1, GOLD);
-        const int perP = 7;
-        int maxP = (int)ceil((float)p.inventoryEquip.size() / perP); if (maxP < 1) maxP = 1;
+        const int perP = 7; int maxP = (int)ceil((float)p.inventoryEquip.size() / perP); if (maxP < 1) maxP = 1;
         DrawTextEx(font, TextFormat(DataManager::uiStrings["PAGE_INFO"].c_str(), equipPage + 1, maxP), { 1400, 155 }, 28, 1, WHITE);
-
         for (int i = 0; i < perP; i++) {
             int idx = equipPage * perP + i; if (idx >= (int)p.inventoryEquip.size()) break;
             int y = 200 + i * 75; Rectangle r = { 1050, (float)y, 450, 65 }; DrawRectangleRec(r, BLACK);
             Rectangle detailsRect = { 1050, (float)y, 330, 65 };
-            if (active && CheckCollisionPointRec(GetMousePosition(), detailsRect) && IsMouseButtonPressed(0)) {
-                showDetail = true; detailItem = p.inventoryEquip[idx]; timeOnOpen = GetTime();
-            }
-
+            if (active && CheckCollisionPointRec(GetMousePosition(), detailsRect) && IsMouseButtonPressed(0)) { showDetail = true; detailItem = p.inventoryEquip[idx]; timeOnOpen = GetTime(); }
             DrawTextEx(font, Player::GetFullItemName(p.inventoryEquip[idx]).c_str(), { 1060, (float)y + 20 }, 30, 1, WHITE);
-            if (p.inventoryEquip[idx].type == "EQUIP") {
-                if (UI::DrawButton({ 1380, (float)y + 10, 50, 45 }, "W1", font, DARKGRAY, active)) p.EquipWeapon(idx, 0);
-                if (UI::DrawButton({ 1440, (float)y + 10, 50, 45 }, "W2", font, DARKGRAY, active)) p.EquipWeapon(idx, 1);
-            }
-            else if (p.inventoryEquip[idx].type == "ARMOR") {
-                int subtype = p.inventoryEquip[idx].weaponSubtype;
-                if (subtype >= 0 && subtype < 5) {
-                    if (UI::DrawButton({ 1380, (float)y + 10, 110, 45 }, "EQUIP", font, DARKGREEN, active)) p.EquipArmor(idx, subtype);
-                }
-            }
+            if (p.inventoryEquip[idx].type == "EQUIP") { if (UI::DrawButton({ 1380, (float)y + 10, 50, 45 }, "W1", font, DARKGRAY, active)) p.EquipWeapon(idx, 0); if (UI::DrawButton({ 1440, (float)y + 10, 50, 45 }, "W2", font, DARKGRAY, active)) p.EquipWeapon(idx, 1); }
+            else if (p.inventoryEquip[idx].type == "ARMOR") { int subtype = p.inventoryEquip[idx].weaponSubtype; if (subtype >= 0 && subtype < 5) { if (UI::DrawButton({ 1380, (float)y + 10, 110, 45 }, "EQUIP", font, DARKGREEN, active)) p.EquipArmor(idx, subtype); } }
         }
-        if (UI::DrawButton({ 1050, 750, 120, 50 }, "<<", font, GRAY, active) && equipPage > 0) equipPage--;
-        if (UI::DrawButton({ 1200, 750, 120, 50 }, ">>", font, GRAY, active)) equipPage++;
-
+        if (UI::DrawButton({ 1050, 750, 120, 50 }, "<<", font, GRAY, active) && equipPage > 0) equipPage--; if (UI::DrawButton({ 1200, 750, 120, 50 }, ">>", font, GRAY, active)) equipPage++;
     }
     else if (tab == SKILL) {
         Rectangle viewArea = { 100, 150, (float)screenW - 200, (float)screenH - 250 };
@@ -254,10 +202,7 @@ void UI::DrawMenu(Player& p, Dungeon& d, MenuTab& tab, Font font, int screenW, i
         if (active && IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) { Vector2 delta = GetMouseDelta(); skillOffset = Vector2Add(skillOffset, delta); }
         BeginScissorMode((int)viewArea.x, (int)viewArea.y, (int)viewArea.width, (int)viewArea.height);
         for (auto& node : p.skillTree) { Vector2 startPos = Vector2Add(node.uiPos, skillOffset); for (int reqId : node.reqIds) { Vector2 endPos = Vector2Add(p.skillTree[reqId].uiPos, skillOffset); DrawLineEx(startPos, endPos, 4, node.unlocked ? GOLD : DARKGRAY); } }
-        for (int i = 0; i < (int)p.skillTree.size(); i++) {
-            auto& node = p.skillTree[i]; bool available = p.IsSkillAvailable(i); Vector2 drawPos = Vector2Add(node.uiPos, skillOffset); Color nodeColor = node.unlocked ? YELLOW : (available ? GREEN : DARKGRAY); if (node.type != SKILL_PASSIVE) { nodeColor = node.unlocked ? ORANGE : (available ? PURPLE : DARKGRAY); } DrawPoly(drawPos, 6, 55, 0, nodeColor); DrawPolyLines(drawPos, 6, 55, 0, RAYWHITE); DrawTextEx(font, node.name.c_str(), { drawPos.x - 40, drawPos.y - 12 }, 16, 1, node.unlocked ? BLACK : WHITE); if (!node.unlocked) { DrawTextEx(font, TextFormat("SP:%d", node.cost), { drawPos.x - 25, drawPos.y + 25 }, 16, 1, WHITE); }
-            if (active && CheckCollisionPointRec(GetMousePosition(), viewArea)) { if (available && CheckCollisionPointCircle(GetMousePosition(), drawPos, 55) && IsMouseButtonPressed(0)) { p.UnlockSkill(i); } }
-        }
+        for (int i = 0; i < (int)p.skillTree.size(); i++) { auto& node = p.skillTree[i]; bool available = p.IsSkillAvailable(i); Vector2 drawPos = Vector2Add(node.uiPos, skillOffset); Color nodeColor = node.unlocked ? YELLOW : (available ? GREEN : DARKGRAY); if (node.type != SKILL_PASSIVE) { nodeColor = node.unlocked ? ORANGE : (available ? PURPLE : DARKGRAY); } DrawPoly(drawPos, 6, 55, 0, nodeColor); DrawPolyLines(drawPos, 6, 55, 0, RAYWHITE); DrawTextEx(font, node.name.c_str(), { drawPos.x - 40, drawPos.y - 12 }, 16, 1, node.unlocked ? BLACK : WHITE); if (!node.unlocked) { DrawTextEx(font, TextFormat("SP:%d", node.cost), { drawPos.x - 25, drawPos.y + 25 }, 16, 1, WHITE); } if (CheckCollisionPointRec(GetMousePosition(), viewArea)) { if (active && available && CheckCollisionPointCircle(GetMousePosition(), drawPos, 55) && IsMouseButtonPressed(0)) { p.UnlockSkill(i); } } }
         EndScissorMode();
     }
     else if (tab == INVENTORY) {
@@ -353,6 +298,7 @@ void UI::DrawStorage(Player& p, Font font, bool& isOpen, std::vector<ItemData>& 
     }
     if (UI::DrawButton({ 100, 850, 120, 50 }, "<<", font, GRAY, active) && storageInvPage > 0) storageInvPage--;
     if (UI::DrawButton({ 250, 850, 120, 50 }, ">>", font, GRAY, active) && storageInvPage < mPInv - 1) storageInvPage++;
+
     DrawTextEx(font, "倉庫のアイテム", { 900, 120 }, 32, 1, GREEN);
     for (int i = 0; i < perP; i++) {
         int idx = storageBoxPage * perP + i; if (idx >= (int)sItems.size()) break;
@@ -475,55 +421,44 @@ void UI::DrawLogs(std::vector<GameLog>& logs, Player& p, Camera3D& cam, Font fon
     }
 }
 
-// 【追加】頭上UIの描画関数
+// 【修正】DrawOverheadUI を実装 (DrawNearbyItems を置換)
 void UI::DrawOverheadUI(Player& p, std::vector<Enemy>& enemies, std::vector<DroppedItem>& di, Dungeon& d, Camera3D& cam, Font font, int screenW, int screenH) {
-
-    // 1. 敵の頭上UI
+    // 敵HPバー
     for (auto& e : enemies) {
         if (!d.IsDiscovered((float)e.position.x, (float)e.position.z)) continue;
         float dist = Vector3Distance(p.position, e.position);
         if (dist > 20.0f) continue;
-
         Vector3 headPos = Vector3Add(e.position, { 0.0f, 1.8f, 0.0f });
         Vector2 screenPos = GetWorldToScreen(headPos, cam);
-
         if (screenPos.x < -100 || screenPos.x > screenW + 100 || screenPos.y < -100 || screenPos.y > screenH + 100) continue;
-
-        float barWidth = 80.0f; float barHeight = 10.0f;
-        float barX = screenPos.x - barWidth / 2; float barY = screenPos.y;
+        float barWidth = 80.0f; float barHeight = 10.0f; float barX = screenPos.x - barWidth / 2; float barY = screenPos.y;
         DrawRectangle((int)barX - 2, (int)barY - 2, (int)barWidth + 4, (int)barHeight + 4, BLACK);
         DrawRectangle((int)barX, (int)barY, (int)barWidth, (int)barHeight, Fade(RED, 0.3f));
         float hpRatio = e.hp / e.maxHp;
         DrawRectangle((int)barX, (int)barY, (int)(barWidth * hpRatio), (int)barHeight, RED);
-
         std::string nameText = TextFormat("Lv.%d %s", e.level, e.data.name.c_str());
         Vector2 textSize = MeasureTextEx(font, nameText.c_str(), 20, 1);
         DrawTextEx(font, nameText.c_str(), { screenPos.x - textSize.x / 2, barY - 22 }, 20, 1, WHITE);
     }
-
-    // 2. アイテムの頭上UI
+    // アイテム名
     for (auto& item : di) {
         if (!d.IsDiscovered((float)item.pos.x, (float)item.pos.z)) continue;
         float dist = Vector3Distance(p.position, item.pos);
         if (dist > 15.0f) continue;
-
         Vector3 labelPos = Vector3Add(item.pos, { 0.0f, 0.8f, 0.0f });
         Vector2 screenPos = GetWorldToScreen(labelPos, cam);
         if (screenPos.x < -50 || screenPos.x > screenW + 50 || screenPos.y < -50 || screenPos.y > screenH + 50) continue;
-
         std::string name = Player::GetFullItemName(item.data);
         Color nameCol = WHITE;
         if (item.data.type == "EQUIP" || item.data.type == "ARMOR") nameCol = GOLD;
         else if (item.data.type == "CONSUMABLE") nameCol = GREEN;
         else nameCol = LIGHTGRAY;
-
         int fontSize = (dist < 3.0f) ? 24 : 18;
         Vector2 textSize = MeasureTextEx(font, name.c_str(), (float)fontSize, 1);
         DrawRectangle((int)(screenPos.x - textSize.x / 2 - 4), (int)(screenPos.y - 4), (int)textSize.x + 8, (int)textSize.y + 8, Fade(BLACK, 0.4f));
         DrawTextEx(font, name.c_str(), { screenPos.x - textSize.x / 2, screenPos.y }, (float)fontSize, 1, nameCol);
     }
-
-    // 3. プレイヤーの頭上UI (HPバー)
+    // プレイヤーHPバー
     {
         Vector3 headPos = Vector3Add(p.position, { 0.0f, 2.2f, 0.0f });
         Vector2 screenPos = GetWorldToScreen(headPos, cam);
@@ -537,9 +472,9 @@ void UI::DrawOverheadUI(Player& p, std::vector<Enemy>& enemies, std::vector<Drop
     }
 }
 
-// 互換性維持のためのダミー実装
+// DrawNearbyItems は DrawOverheadUI に統合したためダミー化 (または削除)
 void UI::DrawNearbyItems(Player& p, std::vector<DroppedItem>& di, Dungeon& d, Camera3D& cam, Font font) {
-    // DrawOverheadUI に統合したため、ここでは何もしない
+    // 削除済み
 }
 
 int UI::DrawPrompt(const char* label, int sw, int sh, Font font) {
