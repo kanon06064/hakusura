@@ -3,24 +3,28 @@
   "WorkspaceRootPath": "C:\\haku\\hakusura\\HaxSlaGame\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\UI.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
-      "RelativeMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|solutionrelative:HaxSlaGame\\UI.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\Dungeon.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
-      "RelativeMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|solutionrelative:HaxSlaGame\\Dungeon.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+      "AbsoluteMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\enemies.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|solutionrelative:HaxSlaGame\\enemies.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\Player.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
       "RelativeMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|solutionrelative:HaxSlaGame\\Player.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\DataManager.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
-      "RelativeMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|solutionrelative:HaxSlaGame\\DataManager.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+      "AbsoluteMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\items.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|solutionrelative:HaxSlaGame\\items.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\Definitions.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
-      "RelativeMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|solutionrelative:HaxSlaGame\\Definitions.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+      "AbsoluteMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\ui_text.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|solutionrelative:HaxSlaGame\\ui_text.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\recipes.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|solutionrelative:HaxSlaGame\\recipes.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\main.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|solutionrelative:HaxSlaGame\\main.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\Game.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
@@ -31,39 +35,16 @@
       "RelativeMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|solutionrelative:HaxSlaGame\\Game.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
     },
     {
+      "AbsoluteMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\UI.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|solutionrelative:HaxSlaGame\\UI.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\UI.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
       "RelativeMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|solutionrelative:HaxSlaGame\\UI.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\Player.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
       "RelativeMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|solutionrelative:HaxSlaGame\\Player.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\Dungeon.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
-      "RelativeMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|solutionrelative:HaxSlaGame\\Dungeon.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\DataManager.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
-      "RelativeMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|solutionrelative:HaxSlaGame\\DataManager.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|C:\\Users\\weika\\Downloads\\recipes.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\enemies.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
-      "RelativeMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|solutionrelative:HaxSlaGame\\enemies.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\items.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
-      "RelativeMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|solutionrelative:HaxSlaGame\\items.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\modifiers.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
-      "RelativeMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|solutionrelative:HaxSlaGame\\modifiers.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\ui_text.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
-      "RelativeMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|solutionrelative:HaxSlaGame\\ui_text.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\Enemy.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
@@ -82,8 +63,28 @@
       "RelativeMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|solutionrelative:HaxSlaGame\\EffectManager.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\main.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
-      "RelativeMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|solutionrelative:HaxSlaGame\\main.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+      "AbsoluteMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\Dungeon.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|solutionrelative:HaxSlaGame\\Dungeon.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\Dungeon.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|solutionrelative:HaxSlaGame\\Dungeon.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\DataManager.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|solutionrelative:HaxSlaGame\\DataManager.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\DataManager.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|solutionrelative:HaxSlaGame\\DataManager.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\Definitions.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|solutionrelative:HaxSlaGame\\Definitions.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\modifiers.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|solutionrelative:HaxSlaGame\\modifiers.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\haku\\hakusura\\HaxSlaGame\\packages\\nlohmann.json.3.12.0\\build\\native\\include\\nlohmann\\json.hpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
@@ -101,17 +102,17 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 12,
+          "SelectedChildIndex": 20,
           "Children": [
             {
               "$type": "Document",
-              "DocumentIndex": 4,
+              "DocumentIndex": 19,
               "Title": "Definitions.h",
               "DocumentMoniker": "C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\Definitions.h",
               "RelativeDocumentMoniker": "HaxSlaGame\\Definitions.h",
               "ToolTip": "C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\Definitions.h",
               "RelativeToolTip": "HaxSlaGame\\Definitions.h",
-              "ViewState": "AgIAAGcAAAAAAAAAAAAowIIAAAACAAAAAAAAAA==",
+              "ViewState": "AgIAAG4AAAAAAAAAAAAQwIIAAAACAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
               "WhenOpened": "2026-01-27T01:10:33.444Z",
               "IsPinned": true,
@@ -119,13 +120,13 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 10,
+              "DocumentIndex": 18,
               "Title": "DataManager.h",
               "DocumentMoniker": "C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\DataManager.h",
               "RelativeDocumentMoniker": "HaxSlaGame\\DataManager.h",
               "ToolTip": "C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\DataManager.h",
               "RelativeToolTip": "HaxSlaGame\\DataManager.h",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAmwBsAAAACAAAAAAAAAA==",
+              "ViewState": "AgIAAAcAAAAAAAAAAAAQwBsAAAACAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
               "WhenOpened": "2026-01-27T04:53:42.128Z",
               "IsPinned": true,
@@ -133,13 +134,13 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 17,
               "Title": "DataManager.cpp",
               "DocumentMoniker": "C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\DataManager.cpp",
               "RelativeDocumentMoniker": "HaxSlaGame\\DataManager.cpp",
               "ToolTip": "C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\DataManager.cpp",
               "RelativeToolTip": "HaxSlaGame\\DataManager.cpp",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAJcAAAABAAAAAAAAAA==",
+              "ViewState": "AgIAAIMAAAAAAAAAAAAQwJcAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
               "WhenOpened": "2026-01-27T04:53:16.622Z",
               "IsPinned": true,
@@ -147,13 +148,13 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 9,
+              "DocumentIndex": 16,
               "Title": "Dungeon.h",
               "DocumentMoniker": "C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\Dungeon.h",
               "RelativeDocumentMoniker": "HaxSlaGame\\Dungeon.h",
               "ToolTip": "C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\Dungeon.h",
               "RelativeToolTip": "HaxSlaGame\\Dungeon.h",
-              "ViewState": "AgIAABcAAAAAAAAAAAAmwCkAAAACAAAAAAAAAA==",
+              "ViewState": "AgIAABUAAAAAAAAAAAAQwCkAAAACAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
               "WhenOpened": "2026-01-20T01:01:28.999Z",
               "IsPinned": true,
@@ -161,13 +162,13 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 15,
               "Title": "Dungeon.cpp",
               "DocumentMoniker": "C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\Dungeon.cpp",
               "RelativeDocumentMoniker": "HaxSlaGame\\Dungeon.cpp",
               "ToolTip": "C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\Dungeon.cpp",
               "RelativeToolTip": "HaxSlaGame\\Dungeon.cpp",
-              "ViewState": "AgIAAIAAAAAAAAAAAAAmwJsAAAABAAAAAAAAAA==",
+              "ViewState": "AgIAAIcAAAAAAAAAAAAQwJsAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
               "WhenOpened": "2026-01-20T01:01:49.719Z",
               "IsPinned": true,
@@ -175,65 +176,69 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 19,
+              "DocumentIndex": 14,
               "Title": "EffectManager.h",
               "DocumentMoniker": "C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\EffectManager.h",
               "RelativeDocumentMoniker": "HaxSlaGame\\EffectManager.h",
               "ToolTip": "C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\EffectManager.h",
               "RelativeToolTip": "HaxSlaGame\\EffectManager.h",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABcAAAACAAAAAAAAAA==",
+              "ViewState": "AgIAAAMAAAAAAAAAAAAQwBcAAAACAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
               "WhenOpened": "2026-02-04T02:24:14.599Z",
-              "IsPinned": true
+              "IsPinned": true,
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 18,
+              "DocumentIndex": 13,
               "Title": "EffectManager.cpp",
               "DocumentMoniker": "C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\EffectManager.cpp",
               "RelativeDocumentMoniker": "HaxSlaGame\\EffectManager.cpp",
               "ToolTip": "C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\EffectManager.cpp",
               "RelativeToolTip": "HaxSlaGame\\EffectManager.cpp",
-              "ViewState": "AgIAAGkAAAAAAAAAAAAQwJAAAAABAAAAAAAAAA==",
+              "ViewState": "AgIAAHwAAAAAAAAAAAAQwJAAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
               "WhenOpened": "2026-02-04T02:24:33.414Z",
-              "IsPinned": true
+              "IsPinned": true,
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 17,
+              "DocumentIndex": 12,
               "Title": "Enemy.h",
               "DocumentMoniker": "C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\Enemy.h",
               "RelativeDocumentMoniker": "HaxSlaGame\\Enemy.h",
               "ToolTip": "C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\Enemy.h",
               "RelativeToolTip": "HaxSlaGame\\Enemy.h",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABwAAAACAAAAAAAAAA==",
+              "ViewState": "AgIAAAgAAAAAAAAAAAAQwBwAAAACAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
               "WhenOpened": "2026-01-20T05:53:36.997Z",
-              "IsPinned": true
+              "IsPinned": true,
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 16,
+              "DocumentIndex": 11,
               "Title": "Enemy.cpp",
               "DocumentMoniker": "C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\Enemy.cpp",
               "RelativeDocumentMoniker": "HaxSlaGame\\Enemy.cpp",
               "ToolTip": "C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\Enemy.cpp",
               "RelativeToolTip": "HaxSlaGame\\Enemy.cpp",
-              "ViewState": "AgIAAGEAAAAAAAAAAAAQwIUAAAABAAAAAAAAAA==",
+              "ViewState": "AgIAAHEAAAAAAAAAAAAQwIUAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
               "WhenOpened": "2026-01-20T05:53:44.375Z",
-              "IsPinned": true
+              "IsPinned": true,
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 8,
+              "DocumentIndex": 10,
               "Title": "Player.h",
               "DocumentMoniker": "C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\Player.h",
               "RelativeDocumentMoniker": "HaxSlaGame\\Player.h",
               "ToolTip": "C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\Player.h",
               "RelativeToolTip": "HaxSlaGame\\Player.h",
-              "ViewState": "AgIAABwAAAAAAAAAAAAmwDcAAAACAAAAAAAAAA==",
+              "ViewState": "AgIAACMAAAAAAAAAAAAQwDcAAAACAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
               "WhenOpened": "2026-01-20T00:58:03.774Z",
               "IsPinned": true,
@@ -241,13 +246,13 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 1,
               "Title": "Player.cpp",
               "DocumentMoniker": "C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\Player.cpp",
               "RelativeDocumentMoniker": "HaxSlaGame\\Player.cpp",
               "ToolTip": "C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\Player.cpp",
               "RelativeToolTip": "HaxSlaGame\\Player.cpp",
-              "ViewState": "AgIAALwAAAAAAAAAAAAmwNcAAABYAAAAAAAAAA==",
+              "ViewState": "AgIAAMMAAAAAAAAAAAAQwNcAAABYAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
               "WhenOpened": "2026-01-20T00:58:11.259Z",
               "IsPinned": true,
@@ -255,13 +260,13 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 7,
+              "DocumentIndex": 9,
               "Title": "UI.h",
               "DocumentMoniker": "C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\UI.h",
               "RelativeDocumentMoniker": "HaxSlaGame\\UI.h",
               "ToolTip": "C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\UI.h",
               "RelativeToolTip": "HaxSlaGame\\UI.h",
-              "ViewState": "AgIAAAQAAAAAAAAAAAAmwB8AAAACAAAAAAAAAA==",
+              "ViewState": "AgIAAAsAAAAAAAAAAAAQwB8AAAACAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
               "WhenOpened": "2026-01-27T01:20:56.722Z",
               "IsPinned": true,
@@ -269,13 +274,13 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 8,
               "Title": "UI.cpp",
               "DocumentMoniker": "C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\UI.cpp",
               "RelativeDocumentMoniker": "HaxSlaGame\\UI.cpp",
-              "ToolTip": "C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\UI.cpp*",
-              "RelativeToolTip": "HaxSlaGame\\UI.cpp*",
-              "ViewState": "AgIAAFcBAAAAAAAAAAAUwHABAAABAAAAAAAAAA==",
+              "ToolTip": "C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\UI.cpp",
+              "RelativeToolTip": "HaxSlaGame\\UI.cpp",
+              "ViewState": "AgIAAFwBAAAAAAAAAAAQwHABAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
               "WhenOpened": "2026-01-27T01:21:05.791Z",
               "IsPinned": true,
@@ -283,13 +288,13 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 6,
+              "DocumentIndex": 7,
               "Title": "Game.h",
               "DocumentMoniker": "C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\Game.h",
               "RelativeDocumentMoniker": "HaxSlaGame\\Game.h",
               "ToolTip": "C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\Game.h",
               "RelativeToolTip": "HaxSlaGame\\Game.h",
-              "ViewState": "AgIAAB4AAAAAAAAAAAAowDkAAAACAAAAAAAAAA==",
+              "ViewState": "AgIAACoAAAAAAAAAAAAQwD4AAAACAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
               "WhenOpened": "2026-02-04T02:25:20.967Z",
               "IsPinned": true,
@@ -297,13 +302,13 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 5,
+              "DocumentIndex": 6,
               "Title": "Game.cpp",
               "DocumentMoniker": "C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\Game.cpp",
               "RelativeDocumentMoniker": "HaxSlaGame\\Game.cpp",
               "ToolTip": "C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\Game.cpp",
               "RelativeToolTip": "HaxSlaGame\\Game.cpp",
-              "ViewState": "AgIAALQAAAAAAAAAAAAowM8AAAABAAAAAAAAAA==",
+              "ViewState": "AgIAAOQAAAAAAAAAAAAQwPgAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
               "WhenOpened": "2026-02-04T02:25:28.799Z",
               "IsPinned": true,
@@ -311,7 +316,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 20,
+              "DocumentIndex": 5,
               "Title": "main.cpp",
               "DocumentMoniker": "C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\main.cpp",
               "RelativeDocumentMoniker": "HaxSlaGame\\main.cpp",
@@ -320,7 +325,21 @@
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAA4AAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
               "WhenOpened": "2026-01-20T00:44:32.049Z",
-              "IsPinned": true
+              "IsPinned": true,
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "recipes.json",
+              "DocumentMoniker": "C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\recipes.json",
+              "RelativeDocumentMoniker": "HaxSlaGame\\recipes.json",
+              "ToolTip": "C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\recipes.json",
+              "RelativeToolTip": "HaxSlaGame\\recipes.json",
+              "ViewState": "AgIAAAoAAAAAAAAAAAAIwB4AAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2026-02-12T13:55:46.265Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Bookmark",
@@ -328,15 +347,41 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 11,
-              "Title": "recipes.json",
-              "DocumentMoniker": "C:\\Users\\weika\\Downloads\\recipes.json",
-              "RelativeDocumentMoniker": "..\\..\\..\\Users\\weika\\Downloads\\recipes.json",
-              "ToolTip": "C:\\Users\\weika\\Downloads\\recipes.json",
-              "RelativeToolTip": "..\\..\\..\\Users\\weika\\Downloads\\recipes.json",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "DocumentIndex": 3,
+              "Title": "ui_text.json",
+              "DocumentMoniker": "C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\ui_text.json",
+              "RelativeDocumentMoniker": "HaxSlaGame\\ui_text.json",
+              "ToolTip": "C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\ui_text.json",
+              "RelativeToolTip": "HaxSlaGame\\ui_text.json",
+              "ViewState": "AgIAABIAAAAAAAAAAAAIwCYAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
-              "WhenOpened": "2026-02-08T14:17:59.507Z",
+              "WhenOpened": "2026-01-28T01:41:39.191Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "items.json",
+              "DocumentMoniker": "C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\items.json",
+              "RelativeDocumentMoniker": "HaxSlaGame\\items.json",
+              "ToolTip": "C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\items.json",
+              "RelativeToolTip": "HaxSlaGame\\items.json",
+              "ViewState": "AgIAACcCAAAAAAAAAAAIwDsCAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2026-01-27T04:52:00.455Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "enemies.json",
+              "DocumentMoniker": "C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\enemies.json",
+              "RelativeDocumentMoniker": "HaxSlaGame\\enemies.json",
+              "ToolTip": "C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\enemies.json",
+              "RelativeToolTip": "HaxSlaGame\\enemies.json",
+              "ViewState": "AgIAABkBAAAAAAAAAAAIwC0BAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2026-01-27T04:51:44.824Z",
               "EditorCaption": ""
             },
             {
@@ -353,44 +398,6 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 15,
-              "Title": "ui_text.json",
-              "DocumentMoniker": "C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\ui_text.json",
-              "RelativeDocumentMoniker": "HaxSlaGame\\ui_text.json",
-              "ToolTip": "C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\ui_text.json",
-              "RelativeToolTip": "HaxSlaGame\\ui_text.json",
-              "ViewState": "AgIAABAAAAAAAAAAAAAUwCYAAAABAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
-              "WhenOpened": "2026-01-28T01:41:39.191Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 13,
-              "Title": "items.json",
-              "DocumentMoniker": "C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\items.json",
-              "RelativeDocumentMoniker": "HaxSlaGame\\items.json",
-              "ToolTip": "C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\items.json",
-              "RelativeToolTip": "HaxSlaGame\\items.json",
-              "ViewState": "AgIAAC0CAAAAAAAAAAApwDsCAAABAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
-              "WhenOpened": "2026-01-27T04:52:00.455Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 12,
-              "Title": "enemies.json",
-              "DocumentMoniker": "C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\enemies.json",
-              "RelativeDocumentMoniker": "HaxSlaGame\\enemies.json",
-              "ToolTip": "C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\enemies.json",
-              "RelativeToolTip": "HaxSlaGame\\enemies.json",
-              "ViewState": "AgIAAHkAAAAAAAAAAAApwIUAAAADAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
-              "WhenOpened": "2026-01-27T04:51:44.824Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
               "DocumentIndex": 21,
               "Title": "json.hpp",
               "DocumentMoniker": "C:\\haku\\hakusura\\HaxSlaGame\\packages\\nlohmann.json.3.12.0\\build\\native\\include\\nlohmann\\json.hpp",
@@ -403,7 +410,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 14,
+              "DocumentIndex": 20,
               "Title": "modifiers.json",
               "DocumentMoniker": "C:\\haku\\hakusura\\HaxSlaGame\\HaxSlaGame\\modifiers.json",
               "RelativeDocumentMoniker": "HaxSlaGame\\modifiers.json",
@@ -411,8 +418,7 @@
               "RelativeToolTip": "HaxSlaGame\\modifiers.json",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAHMAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
-              "WhenOpened": "2026-02-05T03:34:59.176Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-02-05T03:34:59.176Z"
             }
           ]
         }
