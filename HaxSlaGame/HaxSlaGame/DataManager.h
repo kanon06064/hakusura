@@ -25,7 +25,7 @@ public:
     static void SaveGame(int slot, Player* p, int currentFloor, int maxReachedFloor, const std::vector<ItemData>& sItems, const std::vector<ItemData>& sEquip);
     static bool LoadGame(int slot, Player* p, int& currentFloor, int& maxReachedFloor, std::vector<ItemData>& sItems, std::vector<ItemData>& sEquip);
 
-    // 【追加】データ削除
+    // データ削除機能
     static void DeleteSaveData(int slot);
 
     static SaveHeader GetSaveHeader(int slot);

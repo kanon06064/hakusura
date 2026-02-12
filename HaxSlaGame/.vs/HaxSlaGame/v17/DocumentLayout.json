@@ -3,10 +3,6 @@
   "WorkspaceRootPath": "C:\\Users\\G2343\\Documents\\GitHub\\hakusura\\HaxSlaGame\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|C:\\Users\\G2343\\Documents\\GitHub\\hakusura\\HaxSlaGame\\HaxSlaGame\\UI.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
-      "RelativeMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|solutionrelative:HaxSlaGame\\UI.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|C:\\Users\\G2343\\Documents\\GitHub\\hakusura\\HaxSlaGame\\HaxSlaGame\\UI.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
       "RelativeMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|solutionrelative:HaxSlaGame\\UI.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
     },
@@ -15,8 +11,8 @@
       "RelativeMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|solutionrelative:HaxSlaGame\\Game.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|C:\\Users\\G2343\\Documents\\GitHub\\hakusura\\HaxSlaGame\\HaxSlaGame\\Game.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
-      "RelativeMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|solutionrelative:HaxSlaGame\\Game.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+      "AbsoluteMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|C:\\Users\\G2343\\Documents\\GitHub\\hakusura\\HaxSlaGame\\HaxSlaGame\\UI.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|solutionrelative:HaxSlaGame\\UI.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|C:\\Users\\G2343\\Documents\\GitHub\\hakusura\\HaxSlaGame\\HaxSlaGame\\DataManager.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
@@ -25,6 +21,10 @@
     {
       "AbsoluteMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|C:\\Users\\G2343\\Documents\\GitHub\\hakusura\\HaxSlaGame\\HaxSlaGame\\DataManager.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
       "RelativeMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|solutionrelative:HaxSlaGame\\DataManager.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|C:\\Users\\G2343\\Documents\\GitHub\\hakusura\\HaxSlaGame\\HaxSlaGame\\Game.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{39FF62F5-33D3-4DBD-8F08-64A53AD0C0F7}|HaxSlaGame\\HaxSlaGame.vcxproj|solutionrelative:HaxSlaGame\\Game.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\G2343\\Documents\\GitHub\\Python_task\\GameTaskManagerPython\\GameTaskManagerPython\\check_env.py||{8B382828-6202-11D1-8870-0000F87579D2}"
@@ -107,7 +107,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 12,
+          "SelectedChildIndex": 11,
           "Children": [
             {
               "$type": "Document",
@@ -124,7 +124,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 5,
+              "DocumentIndex": 4,
               "Title": "DataManager.h",
               "DocumentMoniker": "C:\\Users\\G2343\\Documents\\GitHub\\hakusura\\HaxSlaGame\\HaxSlaGame\\DataManager.h",
               "RelativeDocumentMoniker": "HaxSlaGame\\DataManager.h",
@@ -133,20 +133,22 @@
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAB8AAAACAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
               "WhenOpened": "2026-01-27T04:53:42.128Z",
-              "IsPinned": true
+              "IsPinned": true,
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 4,
+              "DocumentIndex": 3,
               "Title": "DataManager.cpp",
               "DocumentMoniker": "C:\\Users\\G2343\\Documents\\GitHub\\hakusura\\HaxSlaGame\\HaxSlaGame\\DataManager.cpp",
               "RelativeDocumentMoniker": "HaxSlaGame\\DataManager.cpp",
               "ToolTip": "C:\\Users\\G2343\\Documents\\GitHub\\hakusura\\HaxSlaGame\\HaxSlaGame\\DataManager.cpp",
               "RelativeToolTip": "HaxSlaGame\\DataManager.cpp",
-              "ViewState": "AgIAAHoAAAAAAAAAAAAQwJ4AAAABAAAAAAAAAA==",
+              "ViewState": "AgIAAIAAAAAAAAAAAAAAwI8AAAAhAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
               "WhenOpened": "2026-01-27T04:53:16.622Z",
-              "IsPinned": true
+              "IsPinned": true,
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
@@ -254,13 +256,13 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 0,
               "Title": "UI.h",
               "DocumentMoniker": "C:\\Users\\G2343\\Documents\\GitHub\\hakusura\\HaxSlaGame\\HaxSlaGame\\UI.h",
               "RelativeDocumentMoniker": "HaxSlaGame\\UI.h",
-              "ToolTip": "C:\\Users\\G2343\\Documents\\GitHub\\hakusura\\HaxSlaGame\\HaxSlaGame\\UI.h",
-              "RelativeToolTip": "HaxSlaGame\\UI.h",
-              "ViewState": "AgIAABIAAAAAAAAAAAAQwDUAAAACAAAAAAAAAA==",
+              "ToolTip": "C:\\Users\\G2343\\Documents\\GitHub\\hakusura\\HaxSlaGame\\HaxSlaGame\\UI.h*",
+              "RelativeToolTip": "HaxSlaGame\\UI.h*",
+              "ViewState": "AgIAABMAAAAAAAAAAAAQwC4AAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
               "WhenOpened": "2026-01-27T01:20:56.722Z",
               "IsPinned": true,
@@ -268,13 +270,13 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 2,
               "Title": "UI.cpp",
               "DocumentMoniker": "C:\\Users\\G2343\\Documents\\GitHub\\hakusura\\HaxSlaGame\\HaxSlaGame\\UI.cpp",
               "RelativeDocumentMoniker": "HaxSlaGame\\UI.cpp",
               "ToolTip": "C:\\Users\\G2343\\Documents\\GitHub\\hakusura\\HaxSlaGame\\HaxSlaGame\\UI.cpp",
               "RelativeToolTip": "HaxSlaGame\\UI.cpp",
-              "ViewState": "AgIAAAECAAAAAAAAAAAQwCQCAAABAAAAAAAAAA==",
+              "ViewState": "AgIAAH4AAAAAAAAAAAAAwJAAAAAZAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
               "WhenOpened": "2026-01-27T01:21:05.791Z",
               "IsPinned": true,
@@ -282,7 +284,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 5,
               "Title": "Game.h",
               "DocumentMoniker": "C:\\Users\\G2343\\Documents\\GitHub\\hakusura\\HaxSlaGame\\HaxSlaGame\\Game.h",
               "RelativeDocumentMoniker": "HaxSlaGame\\Game.h",
@@ -295,16 +297,17 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 1,
               "Title": "Game.cpp",
               "DocumentMoniker": "C:\\Users\\G2343\\Documents\\GitHub\\hakusura\\HaxSlaGame\\HaxSlaGame\\Game.cpp",
               "RelativeDocumentMoniker": "HaxSlaGame\\Game.cpp",
               "ToolTip": "C:\\Users\\G2343\\Documents\\GitHub\\hakusura\\HaxSlaGame\\HaxSlaGame\\Game.cpp",
               "RelativeToolTip": "HaxSlaGame\\Game.cpp",
-              "ViewState": "AgIAAOwAAAAAAAAAAAAQwA8BAAABAAAAAAAAAA==",
+              "ViewState": "AgIAAAEBAAAAAAAAAAAQwCQBAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
               "WhenOpened": "2026-02-04T02:25:28.799Z",
-              "IsPinned": true
+              "IsPinned": true,
+              "EditorCaption": ""
             },
             {
               "$type": "Document",

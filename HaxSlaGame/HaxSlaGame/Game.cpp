@@ -6,8 +6,8 @@
 #include <algorithm>
 
 Game::Game()
-    : windowWidth(1280), windowHeight(720),
-    gameWidth(1920), gameHeight(1080),
+    : windowWidth(1280), windowHeight(720), // 実際のウィンドウサイズ
+    gameWidth(1920), gameHeight(1080),    // 内部解像度 (高画質用)
     player(nullptr), camera({ 0 }), state(STATE_TITLE), floor(0), maxReachedFloor(0), currentSlot(0),
     debugMode(false), showMenu(false), showStorage(false), showReforgeMenu(false), showWarpMenu(false),
     showCraftMenu(false),
@@ -15,17 +15,21 @@ Game::Game()
     menuInputDelay(0.0f),
     bossDefeated(false)
 {
+    // ウィンドウサイズ変更可、VSync有効
     SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_VSYNC_HINT);
     InitWindow(windowWidth, windowHeight, "3D Hack and Slash RPG Refactored");
     SetTargetFPS(60);
 
+    // 内部解像度用のレンダーターゲット作成
     renderTarget = LoadRenderTexture(gameWidth, gameHeight);
     SetTextureFilter(renderTarget.texture, TEXTURE_FILTER_BILINEAR);
 
+    // 初期のマウススケール設定
     SetMouseScale((float)gameWidth / (float)windowWidth, (float)gameHeight / (float)windowHeight);
 
     DataManager::LoadAllData();
 
+    // 日本語フォント読み込み (サイズ64)
     std::vector<int> cps;
     for (int i = 32; i < 127; i++) cps.push_back(i);
     for (int i = 0x3000; i <= 0x30FF; i++) cps.push_back(i);
@@ -83,6 +87,18 @@ void Game::Run() { while (!WindowShouldClose()) { Update(); Draw(); } }
 
 void Game::Update() {
     float dt = GetFrameTime();
+
+    if (IsKeyPressed(KEY_F11)) ToggleFullscreen();
+
+    // マウススケールの更新（ウィンドウサイズ変更対応）
+    float screenW = (float)GetScreenWidth();
+    float screenH = (float)GetScreenHeight();
+    float scale = fminf(screenW / (float)gameWidth, screenH / (float)gameHeight);
+    float offsetX = (screenW - ((float)gameWidth * scale)) * 0.5f;
+    float offsetY = (screenH - ((float)gameHeight * scale)) * 0.5f;
+    SetMouseOffset(-(int)offsetX, -(int)offsetY);
+    SetMouseScale(1.0f / scale, 1.0f / scale);
+
     if (state == STATE_TITLE) return;
     if (state == STATE_GAMEOVER) { if (IsMouseButtonPressed(0) || IsKeyPressed(KEY_SPACE)) ApplyDeathPenalty(); return; }
 
@@ -169,16 +185,20 @@ void Game::Draw() {
         EndMode3D();
 
         fxManager.Draw2D(font, camera);
+
         UI::DrawHUD(*player, enemies, dungeon, camera, floor, debugMode, font, gameWidth, gameHeight);
         UI::DrawLogs(logs, *player, camera, font, gameWidth, gameHeight);
-        // DrawNearbyItems は DrawOverheadUI に置き換え
         UI::DrawOverheadUI(*player, enemies, droppedItems, dungeon, camera, font, gameWidth, gameHeight);
 
+        // 【重要】詳細ウィンドウが開いているかチェック
         bool detailOpen = UI::IsDetailOpen();
+        // 詳細が開いていない場合のみ入力有効
         bool inputEnabled = !detailOpen;
 
         if (showMenu) {
+            // メニュー操作の有効/無効を渡す
             UI::DrawMenu(*player, dungeon, currentTab, font, gameWidth, gameHeight, inputEnabled);
+
             if (currentTab == SYSTEM_TAB && inputEnabled) {
                 Rectangle saveBtn = { 120, 250, 300, 80 };
                 if (CheckCollisionPointRec(GetMousePosition(), saveBtn) && IsMouseButtonPressed(0) && dungeon.isHome) { SaveCurrentSlot(); logs.insert(logs.begin(), { "GAME SAVED!", 3.0f, GREEN }); }
@@ -190,6 +210,7 @@ void Game::Draw() {
         if (showReforgeMenu) UI::DrawReforgeMenu(*player, font, showReforgeMenu, gameWidth, gameHeight, inputEnabled);
 
         if (showWarpMenu) {
+            // ワープメニューも詳細が開いているときは操作不可
             int sf = UI::DrawWarpMenu(maxReachedFloor, font, showWarpMenu, (menuInputDelay <= 0 && inputEnabled), gameWidth, gameHeight);
             if (sf > 0) WarpToFloor(sf);
         }
@@ -206,7 +227,7 @@ void Game::Draw() {
             else if (res == 2) { showPrompt = false; sceneTimer = 1.0f; }
         }
 
-        // 【重要】詳細ウィンドウを最後に描画
+        // 【重要】詳細ウィンドウは最後に描画 (最前面)
         UI::DrawItemDetail(font, gameWidth, gameHeight);
     }
     EndTextureMode();
