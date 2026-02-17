@@ -13,14 +13,134 @@ int UI::warpScroll = 0;
 int UI::craftingScroll = 0;
 Vector2 UI::skillOffset = { 0.0f, 0.0f };
 
+// 静的メンバ変数の初期化
+bool UI::showDetail = false;
+ItemData UI::focusingItem;
+
+// 詳細表示中(showDetail == true)は入力をブロックし、色を暗くする
 bool UI::DrawButton(Rectangle r, const char* label, Font font, Color col) {
-    bool clicked = false; bool hover = CheckCollisionPointRec(GetMousePosition(), r);
-    DrawRectangleRec(r, hover ? ColorBrightness(col, 0.2f) : col);
-    DrawRectangleLinesEx(r, 2, RAYWHITE);
+    bool locked = showDetail; // ロック状態判定
+
+    bool clicked = false;
+    // ロック中はホバー判定を無効化
+    bool hover = !locked && CheckCollisionPointRec(GetMousePosition(), r);
+
+    // ロック中は色を暗くする
+    Color drawCol = locked ? ColorBrightness(col, -0.4f) : col;
+    if (hover) drawCol = ColorBrightness(col, 0.2f);
+
+    DrawRectangleRec(r, drawCol);
+    DrawRectangleLinesEx(r, 2, locked ? GRAY : RAYWHITE); // ロック中は枠線もグレーに
+
     Vector2 tSize = MeasureTextEx(font, label, 18, 1);
-    DrawTextEx(font, label, { r.x + r.width / 2 - tSize.x / 2, r.y + r.height / 2 - tSize.y / 2 }, 18, 1, WHITE);
+    DrawTextEx(font, label, { r.x + r.width / 2 - tSize.x / 2, r.y + r.height / 2 - tSize.y / 2 }, 18, 1, locked ? LIGHTGRAY : WHITE);
+
     if (hover && IsMouseButtonPressed(0)) clicked = true;
     return clicked;
+}
+
+// 詳細ウィンドウの描画と制御
+void UI::DrawDetailWindow(Font font) {
+    if (!showDetail) return;
+
+    int sw = GetScreenWidth();
+    int sh = GetScreenHeight();
+
+    // 1. 全画面を覆う半透明の黒背景（背面操作ブロックの視覚化）
+    DrawRectangle(0, 0, sw, sh, Fade(BLACK, 0.7f));
+
+    // 2. ウィンドウ本体
+    int w = 450;
+    int h = 550;
+    int x = (sw - w) / 2;
+    int y = (sh - h) / 2;
+
+    DrawRectangle(x, y, w, h, Fade(DARKBLUE, 0.95f));
+    DrawRectangleLinesEx({ (float)x, (float)y, (float)w, (float)h }, 3, GOLD);
+
+    // 3. アイテム情報表示
+    // 名前
+    DrawTextEx(font, Player::GetFullItemName(focusingItem).c_str(), { (float)x + 25, (float)y + 25 }, 28, 1, GOLD);
+
+    // カテゴリ表示
+    std::string typeStr = focusingItem.type;
+    if (typeStr == "EQUIP") typeStr = "武器";
+    else if (typeStr == "ARMOR") typeStr = "防具";
+    else if (typeStr == "CONSUMABLE") typeStr = "消耗品";
+    else if (typeStr == "MATERIAL") typeStr = "素材";
+
+    // 武器種・防具種の詳細
+    if (focusingItem.type == "EQUIP") {
+        const char* wTypes[] = { "剣", "槍", "斧", "弓", "杖", "なし" };
+        if (focusingItem.weaponSubtype >= 0 && focusingItem.weaponSubtype <= 4) {
+            typeStr += std::string(" (") + wTypes[focusingItem.weaponSubtype] + ")";
+        }
+    }
+    else if (focusingItem.type == "ARMOR") {
+        const char* aTypes[] = { "頭", "胴", "手", "脚", "足" };
+        if (focusingItem.weaponSubtype >= 0 && focusingItem.weaponSubtype <= 4) {
+            typeStr += std::string(" (") + aTypes[focusingItem.weaponSubtype] + ")";
+        }
+    }
+
+    DrawTextEx(font, typeStr.c_str(), { (float)x + 25, (float)y + 60 }, 20, 1, LIGHTGRAY);
+
+    // ステータス計算と表示
+    Modifier mod = DataManager::GetModifier(focusingItem.modifierId);
+    float totalAtk = focusingItem.atkBonus + mod.atk;
+    float totalDef = focusingItem.defBonus + mod.def;
+    float totalHp = focusingItem.hpBonus + mod.hp;
+    float totalSpd = focusingItem.speedBonus + mod.spd;
+
+    int statsY = y + 110;
+    int lineH = 35;
+
+    if (totalAtk != 0) {
+        DrawTextEx(font, TextFormat("攻撃力 : %+.1f", totalAtk), { (float)x + 40, (float)statsY }, 22, 1, RED);
+        if (mod.atk != 0) DrawTextEx(font, TextFormat("(補正 %+.1f)", mod.atk), { (float)x + 250, (float)statsY }, 18, 1, ORANGE);
+        statsY += lineH;
+    }
+    if (totalDef != 0) {
+        DrawTextEx(font, TextFormat("防御力 : %+.1f", totalDef), { (float)x + 40, (float)statsY }, 22, 1, BLUE);
+        if (mod.def != 0) DrawTextEx(font, TextFormat("(補正 %+.1f)", mod.def), { (float)x + 250, (float)statsY }, 18, 1, ORANGE);
+        statsY += lineH;
+    }
+    if (totalHp != 0) {
+        DrawTextEx(font, TextFormat("最大HP : %+.0f", totalHp), { (float)x + 40, (float)statsY }, 22, 1, GREEN);
+        if (mod.hp != 0) DrawTextEx(font, TextFormat("(補正 %+.0f)", mod.hp), { (float)x + 250, (float)statsY }, 18, 1, ORANGE);
+        statsY += lineH;
+    }
+    if (totalSpd != 0) {
+        DrawTextEx(font, TextFormat("速度   : %+.2f", totalSpd), { (float)x + 40, (float)statsY }, 22, 1, SKYBLUE);
+        if (mod.spd != 0) DrawTextEx(font, TextFormat("(補正 %+.2f)", mod.spd), { (float)x + 250, (float)statsY }, 18, 1, ORANGE);
+        statsY += lineH;
+    }
+    if (focusingItem.heal > 0) {
+        DrawTextEx(font, TextFormat("回復量 : %.0f", focusingItem.heal), { (float)x + 40, (float)statsY }, 22, 1, PINK);
+        statsY += lineH;
+    }
+
+    // 称号（モディファイア）情報
+    if (mod.id != 0) {
+        statsY += 20;
+        DrawRectangleLines(x + 20, statsY - 5, w - 40, 70, ORANGE);
+        DrawTextEx(font, "付与効果(エンチャント):", { (float)x + 30, (float)statsY }, 18, 1, ORANGE);
+        DrawTextEx(font, mod.name.c_str(), { (float)x + 50, (float)statsY + 30 }, 22, 1, YELLOW);
+    }
+
+    // 4. 閉じるボタン（DrawButtonを使わず独自に描画してロックの影響を受けないようにする）
+    Rectangle closeBtn = { (float)x + w / 2 - 80, (float)y + h - 70, 160, 50 };
+    bool hover = CheckCollisionPointRec(GetMousePosition(), closeBtn);
+
+    DrawRectangleRec(closeBtn, hover ? RED : MAROON);
+    DrawRectangleLinesEx(closeBtn, 2, WHITE);
+
+    Vector2 txtSz = MeasureTextEx(font, "閉じる", 24, 1);
+    DrawTextEx(font, "閉じる", { closeBtn.x + closeBtn.width / 2 - txtSz.x / 2, closeBtn.y + closeBtn.height / 2 - txtSz.y / 2 }, 24, 1, WHITE);
+
+    if (hover && IsMouseButtonPressed(0)) {
+        showDetail = false;
+    }
 }
 
 int UI::DrawTitleScreen(Font font) {
@@ -93,23 +213,45 @@ void UI::DrawMenu(Player& p, Dungeon& d, MenuTab& tab, Font font) {
     const char* tKeys[] = { "EQUIP", "SKILL", "MAP", "ITEMS", "DEBUG", "SYSTEM" };
     for (int i = 0; i < 6; i++) {
         Rectangle r = { 110.0f + (float)i * 135, 70.0f, 130.0f, 40.0f };
-        if (CheckCollisionPointRec(GetMousePosition(), r) && IsMouseButtonPressed(0)) { tab = (MenuTab)i; }
-        DrawRectangleRec(r, (tab == i) ? BLUE : DARKGRAY);
-        std::string label = DataManager::uiStrings[tKeys[i]]; if (label.empty()) label = tKeys[i];
-        Vector2 lSize = MeasureTextEx(font, label.c_str(), 20, 1);
-        DrawTextEx(font, label.c_str(), { r.x + (r.width / 2 - lSize.x / 2), r.y + 10 }, 18, 1, WHITE);
+        Color tabColor = (tab == i) ? BLUE : DARKGRAY;
+        std::string label = DataManager::uiStrings[tKeys[i]];
+        if (label.empty()) label = tKeys[i];
+
+        if (UI::DrawButton(r, label.c_str(), font, tabColor)) { tab = (MenuTab)i; }
     }
 
     if (tab == EQUIP) {
         DrawTextEx(font, DataManager::uiStrings["ACTIVE_SLOTS"].c_str(), { 120, 130 }, 20, 1, GOLD);
         for (int i = 0; i < 2; i++) {
             int y = 160 + i * 105; bool isEmpty = (p.equippedData[i].id == -1);
-            DrawRectangle(120, y, 260, 95, (p.activeSlot == i) ? MAROON : BLACK);
+
+            // 装備スロットの背景と判定
+            Rectangle slotRect = { 120, (float)y, 260, 95 };
+            // ボタンエリア（はずすボタン）
+            Rectangle btnRect = { 310, (float)y + 25, 60, 40 };
+
+            Color slotCol = (p.activeSlot == i) ? MAROON : BLACK;
+            if (showDetail) slotCol = ColorBrightness(slotCol, -0.4f);
+            DrawRectangleRec(slotRect, slotCol);
+
+            // 【修正】左クリックで詳細 (ただしボタンエリアを除く)
+            if (!showDetail && !isEmpty && CheckCollisionPointRec(GetMousePosition(), slotRect)) {
+                // ボタンの上でなければ詳細を開く
+                if (!CheckCollisionPointRec(GetMousePosition(), btnRect)) {
+                    if (IsMouseButtonPressed(0)) {
+                        focusingItem = p.equippedData[i];
+                        showDetail = true;
+                    }
+                }
+            }
+
             if (!isEmpty) {
                 DrawTextEx(font, Player::GetFullItemName(p.equippedData[i]).c_str(), { 130, (float)y + 25 }, 20, 1, WHITE);
                 float totalBonus = Player::GetItemTotalAtkBonus(p.equippedData[i]);
                 DrawTextEx(font, TextFormat("%s +%.1f", DataManager::uiStrings["ATK"].c_str(), totalBonus), { 130, (float)y + 50 }, 14, 1, YELLOW);
-                if (UI::DrawButton({ 310, (float)y + 25, 60, 40 }, "はずす", font, RED)) p.UnequipWeapon(i);
+
+                // ボタン描画 (DrawButton内でクリック判定)
+                if (UI::DrawButton(btnRect, "はずす", font, RED)) p.UnequipWeapon(i);
             }
             else DrawTextEx(font, "EMPTY", { 130, (float)y + 35 }, 20, 1, DARKGRAY);
         }
@@ -119,13 +261,30 @@ void UI::DrawMenu(Player& p, Dungeon& d, MenuTab& tab, Font font) {
             int y = 160 + i * 70;
             DrawTextEx(font, armorNames[i], { 420, (float)y + 20 }, 16, 1, LIGHTGRAY);
             bool isEmpty = (p.equippedArmor[i].id == -1);
-            DrawRectangle(480, y, 200, 60, BLACK);
-            DrawRectangleLines(480, y, 200, 60, DARKGRAY);
+
+            Rectangle slotRect = { 480, (float)y, 200, 60 };
+            // ボタンエリア(OUTボタン)
+            Rectangle btnRect = { 630, (float)y + 10, 45, 40 };
+
+            DrawRectangleRec(slotRect, showDetail ? ColorBrightness(BLACK, -0.4f) : BLACK);
+            DrawRectangleLinesEx(slotRect, 1, showDetail ? GRAY : DARKGRAY);
+
+            // 【修正】左クリックで詳細 (ボタンエリアを除く)
+            if (!showDetail && !isEmpty && CheckCollisionPointRec(GetMousePosition(), slotRect)) {
+                if (!CheckCollisionPointRec(GetMousePosition(), btnRect)) {
+                    if (IsMouseButtonPressed(0)) {
+                        focusingItem = p.equippedArmor[i];
+                        showDetail = true;
+                    }
+                }
+            }
+
             if (!isEmpty) {
                 DrawTextEx(font, Player::GetFullItemName(p.equippedArmor[i]).c_str(), { 490, (float)y + 10 }, 14, 1, WHITE);
                 float def = p.equippedArmor[i].defBonus + DataManager::GetModifier(p.equippedArmor[i].modifierId).def;
                 DrawTextEx(font, TextFormat("DEF +%.1f", def), { 490, (float)y + 35 }, 12, 1, BLUE);
-                if (UI::DrawButton({ 630, (float)y + 10, 45, 40 }, "OUT", font, RED)) p.UnequipArmor(i);
+
+                if (UI::DrawButton(btnRect, "OUT", font, RED)) p.UnequipArmor(i);
             }
             else { DrawTextEx(font, "EMPTY", { 490, (float)y + 20 }, 14, 1, DARKGRAY); }
         }
@@ -134,7 +293,23 @@ void UI::DrawMenu(Player& p, Dungeon& d, MenuTab& tab, Font font) {
         const int perP = 8; int maxP = (int)ceil((float)p.inventoryEquip.size() / perP); if (maxP < 1) maxP = 1;
         for (int i = 0; i < perP; i++) {
             int idx = equipPage * perP + i; if (idx >= (int)p.inventoryEquip.size()) break;
-            int y = 160 + i * 45; Rectangle r = { 720, (float)y, 300, 40 }; DrawRectangleRec(r, BLACK);
+            int y = 160 + i * 45;
+
+            Rectangle r = { 720, (float)y, 300, 40 };
+            // 装備ボタンはx=950以降にある
+
+            DrawRectangleRec(r, showDetail ? ColorBrightness(BLACK, -0.4f) : BLACK);
+
+            // 【修正】左クリックで詳細 (ボタンエリア x>=950 を除く)
+            if (!showDetail && CheckCollisionPointRec(GetMousePosition(), r)) {
+                if (GetMouseX() < 950) { // ボタンエリアの手前なら詳細
+                    if (IsMouseButtonPressed(0)) {
+                        focusingItem = p.inventoryEquip[idx];
+                        showDetail = true;
+                    }
+                }
+            }
+
             DrawTextEx(font, Player::GetFullItemName(p.inventoryEquip[idx]).c_str(), { 730, (float)y + 10 }, 14, 1, WHITE);
             if (p.inventoryEquip[idx].type == "EQUIP") {
                 if (UI::DrawButton({ 950, (float)y, 30, 40 }, "W1", font, DARKGRAY)) p.EquipWeapon(idx, 0);
@@ -154,20 +329,50 @@ void UI::DrawMenu(Player& p, Dungeon& d, MenuTab& tab, Font font) {
     else if (tab == SKILL) {
         Rectangle viewArea = { 100, 120, (float)sw - 200, (float)sh - 170 };
         DrawTextEx(font, "右クリックドラッグで視点移動", { 120, 620 }, 16, 1, LIGHTGRAY);
-        if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) { Vector2 delta = GetMouseDelta(); skillOffset = Vector2Add(skillOffset, delta); }
+        if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT) && !showDetail) { Vector2 delta = GetMouseDelta(); skillOffset = Vector2Add(skillOffset, delta); }
         BeginScissorMode((int)viewArea.x, (int)viewArea.y, (int)viewArea.width, (int)viewArea.height);
         for (auto& node : p.skillTree) { Vector2 startPos = Vector2Add(node.uiPos, skillOffset); for (int reqId : node.reqIds) { Vector2 endPos = Vector2Add(p.skillTree[reqId].uiPos, skillOffset); DrawLineEx(startPos, endPos, 3, node.unlocked ? GOLD : DARKGRAY); } }
-        for (int i = 0; i < (int)p.skillTree.size(); i++) { auto& node = p.skillTree[i]; bool available = p.IsSkillAvailable(i); Vector2 drawPos = Vector2Add(node.uiPos, skillOffset); Color nodeColor = node.unlocked ? YELLOW : (available ? GREEN : DARKGRAY); if (node.type != SKILL_PASSIVE) { nodeColor = node.unlocked ? ORANGE : (available ? PURPLE : DARKGRAY); } DrawPoly(drawPos, 6, 35, 0, nodeColor); DrawPolyLines(drawPos, 6, 35, 0, RAYWHITE); DrawTextEx(font, node.name.c_str(), { drawPos.x - 28, drawPos.y - 8 }, 12, 1, node.unlocked ? BLACK : WHITE); if (!node.unlocked) { DrawTextEx(font, TextFormat("SP:%d", node.cost), { drawPos.x - 15, drawPos.y + 15 }, 10, 1, WHITE); } if (CheckCollisionPointRec(GetMousePosition(), viewArea)) { if (available && CheckCollisionPointCircle(GetMousePosition(), drawPos, 35) && IsMouseButtonPressed(0)) { p.UnlockSkill(i); } } }
+        for (int i = 0; i < (int)p.skillTree.size(); i++) { auto& node = p.skillTree[i]; bool available = p.IsSkillAvailable(i); Vector2 drawPos = Vector2Add(node.uiPos, skillOffset); Color nodeColor = node.unlocked ? YELLOW : (available ? GREEN : DARKGRAY); if (node.type != SKILL_PASSIVE) { nodeColor = node.unlocked ? ORANGE : (available ? PURPLE : DARKGRAY); } DrawPoly(drawPos, 6, 35, 0, nodeColor); DrawPolyLines(drawPos, 6, 35, 0, RAYWHITE); DrawTextEx(font, node.name.c_str(), { drawPos.x - 28, drawPos.y - 8 }, 12, 1, node.unlocked ? BLACK : WHITE); if (!node.unlocked) { DrawTextEx(font, TextFormat("SP:%d", node.cost), { drawPos.x - 15, drawPos.y + 15 }, 10, 1, WHITE); } if (!showDetail && CheckCollisionPointRec(GetMousePosition(), viewArea)) { if (available && CheckCollisionPointCircle(GetMousePosition(), drawPos, 35) && IsMouseButtonPressed(0)) { p.UnlockSkill(i); } } }
         EndScissorMode();
     }
     else if (tab == INVENTORY) {
         const char* subK[] = { "CONSUMABLE", "MATERIAL" };
-        for (int i = 0; i < 2; i++) { Rectangle r = { 120.0f + (float)i * 210, 120, 200, 35 }; if (CheckCollisionPointRec(GetMousePosition(), r) && IsMouseButtonPressed(0)) { itemSubTab = i; itemPage = 0; } DrawRectangleRec(r, (itemSubTab == i) ? GREEN : BLACK); std::string label = DataManager::uiStrings[subK[i]]; if (label.empty()) label = subK[i]; DrawTextEx(font, label.c_str(), { r.x + 10, r.y + 8 }, 16, 1, WHITE); }
+        for (int i = 0; i < 2; i++) {
+            Rectangle r = { 120.0f + (float)i * 210, 120, 200, 35 };
+            Color c = (itemSubTab == i) ? GREEN : BLACK;
+            if (showDetail) c = ColorBrightness(c, -0.4f);
+
+            if (!showDetail && CheckCollisionPointRec(GetMousePosition(), r) && IsMouseButtonPressed(0)) { itemSubTab = i; itemPage = 0; }
+            DrawRectangleRec(r, c);
+            std::string label = DataManager::uiStrings[subK[i]]; if (label.empty()) label = subK[i];
+            DrawTextEx(font, label.c_str(), { r.x + 10, r.y + 8 }, 16, 1, WHITE);
+        }
         std::vector<int> filtered; std::string target = (itemSubTab == 0) ? "CONSUMABLE" : "MATERIAL"; for (int i = 0; i < (int)p.inventoryItems.size(); i++) if (p.inventoryItems[i].type == target) filtered.push_back(i);
         const int perP = 10; int maxP = (int)ceil((float)filtered.size() / perP); if (maxP < 1) maxP = 1;
         DrawTextEx(font, TextFormat(DataManager::uiStrings["PAGE_INFO"].c_str(), itemPage + 1, maxP), { 600, 125 }, 18, 1, WHITE);
-        for (int i = 0; i < perP; i++) { int lIdx = itemPage * perP + i; if (lIdx >= (int)filtered.size()) break; int invIdx = filtered[lIdx]; auto& item = p.inventoryItems[invIdx]; int y = 165 + i * 42; DrawRectangle(120, y, 400, 38, Fade(BLACK, 0.4f)); DrawTextEx(font, TextFormat("%s x%d", item.name.c_str(), item.count), { 135, (float)y + 10 }, 18, 1.0f, WHITE); if (itemSubTab == 0 && UI::DrawButton({ 530, (float)y, 80, 38 }, "使う", font, GREEN)) p.UseItem(invIdx); }
-        if (UI::DrawButton({ 120, 600, 100, 30 }, "<<", font, GRAY) && itemPage > 0) itemPage--; if (UI::DrawButton({ 230, 600, 100, 30 }, ">>", font, GRAY) && itemPage < maxP - 1) itemPage++;
+        for (int i = 0; i < perP; i++) {
+            int lIdx = itemPage * perP + i; if (lIdx >= (int)filtered.size()) break;
+            int invIdx = filtered[lIdx]; auto& item = p.inventoryItems[invIdx];
+            int y = 165 + i * 42;
+            Rectangle itemRect = { 120, (float)y, 400, 38 };
+
+            DrawRectangleRec(itemRect, Fade(BLACK, showDetail ? 0.2f : 0.4f));
+            DrawTextEx(font, TextFormat("%s x%d", item.name.c_str(), item.count), { 135, (float)y + 10 }, 18, 1.0f, WHITE);
+
+            // 【修正】左クリックで詳細 (ボタンエリア x>=530 を除く)
+            // ボタンは x=530 から。itemRectは 120+400=520 まで。
+            // つまり、ボタンは itemRect の外にあるため、単純に左クリック判定でOK。
+            if (!showDetail && CheckCollisionPointRec(GetMousePosition(), itemRect)) {
+                if (IsMouseButtonPressed(0)) {
+                    focusingItem = item;
+                    showDetail = true;
+                }
+            }
+
+            if (itemSubTab == 0 && UI::DrawButton({ 530, (float)y, 80, 38 }, "使う", font, GREEN)) p.UseItem(invIdx);
+        }
+        if (UI::DrawButton({ 120, 600, 100, 30 }, "<<", font, GRAY) && itemPage > 0) itemPage--;
+        if (UI::DrawButton({ 230, 600, 100, 30 }, ">>", font, GRAY) && itemPage < maxP - 1) itemPage++;
     }
     else if (tab == DEBUG_TAB) {
         const int perP = 10; int total = (int)DataManager::itemConfigs.size(); int maxP = (int)ceil((float)total / perP);
@@ -188,13 +393,14 @@ void UI::DrawMenu(Player& p, Dungeon& d, MenuTab& tab, Font font) {
         else { DrawRectangle(120, 200, 200, 60, GRAY); DrawTextEx(font, "セーブ (ホームのみ)", { 140, 220 }, 18, 1, DARKGRAY); }
         if (UI::DrawButton({ 120, 300, 200, 60 }, "タイトルへ戻る", font, RED)) { /* Game.cppで処理 */ }
     }
+
+    // 最前面に詳細ウィンドウを描画
+    DrawDetailWindow(font);
 }
 
-// 【修正】クラフトメニューのレイアウト調整
 void UI::DrawCraftingMenu(Player& p, Font font, bool& isOpen) {
     int sw = GetScreenWidth(), sh = GetScreenHeight();
 
-    // 背景ウィンドウ
     DrawRectangle(50, 50, sw - 100, sh - 100, Fade(BLACK, 0.95f));
     DrawRectangleLinesEx({ 50, 50, (float)sw - 100, (float)sh - 100 }, 3, ORANGE);
 
@@ -202,7 +408,6 @@ void UI::DrawCraftingMenu(Player& p, Font font, bool& isOpen) {
     DrawTextEx(font, "クラフト", { 80, 70 }, 24, 1, ORANGE);
     DrawTextEx(font, TextFormat("Gold: %d", p.gold), { 250, 75 }, 20, 1, YELLOW);
 
-    // 1ページあたりの表示数を減らす
     const int perPage = 6;
     int maxP = (int)ceil((float)DataManager::recipes.size() / perPage);
 
@@ -213,9 +418,22 @@ void UI::DrawCraftingMenu(Player& p, Font font, bool& isOpen) {
         auto& r = DataManager::recipes[idx];
         ItemData res = DataManager::GetItemConfigCopy(r.resultItemId);
 
-        // アイテム表示枠のY座標調整
-        float y = 120.0f + (float)i * 80.0f; // 間隔を広げる
-        DrawRectangle(80, (int)y, sw - 200, 70, Fade(DARKGRAY, 0.5f));
+        float y = 120.0f + (float)i * 80.0f;
+        Rectangle itemRect = { 80, (float)y, (float)sw - 200, 70 };
+        // 作成ボタンは itemRect の内部に含まれる可能性が高いので注意
+        Rectangle createBtn = { (float)sw - 200, y + 15, 80, 40 };
+
+        DrawRectangleRec(itemRect, Fade(DARKGRAY, showDetail ? 0.2f : 0.5f));
+
+        // 【修正】左クリックで詳細 (作成ボタンエリアを除く)
+        if (!showDetail && CheckCollisionPointRec(GetMousePosition(), itemRect)) {
+            if (!CheckCollisionPointRec(GetMousePosition(), createBtn)) {
+                if (IsMouseButtonPressed(0)) {
+                    focusingItem = res;
+                    showDetail = true;
+                }
+            }
+        }
 
         DrawTextEx(font, res.name.c_str(), { 90, y + 10 }, 20, 1, WHITE);
 
@@ -232,7 +450,7 @@ void UI::DrawCraftingMenu(Player& p, Font font, bool& isOpen) {
         DrawTextEx(font, TextFormat("費用: %d G", r.cost), { (float)sw - 320, y + 25 }, 16, 1, (p.gold >= r.cost ? YELLOW : RED));
 
         if (canCraft && p.gold >= r.cost) {
-            if (UI::DrawButton({ (float)sw - 200, y + 15, 80, 40 }, "作成", font, ORANGE)) {
+            if (UI::DrawButton(createBtn, "作成", font, ORANGE)) {
                 p.gold -= r.cost;
                 for (auto& m : r.materials) {
                     for (auto it = p.inventoryItems.begin(); it != p.inventoryItems.end(); ) {
@@ -247,12 +465,13 @@ void UI::DrawCraftingMenu(Player& p, Font font, bool& isOpen) {
                 p.AddToInventory(newItem);
             }
         }
-        else { DrawRectangle((int)sw - 200, (int)y + 15, 80, 40, GRAY); }
+        else { DrawRectangle((int)sw - 200, (int)y + 15, 80, 40, showDetail ? ColorBrightness(GRAY, -0.4f) : GRAY); }
     }
 
-    // ページ送りボタン位置調整
     if (UI::DrawButton({ 80, 620, 100, 30 }, "<<", font, GRAY) && craftingScroll > 0) craftingScroll--;
     if (UI::DrawButton({ 200, 620, 100, 30 }, ">>", font, GRAY) && craftingScroll < maxP - 1) craftingScroll++;
+
+    DrawDetailWindow(font);
 }
 
 void UI::DrawStorage(Player& p, Font font, bool& isOpen, std::vector<ItemData>& sItems, std::vector<ItemData>& sEquip) {
@@ -262,8 +481,18 @@ void UI::DrawStorage(Player& p, Font font, bool& isOpen, std::vector<ItemData>& 
     const int perP = 10; int mPInv = (int)ceil((float)p.inventoryItems.size() / perP); int mPBox = (int)ceil((float)sItems.size() / perP); if (mPInv < 1)mPInv = 1; if (mPBox < 1)mPBox = 1;
     for (int i = 0; i < perP; i++) {
         int idx = storageInvPage * perP + i; if (idx >= (int)p.inventoryItems.size()) break;
-        Rectangle r = { 80, (float)170 + i * 42, 350, 38 }; DrawRectangleRec(r, DARKGRAY);
+        Rectangle r = { 80, (float)170 + i * 42, 350, 38 };
+        DrawRectangleRec(r, showDetail ? ColorBrightness(DARKGRAY, -0.4f) : DARKGRAY);
         DrawTextEx(font, TextFormat("%s x%d", p.inventoryItems[idx].name.c_str(), p.inventoryItems[idx].count), { r.x + 10, r.y + 10 }, 18, 1, WHITE);
+
+        // 【修正】左クリックで詳細 (ボタンはx=440、rはx=430までなので被らない)
+        if (!showDetail && CheckCollisionPointRec(GetMousePosition(), r)) {
+            if (IsMouseButtonPressed(0)) {
+                focusingItem = p.inventoryItems[idx];
+                showDetail = true;
+            }
+        }
+
         if (UI::DrawButton({ 440, r.y, 110, 38 }, "預ける >>", font, BLUE)) {
             bool f = false; for (auto& si : sItems) if (si.id == p.inventoryItems[idx].id) { si.count += p.inventoryItems[idx].count; f = true; break; }
             if (!f) sItems.push_back(p.inventoryItems[idx]); p.inventoryItems.erase(p.inventoryItems.begin() + idx); break;
@@ -275,13 +504,25 @@ void UI::DrawStorage(Player& p, Font font, bool& isOpen, std::vector<ItemData>& 
     DrawTextEx(font, "倉庫のアイテム", { 620, 120 }, 20, 1, GREEN);
     for (int i = 0; i < perP; i++) {
         int idx = storageBoxPage * perP + i; if (idx >= (int)sItems.size()) break;
-        Rectangle r = { 770, (float)170 + i * 42, 350, 38 }; DrawRectangleRec(r, DARKBLUE);
+        Rectangle r = { 770, (float)170 + i * 42, 350, 38 };
+        DrawRectangleRec(r, showDetail ? ColorBrightness(DARKBLUE, -0.4f) : DARKBLUE);
         DrawTextEx(font, TextFormat("%s x%d", sItems[idx].name.c_str(), sItems[idx].count), { r.x + 10, r.y + 10 }, 18, 1, WHITE);
+
+        // 【修正】左クリックで詳細 (ボタンはx=620。rはx=770から。被らない)
+        if (!showDetail && CheckCollisionPointRec(GetMousePosition(), r)) {
+            if (IsMouseButtonPressed(0)) {
+                focusingItem = sItems[idx];
+                showDetail = true;
+            }
+        }
+
         if (UI::DrawButton({ 620, r.y, 110, 38 }, "<< 取出す", font, DARKGREEN)) if (p.AddToInventory(sItems[idx])) sItems.erase(sItems.begin() + idx);
     }
     if (UI::DrawButton({ 620, 600, 100, 30 }, "<<", font, GRAY) && storageBoxPage > 0) storageBoxPage--;
     if (UI::DrawButton({ 730, 600, 100, 30 }, ">>", font, GRAY) && storageBoxPage < mPBox - 1) storageBoxPage++;
     if (UI::DrawButton({ (float)sw - 160, 70, 100, 45 }, "閉じる", font, RED)) isOpen = false;
+
+    DrawDetailWindow(font);
 }
 
 void UI::DrawReforgeMenu(Player& p, Font font, bool& isOpen) {
@@ -296,6 +537,11 @@ void UI::DrawReforgeMenu(Player& p, Font font, bool& isOpen) {
         if (i >= perPage) break;
         Rectangle r = { 80, 180.0f + i * 42, 350, 38 };
         Color c = (reforgeItemIdx == i) ? DARKBLUE : DARKGRAY;
+
+        // リフォージメニューは「選択」が主機能のため、クリックは選択のみにする(詳細ウィンドウは出さない)
+        // 既存動作: DrawButtonをクリックすると選択され、右側に詳細が出る。
+        // これで十分なはずなので、ここにはモーダルウィンドウのトリガーを追加しない。
+
         if (DrawButton(r, Player::GetFullItemName(p.inventoryEquip[i]).c_str(), font, c)) { reforgeItemIdx = i; }
     }
     if (reforgeItemIdx != -1 && reforgeItemIdx < (int)p.inventoryEquip.size()) {
@@ -315,9 +561,12 @@ void UI::DrawReforgeMenu(Player& p, Font font, bool& isOpen) {
             if (DrawButton({ 520, 400, 150, 50 }, "リフォージ", font, GREEN)) { p.gold -= cost; item.modifierId = DataManager::GetRandomModifierId(); }
         }
         else {
-            DrawRectangle(520, 400, 150, 50, GRAY); DrawTextEx(font, "ゴールド不足", { 530, 415 }, 18, 1, BLACK);
+            DrawRectangle(520, 400, 150, 50, showDetail ? ColorBrightness(GRAY, -0.4f) : GRAY); DrawTextEx(font, "ゴールド不足", { 530, 415 }, 18, 1, BLACK);
         }
     }
+
+    // 最前面に詳細ウィンドウ（リフォージでは使わないが共通処理として残す）
+    DrawDetailWindow(font);
 }
 
 int UI::DrawWarpMenu(int maxFloor, Font font, bool& isOpen) {

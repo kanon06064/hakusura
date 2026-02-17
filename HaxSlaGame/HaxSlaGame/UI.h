@@ -13,7 +13,7 @@ public:
     static void DrawMenu(class Player& p, class Dungeon& d, MenuTab& tab, Font font);
     static void DrawStorage(class Player& p, Font font, bool& isOpen, std::vector<ItemData>& sItems, std::vector<ItemData>& sEquip);
     static void DrawReforgeMenu(class Player& p, Font font, bool& isOpen);
-    static void DrawCraftingMenu(class Player& p, Font font, bool& isOpen); // y’Ç‰Áz
+    static void DrawCraftingMenu(class Player& p, Font font, bool& isOpen);
 
     static int DrawTitleScreen(Font font);
     static int DrawWarpMenu(int maxFloor, Font font, bool& isOpen);
@@ -23,10 +23,18 @@ public:
     static void DrawNearbyItems(class Player& p, std::vector<DroppedItem>& di, class Dungeon& d, Camera3D& cam, Font font);
 
     static int itemPage, equipPage, debugPage, storageInvPage, storageBoxPage, itemSubTab;
+
+    // y’Ç‰ÁzÚ×ƒEƒBƒ“ƒhƒEŠÇ——p
+    static bool showDetail;
+    static ItemData focusingItem;
+
 private:
     static int reforgeItemIdx;
     static int warpScroll;
-    static int craftingScroll; // y’Ç‰Áz
+    static int craftingScroll;
     static Vector2 skillOffset;
     static bool DrawButton(Rectangle rect, const char* label, Font font, Color baseCol);
+
+    // y’Ç‰ÁzÚ×ƒEƒBƒ“ƒhƒE•`‰æŠÖ”
+    static void DrawDetailWindow(Font font);
 };

@@ -1,648 +1,198 @@
-﻿  DataManager.cpp
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\DataManager.cpp(1,1): warning C4828: オフセット 0x1b5 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\DataManager.cpp(1,1): warning C4828: オフセット 0x1b8 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\DataManager.cpp(1,1): warning C4828: オフセット 0x1b9 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\DataManager.cpp(1,1): warning C4828: オフセット 0x1bb から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\DataManager.cpp(1,1): warning C4828: オフセット 0x1bc から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\DataManager.cpp(1,1): warning C4828: オフセット 0x1bd から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\DataManager.cpp(1,1): warning C4828: オフセット 0x1bf から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\DataManager.cpp(1,1): warning C4828: オフセット 0x1c9 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\DataManager.cpp(1,1): warning C4828: オフセット 0x1cc から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\DataManager.cpp(1,1): warning C4828: オフセット 0x1cd から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\DataManager.cpp(1,1): warning C4828: オフセット 0x1d3 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\DataManager.cpp(1,1): warning C4828: オフセット 0x1d4 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\DataManager.cpp(1,1): warning C4828: オフセット 0x1d5 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\DataManager.cpp(1,1): warning C4828: オフセット 0x1d6 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\DataManager.cpp(1,1): warning C4828: オフセット 0x1d7 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\DataManager.cpp(1,1): warning C4828: オフセット 0x1d9 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\DataManager.cpp(1,1): warning C4828: オフセット 0x1db から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\DataManager.cpp(1,1): warning C4828: オフセット 0x1dd から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\DataManager.cpp(1,1): warning C4828: オフセット 0x1e0 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\DataManager.cpp(1,1): warning C4828: オフセット 0x1e1 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\DataManager.cpp(1,1): warning C4828: オフセット 0x1e2 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\DataManager.h(1,1): warning C4828: オフセット 0x186 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'DataManager.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\DataManager.h(1,1): warning C4828: オフセット 0x188 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'DataManager.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\DataManager.h(1,1): warning C4828: オフセット 0x18b から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'DataManager.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\DataManager.h(1,1): warning C4828: オフセット 0x18c から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'DataManager.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x5e から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'DataManager.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x12a から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'DataManager.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x180 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'DataManager.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x182 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'DataManager.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x184 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'DataManager.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x185 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'DataManager.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x186 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'DataManager.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x197 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'DataManager.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x19a から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'DataManager.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x3d0 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'DataManager.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x3d2 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'DataManager.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x3d3 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'DataManager.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x3d4 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'DataManager.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x3d5 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'DataManager.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Player.h(1,1): warning C4828: オフセット 0x265 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'DataManager.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Player.h(1,1): warning C4828: オフセット 0x267 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'DataManager.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Player.h(1,1): warning C4828: オフセット 0x268 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'DataManager.cpp' をコンパイルしています)
-  
-  Game.cpp
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Game.h(1,1): warning C4828: オフセット 0x1b2 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Game.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Game.h(1,1): warning C4828: オフセット 0x1b4 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Game.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Game.h(1,1): warning C4828: オフセット 0x1b7 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Game.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Game.h(1,1): warning C4828: オフセット 0x1b8 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Game.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Game.h(1,1): warning C4828: オフセット 0x1ba から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Game.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Game.h(1,1): warning C4828: オフセット 0x1bc から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Game.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Game.h(1,1): warning C4828: オフセット 0x1be から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Game.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Game.h(1,1): warning C4828: オフセット 0x1bf から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Game.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Game.h(1,1): warning C4828: オフセット 0x1c0 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Game.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Game.h(1,1): warning C4828: オフセット 0x1c2 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Game.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Game.h(1,1): warning C4828: オフセット 0x1c4 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Game.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Game.h(1,1): warning C4828: オフセット 0x1c6 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Game.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Game.h(1,1): warning C4828: オフセット 0x1c8 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Game.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.h(1,1): warning C4828: オフセット 0x190 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Game.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.h(1,1): warning C4828: オフセット 0x192 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Game.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.h(1,1): warning C4828: オフセット 0x193 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Game.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.h(1,1): warning C4828: オフセット 0x194 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Game.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.h(1,1): warning C4828: オフセット 0x196 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Game.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.h(1,1): warning C4828: オフセット 0x198 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Game.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.h(1,1): warning C4828: オフセット 0x19a から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Game.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.h(1,1): warning C4828: オフセット 0x19c から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Game.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.h(1,1): warning C4828: オフセット 0x19e から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Game.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.h(1,1): warning C4828: オフセット 0x1a0 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Game.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.h(1,1): warning C4828: オフセット 0x1a1 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Game.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.h(1,1): warning C4828: オフセット 0x1a2 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Game.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.h(1,1): warning C4828: オフセット 0x1a3 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Game.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x5e から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Game.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x12a から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Game.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x180 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Game.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x182 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Game.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x184 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Game.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x185 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Game.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x186 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Game.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x197 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Game.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x19a から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Game.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x3d0 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Game.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x3d2 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Game.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x3d3 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Game.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x3d4 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Game.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x3d5 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Game.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Player.h(1,1): warning C4828: オフセット 0x265 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Game.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Player.h(1,1): warning C4828: オフセット 0x267 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Game.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Player.h(1,1): warning C4828: オフセット 0x268 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Game.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI.h(1,1): warning C4828: オフセット 0x29f から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Game.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI.h(1,1): warning C4828: オフセット 0x2a1 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Game.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI.h(1,1): warning C4828: オフセット 0x2a4 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Game.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI.h(1,1): warning C4828: オフセット 0x2a5 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Game.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI.h(1,1): warning C4828: オフセット 0x50d から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Game.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI.h(1,1): warning C4828: オフセット 0x50f から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Game.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI.h(1,1): warning C4828: オフセット 0x512 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Game.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI.h(1,1): warning C4828: オフセット 0x513 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Game.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\DataManager.h(1,1): warning C4828: オフセット 0x186 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Game.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\DataManager.h(1,1): warning C4828: オフセット 0x188 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Game.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\DataManager.h(1,1): warning C4828: オフセット 0x18b から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Game.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\DataManager.h(1,1): warning C4828: オフセット 0x18c から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Game.cpp' をコンパイルしています)
-  
-  Player.cpp
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Player.h(1,1): warning C4828: オフセット 0x265 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Player.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Player.h(1,1): warning C4828: オフセット 0x267 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Player.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Player.h(1,1): warning C4828: オフセット 0x268 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Player.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x5e から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Player.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x12a から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Player.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x180 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Player.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x182 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Player.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x184 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Player.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x185 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Player.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x186 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Player.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x197 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Player.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x19a から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Player.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x3d0 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Player.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x3d2 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Player.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x3d3 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Player.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x3d4 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Player.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x3d5 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Player.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.h(1,1): warning C4828: オフセット 0x190 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Player.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.h(1,1): warning C4828: オフセット 0x192 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Player.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.h(1,1): warning C4828: オフセット 0x193 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Player.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.h(1,1): warning C4828: オフセット 0x194 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Player.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.h(1,1): warning C4828: オフセット 0x196 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Player.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.h(1,1): warning C4828: オフセット 0x198 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Player.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.h(1,1): warning C4828: オフセット 0x19a から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Player.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.h(1,1): warning C4828: オフセット 0x19c から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Player.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.h(1,1): warning C4828: オフセット 0x19e から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Player.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.h(1,1): warning C4828: オフセット 0x1a0 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Player.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.h(1,1): warning C4828: オフセット 0x1a1 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Player.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.h(1,1): warning C4828: オフセット 0x1a2 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Player.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.h(1,1): warning C4828: オフセット 0x1a3 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Player.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\DataManager.h(1,1): warning C4828: オフセット 0x186 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Player.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\DataManager.h(1,1): warning C4828: オフセット 0x188 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Player.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\DataManager.h(1,1): warning C4828: オフセット 0x18b から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Player.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\DataManager.h(1,1): warning C4828: オフセット 0x18c から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'Player.cpp' をコンパイルしています)
-  
-  UI.cpp
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI.h(1,1): warning C4828: オフセット 0x29f から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
+﻿  UI.cpp
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\UI.h(1,1): warning C4828: オフセット 0x4a2 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
   (ソース ファイル 'UI.cpp' をコンパイルしています)
   
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI.h(1,1): warning C4828: オフセット 0x2a1 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\UI.h(1,1): warning C4828: オフセット 0x4a4 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
   (ソース ファイル 'UI.cpp' をコンパイルしています)
   
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI.h(1,1): warning C4828: オフセット 0x2a4 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\UI.h(1,1): warning C4828: オフセット 0x4a7 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
   (ソース ファイル 'UI.cpp' をコンパイルしています)
   
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI.h(1,1): warning C4828: オフセット 0x2a5 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\UI.h(1,1): warning C4828: オフセット 0x4a8 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
   (ソース ファイル 'UI.cpp' をコンパイルしています)
   
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI.h(1,1): warning C4828: オフセット 0x50d から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\UI.h(1,1): warning C4828: オフセット 0x4aa から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
   (ソース ファイル 'UI.cpp' をコンパイルしています)
   
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI.h(1,1): warning C4828: オフセット 0x50f から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\UI.h(1,1): warning C4828: オフセット 0x4b0 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
   (ソース ファイル 'UI.cpp' をコンパイルしています)
   
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI.h(1,1): warning C4828: オフセット 0x512 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\UI.h(1,1): warning C4828: オフセット 0x4b2 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
   (ソース ファイル 'UI.cpp' をコンパイルしています)
   
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI.h(1,1): warning C4828: オフセット 0x513 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\UI.h(1,1): warning C4828: オフセット 0x4b3 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
   (ソース ファイル 'UI.cpp' をコンパイルしています)
   
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x5e から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\UI.h(1,1): warning C4828: オフセット 0x4b4 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
   (ソース ファイル 'UI.cpp' をコンパイルしています)
   
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x12a から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\UI.h(1,1): warning C4828: オフセット 0x4b6 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
   (ソース ファイル 'UI.cpp' をコンパイルしています)
   
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x180 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\UI.h(1,1): warning C4828: オフセット 0x4b8 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
   (ソース ファイル 'UI.cpp' をコンパイルしています)
   
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x182 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\UI.h(1,1): warning C4828: オフセット 0x4bb から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
   (ソース ファイル 'UI.cpp' をコンパイルしています)
   
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x184 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\UI.h(1,1): warning C4828: オフセット 0x4bc から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
   (ソース ファイル 'UI.cpp' をコンパイルしています)
   
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x185 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\UI.h(1,1): warning C4828: オフセット 0x5ec から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
   (ソース ファイル 'UI.cpp' をコンパイルしています)
   
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x186 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\UI.h(1,1): warning C4828: オフセット 0x5ee から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
   (ソース ファイル 'UI.cpp' をコンパイルしています)
   
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x197 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\UI.h(1,1): warning C4828: オフセット 0x5f1 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
   (ソース ファイル 'UI.cpp' をコンパイルしています)
   
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x19a から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\UI.h(1,1): warning C4828: オフセット 0x5f2 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
   (ソース ファイル 'UI.cpp' をコンパイルしています)
   
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x3d0 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\UI.h(1,1): warning C4828: オフセット 0x5f4 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
   (ソース ファイル 'UI.cpp' をコンパイルしています)
   
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x3d2 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\UI.h(1,1): warning C4828: オフセット 0x5fa から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
   (ソース ファイル 'UI.cpp' をコンパイルしています)
   
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x3d3 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\UI.h(1,1): warning C4828: オフセット 0x5fc から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
   (ソース ファイル 'UI.cpp' をコンパイルしています)
   
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x3d4 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\UI.h(1,1): warning C4828: オフセット 0x5fd から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
   (ソース ファイル 'UI.cpp' をコンパイルしています)
   
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x3d5 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\UI.h(1,1): warning C4828: オフセット 0x5fe から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
   (ソース ファイル 'UI.cpp' をコンパイルしています)
   
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Player.h(1,1): warning C4828: オフセット 0x265 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\UI.h(1,1): warning C4828: オフセット 0x600 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
   (ソース ファイル 'UI.cpp' をコンパイルしています)
   
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Player.h(1,1): warning C4828: オフセット 0x267 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\UI.h(1,1): warning C4828: オフセット 0x602 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
   (ソース ファイル 'UI.cpp' をコンパイルしています)
   
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Player.h(1,1): warning C4828: オフセット 0x268 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\UI.h(1,1): warning C4828: オフセット 0x604 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
   (ソース ファイル 'UI.cpp' をコンパイルしています)
   
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.h(1,1): warning C4828: オフセット 0x190 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\UI.h(1,1): warning C4828: オフセット 0x605 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
   (ソース ファイル 'UI.cpp' をコンパイルしています)
   
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.h(1,1): warning C4828: オフセット 0x192 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\UI.h(1,1): warning C4828: オフセット 0x608 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
   (ソース ファイル 'UI.cpp' をコンパイルしています)
   
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.h(1,1): warning C4828: オフセット 0x193 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\UI.h(1,1): warning C4828: オフセット 0x609 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
   (ソース ファイル 'UI.cpp' をコンパイルしています)
   
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.h(1,1): warning C4828: オフセット 0x194 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x5e から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
   (ソース ファイル 'UI.cpp' をコンパイルしています)
   
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.h(1,1): warning C4828: オフセット 0x196 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x12a から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
   (ソース ファイル 'UI.cpp' をコンパイルしています)
   
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.h(1,1): warning C4828: オフセット 0x198 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x180 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
   (ソース ファイル 'UI.cpp' をコンパイルしています)
   
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.h(1,1): warning C4828: オフセット 0x19a から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x182 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
   (ソース ファイル 'UI.cpp' をコンパイルしています)
   
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.h(1,1): warning C4828: オフセット 0x19c から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x184 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
   (ソース ファイル 'UI.cpp' をコンパイルしています)
   
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.h(1,1): warning C4828: オフセット 0x19e から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x185 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
   (ソース ファイル 'UI.cpp' をコンパイルしています)
   
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.h(1,1): warning C4828: オフセット 0x1a0 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x186 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
   (ソース ファイル 'UI.cpp' をコンパイルしています)
   
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.h(1,1): warning C4828: オフセット 0x1a1 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x197 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
   (ソース ファイル 'UI.cpp' をコンパイルしています)
   
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.h(1,1): warning C4828: オフセット 0x1a2 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x19a から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
   (ソース ファイル 'UI.cpp' をコンパイルしています)
   
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.h(1,1): warning C4828: オフセット 0x1a3 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x3d0 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
   (ソース ファイル 'UI.cpp' をコンパイルしています)
   
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\DataManager.h(1,1): warning C4828: オフセット 0x186 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x3d2 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
   (ソース ファイル 'UI.cpp' をコンパイルしています)
   
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\DataManager.h(1,1): warning C4828: オフセット 0x188 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x3d3 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
   (ソース ファイル 'UI.cpp' をコンパイルしています)
   
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\DataManager.h(1,1): warning C4828: オフセット 0x18b から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x3d4 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
   (ソース ファイル 'UI.cpp' をコンパイルしています)
   
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\DataManager.h(1,1): warning C4828: オフセット 0x18c から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x3d5 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
   (ソース ファイル 'UI.cpp' をコンパイルしています)
   
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI.cpp(178,223): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI.cpp(178,196): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI.cpp(178,171): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI.cpp(178,161): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI.cpp(179,211): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI.cpp(179,203): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI.cpp(179,190): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI.cpp(179,175): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI.cpp(180,65): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI.cpp(180,25): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
-  main.cpp
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Game.h(1,1): warning C4828: オフセット 0x1b2 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'main.cpp' をコンパイルしています)
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\Player.h(1,1): warning C4828: オフセット 0x265 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
+  (ソース ファイル 'UI.cpp' をコンパイルしています)
   
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Game.h(1,1): warning C4828: オフセット 0x1b4 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'main.cpp' をコンパイルしています)
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\Player.h(1,1): warning C4828: オフセット 0x267 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
+  (ソース ファイル 'UI.cpp' をコンパイルしています)
   
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Game.h(1,1): warning C4828: オフセット 0x1b7 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'main.cpp' をコンパイルしています)
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\Player.h(1,1): warning C4828: オフセット 0x268 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
+  (ソース ファイル 'UI.cpp' をコンパイルしています)
   
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Game.h(1,1): warning C4828: オフセット 0x1b8 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'main.cpp' をコンパイルしています)
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.h(1,1): warning C4828: オフセット 0x190 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
+  (ソース ファイル 'UI.cpp' をコンパイルしています)
   
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Game.h(1,1): warning C4828: オフセット 0x1ba から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'main.cpp' をコンパイルしています)
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.h(1,1): warning C4828: オフセット 0x192 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
+  (ソース ファイル 'UI.cpp' をコンパイルしています)
   
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Game.h(1,1): warning C4828: オフセット 0x1bc から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'main.cpp' をコンパイルしています)
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.h(1,1): warning C4828: オフセット 0x193 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
+  (ソース ファイル 'UI.cpp' をコンパイルしています)
   
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Game.h(1,1): warning C4828: オフセット 0x1be から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'main.cpp' をコンパイルしています)
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.h(1,1): warning C4828: オフセット 0x194 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
+  (ソース ファイル 'UI.cpp' をコンパイルしています)
   
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Game.h(1,1): warning C4828: オフセット 0x1bf から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'main.cpp' をコンパイルしています)
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.h(1,1): warning C4828: オフセット 0x196 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
+  (ソース ファイル 'UI.cpp' をコンパイルしています)
   
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Game.h(1,1): warning C4828: オフセット 0x1c0 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'main.cpp' をコンパイルしています)
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.h(1,1): warning C4828: オフセット 0x198 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
+  (ソース ファイル 'UI.cpp' をコンパイルしています)
   
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Game.h(1,1): warning C4828: オフセット 0x1c2 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'main.cpp' をコンパイルしています)
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.h(1,1): warning C4828: オフセット 0x19a から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
+  (ソース ファイル 'UI.cpp' をコンパイルしています)
   
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Game.h(1,1): warning C4828: オフセット 0x1c4 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'main.cpp' をコンパイルしています)
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.h(1,1): warning C4828: オフセット 0x19c から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
+  (ソース ファイル 'UI.cpp' をコンパイルしています)
   
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Game.h(1,1): warning C4828: オフセット 0x1c6 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'main.cpp' をコンパイルしています)
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.h(1,1): warning C4828: オフセット 0x19e から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
+  (ソース ファイル 'UI.cpp' をコンパイルしています)
   
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Game.h(1,1): warning C4828: オフセット 0x1c8 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'main.cpp' をコンパイルしています)
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.h(1,1): warning C4828: オフセット 0x1a0 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
+  (ソース ファイル 'UI.cpp' をコンパイルしています)
   
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.h(1,1): warning C4828: オフセット 0x190 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'main.cpp' をコンパイルしています)
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.h(1,1): warning C4828: オフセット 0x1a1 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
+  (ソース ファイル 'UI.cpp' をコンパイルしています)
   
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.h(1,1): warning C4828: オフセット 0x192 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'main.cpp' をコンパイルしています)
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.h(1,1): warning C4828: オフセット 0x1a2 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
+  (ソース ファイル 'UI.cpp' をコンパイルしています)
   
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.h(1,1): warning C4828: オフセット 0x193 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'main.cpp' をコンパイルしています)
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.h(1,1): warning C4828: オフセット 0x1a3 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
+  (ソース ファイル 'UI.cpp' をコンパイルしています)
   
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.h(1,1): warning C4828: オフセット 0x194 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'main.cpp' をコンパイルしています)
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\DataManager.h(1,1): warning C4828: オフセット 0x186 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
+  (ソース ファイル 'UI.cpp' をコンパイルしています)
   
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.h(1,1): warning C4828: オフセット 0x196 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'main.cpp' をコンパイルしています)
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\DataManager.h(1,1): warning C4828: オフセット 0x188 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
+  (ソース ファイル 'UI.cpp' をコンパイルしています)
   
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.h(1,1): warning C4828: オフセット 0x198 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'main.cpp' をコンパイルしています)
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\DataManager.h(1,1): warning C4828: オフセット 0x18b から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
+  (ソース ファイル 'UI.cpp' をコンパイルしています)
   
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.h(1,1): warning C4828: オフセット 0x19a から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'main.cpp' をコンパイルしています)
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\DataManager.h(1,1): warning C4828: オフセット 0x18c から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
+  (ソース ファイル 'UI.cpp' をコンパイルしています)
   
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.h(1,1): warning C4828: オフセット 0x19c から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'main.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.h(1,1): warning C4828: オフセット 0x19e から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'main.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.h(1,1): warning C4828: オフセット 0x1a0 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'main.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.h(1,1): warning C4828: オフセット 0x1a1 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'main.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.h(1,1): warning C4828: オフセット 0x1a2 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'main.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.h(1,1): warning C4828: オフセット 0x1a3 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'main.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x5e から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'main.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x12a から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'main.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x180 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'main.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x182 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'main.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x184 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'main.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x185 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'main.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x186 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'main.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x197 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'main.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x19a から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'main.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x3d0 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'main.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x3d2 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'main.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x3d3 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'main.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x3d4 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'main.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Definitions.h(1,1): warning C4828: オフセット 0x3d5 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'main.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Player.h(1,1): warning C4828: オフセット 0x265 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'main.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Player.h(1,1): warning C4828: オフセット 0x267 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'main.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Player.h(1,1): warning C4828: オフセット 0x268 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'main.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI.h(1,1): warning C4828: オフセット 0x29f から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'main.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI.h(1,1): warning C4828: オフセット 0x2a1 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'main.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI.h(1,1): warning C4828: オフセット 0x2a4 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'main.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI.h(1,1): warning C4828: オフセット 0x2a5 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'main.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI.h(1,1): warning C4828: オフセット 0x50d から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'main.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI.h(1,1): warning C4828: オフセット 0x50f から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'main.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI.h(1,1): warning C4828: オフセット 0x512 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'main.cpp' をコンパイルしています)
-  
-C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI.h(1,1): warning C4828: オフセット 0x513 から始まる、現在のソースの文字セット (コードページ 65001) では使用できない文字がファイルに含まれています。
-  (ソース ファイル 'main.cpp' をコンパイルしています)
-  
-  コードを生成中...
-LINK : warning LNK4098: defaultlib 'MSVCRT' は他のライブラリの使用と競合しています。/NODEFAULTLIB:library を使用してください。
-  HaxSlaGame.vcxproj -> C:\haku\hakusura\HaxSlaGame\x64\Debug\HaxSlaGame.exe
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\UI.cpp(383,223): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\UI.cpp(383,196): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\UI.cpp(383,171): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\UI.cpp(383,161): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\UI.cpp(384,211): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\UI.cpp(384,203): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\UI.cpp(384,190): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\UI.cpp(384,175): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\UI.cpp(385,65): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\UI.cpp(385,25): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
+  HaxSlaGame.vcxproj -> C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\x64\Debug\HaxSlaGame.exe
