@@ -29,4 +29,7 @@ public:
     static void DeleteSaveData(int slot);
 
     static SaveHeader GetSaveHeader(int slot);
+
+    // 【追加】セーブデータ削除
+    static void DeleteSave(int slot);
 };

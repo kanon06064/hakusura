@@ -14,12 +14,17 @@ std::map<std::string, std::string> DataManager::uiStrings;
 std::vector<Modifier> DataManager::modifiers;
 std::vector<CraftRecipe> DataManager::recipes;
 
+<<<<<<< HEAD
+=======
+// JSON変換ヘルパー
+>>>>>>> sub
 static json ItemToJson(const ItemData& item) {
     return {
         {"id", item.id}, {"name", item.name}, {"type", item.type},
         {"heal", item.heal}, {"atkBonus", item.atkBonus},
         {"defBonus", item.defBonus}, {"hpBonus", item.hpBonus}, {"speedBonus", item.speedBonus},
-        {"weaponSubtype", item.weaponSubtype}, {"count", item.count}, {"modifierId", item.modifierId}
+        {"weaponSubtype", item.weaponSubtype}, {"count", item.count}, {"modifierId", item.modifierId},
+        {"dropChance", item.dropChance}
     };
 }
 
@@ -31,6 +36,7 @@ static ItemData JsonToItem(const json& j) {
     d.speedBonus = j.value("speedBonus", 0.0f);
     d.weaponSubtype = j.value("weaponSubtype", -1); d.count = j.value("count", 1);
     d.modifierId = j.value("modifierId", 0);
+    d.dropChance = j.value("dropChance", 0.0f);
     return d;
 }
 
@@ -154,4 +160,10 @@ SaveHeader DataManager::GetSaveHeader(int slot) {
     std::ifstream i("save" + std::to_string(slot) + ".json");
     if (i.is_open()) { try { json j; i >> j; h.exists = true; h.floor = j.value("floor", 0); h.playerLevel = j["player"].value("level", 1); h.timestamp = "Data " + std::to_string(slot); } catch (...) {} }
     return h;
+}
+
+// 【追加】セーブデータ削除実装
+void DataManager::DeleteSave(int slot) {
+    std::string filename = "save" + std::to_string(slot) + ".json";
+    std::remove(filename.c_str());
 }
