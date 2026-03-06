@@ -88,7 +88,6 @@ void Game::Run() { while (!WindowShouldClose()) { Update(); Draw(); } }
 void Game::Update() {
     float dt = GetFrameTime();
 
-<<<<<<< HEAD
     if (IsKeyPressed(KEY_F11)) ToggleFullscreen();
 
     // マウススケールの更新（ウィンドウサイズ変更対応）
@@ -102,14 +101,6 @@ void Game::Update() {
 
     if (state == STATE_TITLE) return;
     if (state == STATE_GAMEOVER) { if (IsMouseButtonPressed(0) || IsKeyPressed(KEY_SPACE)) ApplyDeathPenalty(); return; }
-=======
-    if (state == STATE_GAMEOVER) {
-        if (IsMouseButtonPressed(0) || IsKeyPressed(KEY_SPACE)) {
-            ApplyDeathPenalty();
-        }
-        return;
-    }
->>>>>>> sub
 
     if (IsKeyPressed(KEY_F1)) debugMode = !debugMode;
     if (IsKeyPressed(KEY_TAB)) showMenu = !showMenu;
@@ -118,7 +109,6 @@ void Game::Update() {
     if (menuInputDelay > 0) menuInputDelay -= dt;
 
     bool stopPlayer = showMenu || showPrompt || showStorage || showReforgeMenu || showWarpMenu || showCraftMenu;
-    if (UI::showDetail) stopPlayer = true;
 
     Vector3 offsetVec = Vector3Subtract(camera.position, camera.target); camera.target = player->position; camera.position = Vector3Add(player->position, offsetVec);
     if (!stopPlayer) { if (IsMouseButtonDown(1) || GetMouseWheelMove() != 0) UpdateCamera(&camera, CAMERA_THIRD_PERSON); }
@@ -127,47 +117,25 @@ void Game::Update() {
     fxManager.Update(dt, dungeon); fxManager.CheckProjectileCollisions(enemies, *player, dungeon); dungeon.UpdateVisibility(player->position);
 
     if (!stopPlayer) {
-<<<<<<< HEAD
         if (player->hp <= 0 && state != STATE_HOME) state = STATE_GAMEOVER;
-=======
-        if (player->hp <= 0 && state != STATE_HOME) {
-            state = STATE_GAMEOVER;
-        }
-
->>>>>>> sub
         for (int i = (int)enemies.size() - 1; i >= 0; i--) {
             enemies[i].Update(*player, dungeon, fxManager);
-
             if (enemies[i].hp <= 0) {
-                player->AddExp(enemies[i].expValue, fxManager);
-                player->gold += enemies[i].data.gold;
-
-                // ドロップ判定
+                player->AddExp(enemies[i].expValue, fxManager); player->gold += enemies[i].data.gold;
                 for (int id : enemies[i].data.drops) {
                     ItemData cfg = DataManager::GetItemConfigCopy(id);
-                    if (cfg.id != -1) {
-                        float chance = cfg.dropChance;
-                        // 【修正】デバッグモードの強制ドロップを削除（「確率無視で落ちる」バグと思われないようにする）
-                        // if (debugMode) chance = 1.0f;
-
-                        // 確率判定の精度を向上 (0.01%単位まで判定可能にする)
-                        if ((float)GetRandomValue(0, 10000) / 10000.0f <= chance) {
-                            if (cfg.type == "EQUIP" || cfg.type == "ARMOR") cfg.modifierId = DataManager::GetRandomModifierId();
-                            droppedItems.push_back({ enemies[i].position, cfg });
-                        }
+                    if (cfg.id != -1 && (float)GetRandomValue(0, 1000) / 1000.0f < cfg.dropChance) {
+                        if (cfg.type == "EQUIP" || cfg.type == "ARMOR") cfg.modifierId = DataManager::GetRandomModifierId();
+                        droppedItems.push_back({ enemies[i].position, cfg });
                     }
                 }
                 enemies.erase(enemies.begin() + i);
             }
         }
         if (floor > 0 && floor % 10 == 0 && enemies.empty() && !bossDefeated) { bossDefeated = true; logs.insert(logs.begin(), { "BOSS DEFEATED!", 5.0f, GOLD }); }
-
         for (int i = (int)droppedItems.size() - 1; i >= 0; i--) {
             if (Vector3Distance(player->position, droppedItems[i].pos) < 1.0f) {
-                if (player->AddToInventory(droppedItems[i].data)) {
-                    logs.insert(logs.begin(), { "Picked up: " + Player::GetFullItemName(droppedItems[i].data), 4.0f, WHITE });
-                    droppedItems.erase(droppedItems.begin() + i);
-                }
+                if (player->AddToInventory(droppedItems[i].data)) { logs.insert(logs.begin(), { "Picked up: " + Player::GetFullItemName(droppedItems[i].data), 4.0f, WHITE }); droppedItems.erase(droppedItems.begin() + i); }
             }
         }
         if (sceneTimer > 0) sceneTimer -= dt;
@@ -201,26 +169,17 @@ void Game::Draw() {
         if (slot > 0) { SaveHeader h = DataManager::GetSaveHeader(slot); if (h.exists) LoadAndStart(slot); else NewGameAndStart(slot); }
     }
     else if (state == STATE_GAMEOVER) {
-<<<<<<< HEAD
         ClearBackground(BLACK); DrawTextEx(font, "YOU DIED", { (float)gameWidth / 2 - 100, (float)gameHeight / 2 - 50 }, 60, 2, RED); DrawTextEx(font, "素材と消耗品を失って帰還します...", { (float)gameWidth / 2 - 180, (float)gameHeight / 2 + 30 }, 24, 1, WHITE); DrawTextEx(font, "Click to Continue", { (float)gameWidth / 2 - 80, (float)gameHeight / 2 + 80 }, 20, 1, LIGHTGRAY);
-=======
-        ClearBackground(BLACK);
-        DrawTextEx(font, "YOU DIED", { (float)screenWidth / 2 - 100, (float)screenHeight / 2 - 50 }, 60, 2, RED);
-        DrawTextEx(font, "素材と消耗品を失って帰還します...", { (float)screenWidth / 2 - 180, (float)screenHeight / 2 + 30 }, 24, 1, WHITE);
-        DrawTextEx(font, "Click to Continue", { (float)screenWidth / 2 - 80, (float)screenHeight / 2 + 80 }, 20, 1, LIGHTGRAY);
->>>>>>> sub
     }
     else {
         ClearBackground(BLACK); BeginMode3D(camera);
         dungeon.Draw();
         if (floor > 0 && floor % 10 == 0 && !bossDefeated && dungeon.stairsDownPos.x != -999) DrawCube(dungeon.stairsDownPos, 2.1f, 2.0f, 2.1f, BLACK);
         fxManager.Draw();
-
         for (auto& item : droppedItems) {
             if (!debugMode && !dungeon.IsDiscovered(item.pos.x, item.pos.z)) continue;
             DrawCube(item.pos, 0.5f, 0.4f, 0.5f, YELLOW); DrawCubeWires(item.pos, 0.5f, 0.4f, 0.5f, ORANGE);
         }
-
         for (auto& e : enemies) if (debugMode || dungeon.IsDiscovered(e.position.x, e.position.z)) e.Draw(debugMode);
         player->Draw(debugMode);
         EndMode3D();
@@ -237,7 +196,6 @@ void Game::Draw() {
         bool inputEnabled = !detailOpen;
 
         if (showMenu) {
-<<<<<<< HEAD
             // メニュー操作の有効/無効を渡す
             UI::DrawMenu(*player, dungeon, currentTab, font, gameWidth, gameHeight, inputEnabled);
 
@@ -246,14 +204,6 @@ void Game::Draw() {
                 if (CheckCollisionPointRec(GetMousePosition(), saveBtn) && IsMouseButtonPressed(0) && dungeon.isHome) { SaveCurrentSlot(); logs.insert(logs.begin(), { "GAME SAVED!", 3.0f, GREEN }); }
                 Rectangle titleBtn = { 120, 400, 300, 80 };
                 if (CheckCollisionPointRec(GetMousePosition(), titleBtn) && IsMouseButtonPressed(0)) state = STATE_TITLE;
-=======
-            UI::DrawMenu(*player, dungeon, currentTab, font);
-            if (currentTab == SYSTEM_TAB) {
-                Rectangle saveBtn = { 120, 200, 200, 60 };
-                if (!UI::showDetail && CheckCollisionPointRec(GetMousePosition(), saveBtn) && IsMouseButtonPressed(0) && dungeon.isHome) { SaveCurrentSlot(); logs.insert(logs.begin(), { "GAME SAVED!", 3.0f, GREEN }); }
-                Rectangle titleBtn = { 120, 300, 200, 60 };
-                if (!UI::showDetail && CheckCollisionPointRec(GetMousePosition(), titleBtn) && IsMouseButtonPressed(0)) state = STATE_TITLE;
->>>>>>> sub
             }
         }
         if (showStorage) UI::DrawStorage(*player, font, showStorage, storageItems, storageEquip, gameWidth, gameHeight, inputEnabled);
@@ -300,16 +250,8 @@ void Game::Draw() {
 }
 
 void Game::ApplyDeathPenalty() {
-<<<<<<< HEAD
     player->inventoryItems.clear(); player->hp = player->maxHp;
     logs.clear(); logs.insert(logs.begin(), { "Returned to Home...", 5.0f, WHITE }); logs.insert(logs.begin(), { "Lost materials.", 5.0f, RED });
-=======
-    player->inventoryItems.clear();
-    player->hp = player->maxHp;
-    logs.clear();
-    logs.insert(logs.begin(), { "Returned to Home...", 5.0f, WHITE });
-    logs.insert(logs.begin(), { "Lost materials.", 5.0f, RED });
->>>>>>> sub
     ReturnHome();
 }
 
