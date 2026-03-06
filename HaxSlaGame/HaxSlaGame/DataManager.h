@@ -12,7 +12,7 @@ public:
     static std::vector<ItemData> itemConfigs;
     static std::map<std::string, std::string> uiStrings;
     static std::vector<Modifier> modifiers;
-    static std::vector<CraftRecipe> recipes; // Åyí«â¡Åz
+    static std::vector<CraftRecipe> recipes;
 
     static void LoadAllData();
     static EnemyData GetRandomEnemyForFloor(int floor);
@@ -25,4 +25,7 @@ public:
     static void SaveGame(int slot, Player* p, int currentFloor, int maxReachedFloor, const std::vector<ItemData>& sItems, const std::vector<ItemData>& sEquip);
     static bool LoadGame(int slot, Player* p, int& currentFloor, int& maxReachedFloor, std::vector<ItemData>& sItems, std::vector<ItemData>& sEquip);
     static SaveHeader GetSaveHeader(int slot);
+
+    // Åyí«â¡ÅzÉZÅ[ÉuÉfÅ[É^çÌèú
+    static void DeleteSave(int slot);
 };

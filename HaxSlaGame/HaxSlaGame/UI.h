@@ -24,17 +24,22 @@ public:
 
     static int itemPage, equipPage, debugPage, storageInvPage, storageBoxPage, itemSubTab;
 
-    // 【追加】詳細ウィンドウ管理用
+    // 詳細ウィンドウ管理用
     static bool showDetail;
     static ItemData focusingItem;
+    static float detailOpenTimer;
+
+    // 【追加】削除確認用
+    static int deleteConfirmSlot;
 
 private:
     static int reforgeItemIdx;
     static int warpScroll;
     static int craftingScroll;
     static Vector2 skillOffset;
+    static Vector2 mapOffset;
     static bool DrawButton(Rectangle rect, const char* label, Font font, Color baseCol);
 
-    // 【追加】詳細ウィンドウ描画関数
     static void DrawDetailWindow(Font font);
+    static void OpenDetail(const ItemData& item);
 };
