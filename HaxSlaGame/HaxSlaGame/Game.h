@@ -5,6 +5,7 @@
 #include "Enemy.h"
 #include "EffectManager.h"
 #include "UI.h"
+#include "Definitions.h"
 #include <vector>
 
 class Game {
@@ -21,18 +22,16 @@ private:
     void SpawnEnemies(int count);
     void NextFloor();
     void ReturnHome();
+
+    // ゲームオーバー・セーブロード関連
     void ApplyDeathPenalty();
     void SaveCurrentSlot();
     void LoadAndStart(int slot);
     void NewGameAndStart(int slot);
 
-    // 【修正】画面サイズとレンダーターゲット
-    int windowWidth;
-    int windowHeight;
-    int gameWidth;
-    int gameHeight;
-    RenderTexture2D renderTarget;
-
+    // メンバ変数（ここが抜けていたためエラーになっていました）
+    int screenWidth;
+    int screenHeight;
     Font font;
 
     Dungeon dungeon;
@@ -60,6 +59,5 @@ private:
     MenuTab currentTab;
     float sceneTimer;
 
-    float menuInputDelay;
     bool bossDefeated;
 };

@@ -14,7 +14,16 @@ public:
     static std::vector<Modifier> modifiers;
     static std::vector<CraftRecipe> recipes;
 
+    // 【追加】テスト用モデルデータ（コウモリ）
+    static Model batModel;
+    static Texture2D batTexture;
+    static ModelAnimation* batAnims;
+    static int batAnimCount;
+    static bool isBatModelLoaded;
+
     static void LoadAllData();
+    static void UnloadAllData(); // 【追加】終了処理用
+
     static EnemyData GetRandomEnemyForFloor(int floor);
     static EnemyData GetBossEnemy();
     static ItemData GetItemConfigCopy(int id);
@@ -24,9 +33,7 @@ public:
 
     static void SaveGame(int slot, Player* p, int currentFloor, int maxReachedFloor, const std::vector<ItemData>& sItems, const std::vector<ItemData>& sEquip);
     static bool LoadGame(int slot, Player* p, int& currentFloor, int& maxReachedFloor, std::vector<ItemData>& sItems, std::vector<ItemData>& sEquip);
-
-    // データ削除機能
-    static void DeleteSaveData(int slot);
-
     static SaveHeader GetSaveHeader(int slot);
+
+    static void DeleteSave(int slot);
 };

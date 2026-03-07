@@ -3,7 +3,7 @@
 #include "raylib.h"
 #include <fstream>
 #include <iostream>
-#include <cstdio> // removeóp
+#include <cstdio>
 #include <nlohmann/json.hpp>
 
 using json = nlohmann::json;
@@ -14,12 +14,21 @@ std::map<std::string, std::string> DataManager::uiStrings;
 std::vector<Modifier> DataManager::modifiers;
 std::vector<CraftRecipe> DataManager::recipes;
 
+// ÉÇÉfÉãÉfÅ[É^ÇÃèâä˙âª
+Model DataManager::batModel = { 0 };
+Texture2D DataManager::batTexture = { 0 };
+ModelAnimation* DataManager::batAnims = nullptr;
+int DataManager::batAnimCount = 0;
+bool DataManager::isBatModelLoaded = false;
+
+// JSONïœä∑ÉwÉãÉpÅ[
 static json ItemToJson(const ItemData& item) {
     return {
         {"id", item.id}, {"name", item.name}, {"type", item.type},
         {"heal", item.heal}, {"atkBonus", item.atkBonus},
         {"defBonus", item.defBonus}, {"hpBonus", item.hpBonus}, {"speedBonus", item.speedBonus},
-        {"weaponSubtype", item.weaponSubtype}, {"count", item.count}, {"modifierId", item.modifierId}
+        {"weaponSubtype", item.weaponSubtype}, {"count", item.count}, {"modifierId", item.modifierId},
+        {"dropChance", item.dropChance}
     };
 }
 
@@ -31,6 +40,7 @@ static ItemData JsonToItem(const json& j) {
     d.speedBonus = j.value("speedBonus", 0.0f);
     d.weaponSubtype = j.value("weaponSubtype", -1); d.count = j.value("count", 1);
     d.modifierId = j.value("modifierId", 0);
+    d.dropChance = j.value("dropChance", 0.0f);
     return d;
 }
 
@@ -78,6 +88,30 @@ void DataManager::LoadAllData() {
         }
     }
     catch (const std::exception& e) { std::cerr << "JSON Load Error: " << e.what() << std::endl; }
+
+    // ÅyèCê≥ÅzIQMÇ…ñﬂÇ∑
+    if (FileExists("resources/Bat.iqm") && FileExists("resources/Albedo.png")) {
+        batModel = LoadModel("resources/Bat.iqm"); // IQM
+        batTexture = LoadTexture("resources/Albedo.png");
+        SetMaterialTexture(&batModel.materials[0], MATERIAL_MAP_DIFFUSE, batTexture);
+
+        batAnims = LoadModelAnimations("resources/Bat.iqm", &batAnimCount); // IQM
+
+        isBatModelLoaded = true;
+        std::cout << "Bat Model Loaded! Anim Count: " << batAnimCount << std::endl;
+    }
+    else {
+        std::cout << "Warning: Bat.iqm or Albedo.png not found in resources/" << std::endl;
+    }
+}
+
+void DataManager::UnloadAllData() {
+    if (isBatModelLoaded) {
+        UnloadTexture(batTexture);
+        UnloadModelAnimations(batAnims, batAnimCount);
+        UnloadModel(batModel);
+        isBatModelLoaded = false;
+    }
 }
 
 EnemyData DataManager::GetRandomEnemyForFloor(int floor) {
@@ -144,14 +178,14 @@ bool DataManager::LoadGame(int slot, Player* p, int& currentFloor, int& maxReach
     catch (...) { return false; }
 }
 
-void DataManager::DeleteSaveData(int slot) {
-    std::string filename = "save" + std::to_string(slot) + ".json";
-    remove(filename.c_str());
-}
-
 SaveHeader DataManager::GetSaveHeader(int slot) {
     SaveHeader h; h.exists = false;
     std::ifstream i("save" + std::to_string(slot) + ".json");
     if (i.is_open()) { try { json j; i >> j; h.exists = true; h.floor = j.value("floor", 0); h.playerLevel = j["player"].value("level", 1); h.timestamp = "Data " + std::to_string(slot); } catch (...) {} }
     return h;
+}
+
+void DataManager::DeleteSave(int slot) {
+    std::string filename = "save" + std::to_string(slot) + ".json";
+    std::remove(filename.c_str());
 }

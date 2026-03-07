@@ -2,7 +2,11 @@
 #include "Player.h"
 #include "Dungeon.h"
 #include "EffectManager.h"
+#include "DataManager.h"
+#include "rlgl.h"
 #include <math.h>
+#include <string>
+#include <iostream>
 
 Enemy::Enemy(Vector3 sp, EnemyData d, int fl) {
     position = sp; data = d; eType = (EnemyType)d.type; state = STATE_PATROL; level = fl;
@@ -13,9 +17,24 @@ Enemy::Enemy(Vector3 sp, EnemyData d, int fl) {
 
     lastPos = sp;
     stuckCount = 0;
+    animFrameCounter = GetRandomValue(0, 30);
+
+    isDying = false;
+    isDead = false;
+}
+
+void Enemy::StartDeath() {
+    if (isDying) return;
+    isDying = true;
+    animFrameCounter = 0;
+
+    if (!DataManager::isBatModelLoaded || data.id != 0) {
+        isDead = true;
+    }
 }
 
 void Enemy::ApplyKnockback(Vector3 dir, float f, Dungeon& d) {
+    if (isDying) return;
     Vector3 kb = Vector3Scale(dir, f);
     if (!d.CheckCollisionRadius(Vector3Add(position, { kb.x, 0, 0 }), radius)) position.x += kb.x;
     if (!d.CheckCollisionRadius(Vector3Add(position, { 0, 0, kb.z }), radius)) position.z += kb.z;
@@ -36,19 +55,30 @@ void Enemy::MoveSmart(Vector3 target, Dungeon& d) {
 }
 
 void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
+    if (isDying) {
+        if (DataManager::isBatModelLoaded && data.id == 0 && DataManager::batAnimCount > 1) {
+            animFrameCounter++;
+            if (animFrameCounter >= DataManager::batAnims[1].frameCount) {
+                isDead = true;
+            }
+        }
+        else {
+            isDead = true;
+        }
+        return;
+    }
+
     if (hudTimer > 0) hudTimer -= GetFrameTime();
     if (attackTimer > 0) attackTimer -= GetFrameTime();
+
+    animFrameCounter++;
 
     float dist = Vector3Distance(position, p.position);
     bool canSee = d.HasLineOfSight(position, p.position);
 
-    // 【修正】ステルス時の索敵ロジック
-    // ステルス中は索敵範囲が極端に狭くなる (例: 1.5f以内ならバレる)
     float effectiveDetect = p.isStealth ? 1.5f : detectRange;
-
-    // すでにチェイス中なら、ステルスになってもある程度追いかける（見失う距離を短くする）
     if (state == STATE_CHASE || state == STATE_ATTACK) {
-        if (p.isStealth) effectiveDetect = 3.0f; // 追跡中なら3.0mまで粘る
+        if (p.isStealth) effectiveDetect = 3.0f;
     }
 
     if (dist < attackRange && canSee && dist < effectiveDetect) state = STATE_ATTACK;
@@ -115,20 +145,100 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
     lastPos = position;
 }
 
-void Enemy::Draw(bool debug) {
-    Color c = (eType == E_SWORD) ? MAROON :
-        (eType == E_SPEAR) ? ORANGE :
-        (eType == E_AXE) ? PURPLE :
-        (eType == E_ARCHER) ? DARKGREEN :
-        (eType == E_MAGE) ? PINK :
-        (eType == E_TRAP) ? DARKGRAY : GRAY;
+void Enemy::Draw(bool debug, Camera3D cam, Font font, Vector3 playerPos) {
+    int currentAnimIndex = -1;
+    bool isBat = false;
 
-    DrawCube(position, 1, 1.2f, 1, c); DrawCubeWires(position, 1, 1.2f, 1, BLACK);
+    if (DataManager::isBatModelLoaded && (data.id == 0)) {
+        isBat = true;
+
+        DataManager::batModel.transform = MatrixIdentity();
+
+        // 0:Attack, 1:Die, 2:Idle, 3:Run
+        int animIndex = 2; // Default: Idle
+
+        if (isDying) animIndex = 1;
+        else if (state == STATE_ATTACK) animIndex = 0;
+        else if (state == STATE_CHASE || state == STATE_PATROL) animIndex = 3;
+
+        if (animIndex >= DataManager::batAnimCount) animIndex = 0;
+        currentAnimIndex = animIndex;
+
+        if (DataManager::batAnimCount > 0) {
+            ModelAnimation& anim = DataManager::batAnims[animIndex];
+            int frame = animFrameCounter;
+            if (isDying) {
+                if (frame >= anim.frameCount - 1) frame = anim.frameCount - 1;
+            }
+            else {
+                frame = frame % anim.frameCount;
+            }
+            UpdateModelAnimation(DataManager::batModel, anim, frame);
+        }
+
+        // --- 向き計算 ---
+        float rotationAngle = 0.0f;
+        Vector3 targetDir = { 0, 0, 1 };
+
+        if (!isDying) {
+            if (state == STATE_CHASE || state == STATE_ATTACK) {
+                targetDir = Vector3Subtract(playerPos, position);
+            }
+            else {
+                targetDir = Vector3Subtract(patrolTarget, position);
+            }
+
+            if (Vector3Length(targetDir) > 0.01f) {
+                rotationAngle = atan2f(targetDir.x, targetDir.z) * RAD2DEG;
+                // 【修正】前回の -90.0f が原因で横を向いていた可能性が高いので削除
+                // もしこれで真後ろを向くようなら += 180.0f にしてください
+            }
+        }
+
+        // 【修正】大きさを 0.01f に変更
+        float scale = 0.01f;
+
+        Matrix matRotX = MatrixRotateX(-90.0f * DEG2RAD);
+        Matrix matRotY = MatrixRotateY(rotationAngle * DEG2RAD);
+
+        DataManager::batModel.transform = MatrixMultiply(DataManager::batModel.transform, matRotX);
+        DataManager::batModel.transform = MatrixMultiply(DataManager::batModel.transform, matRotY);
+
+        DrawModel(DataManager::batModel, position, scale, WHITE);
+
+        DataManager::batModel.transform = MatrixIdentity();
+    }
+    else {
+        Color c = (eType == E_SWORD) ? MAROON :
+            (eType == E_SPEAR) ? ORANGE :
+            (eType == E_AXE) ? PURPLE :
+            (eType == E_ARCHER) ? DARKGREEN :
+            (eType == E_MAGE) ? PINK :
+            (eType == E_TRAP) ? DARKGRAY : GRAY;
+
+        DrawCube(position, 1, 1.2f, 1, c);
+        DrawCubeWires(position, 1, 1.2f, 1, BLACK);
+    }
 
     if (debug) {
-        DrawCircle3D(position, data.atkRange, { 1,0,0 }, 90.0f, Fade(RED, 0.25f));
-        DrawCircle3D(position, data.detect, { 1,0,0 }, 90.0f, Fade(YELLOW, 0.1f));
-        DrawLine3D(position, patrolTarget, GREEN);
-        if (stuckCount > 30) DrawSphere(Vector3Add(position, { 0, 2.0f, 0 }), 0.3f, RED);
+        Vector3 headPos = Vector3Add(position, { 0, 2.5f, 0 });
+        Color debugColor = (animFrameCounter % 10 < 5) ? GREEN : YELLOW;
+        DrawSphere(headPos, 0.2f, debugColor);
+
+        if (isBat) {
+            DrawCubeWires(position, 2.0f, 2.0f, 2.0f, RED);
+        }
+
+        if (isBat && animFrameCounter % 60 == 0) {
+            int frame = animFrameCounter;
+            if (DataManager::batAnimCount > 0 && !isDying) {
+                frame = animFrameCounter % DataManager::batAnims[currentAnimIndex].frameCount;
+            }
+            std::cout << "Bat[ID:0] | State: " << state
+                << " | Anim: " << currentAnimIndex
+                << " | Frame: " << frame;
+            if (DataManager::batAnimCount > 0) std::cout << " / " << DataManager::batAnims[currentAnimIndex].frameCount;
+            std::cout << std::endl;
+        }
     }
 }

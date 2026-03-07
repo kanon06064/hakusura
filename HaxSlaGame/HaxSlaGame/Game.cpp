@@ -6,45 +6,25 @@
 #include <algorithm>
 
 Game::Game()
-    : windowWidth(1280), windowHeight(720), // 実際のウィンドウサイズ
-    gameWidth(1920), gameHeight(1080),    // 内部解像度 (高画質用)
-    player(nullptr), camera({ 0 }), state(STATE_TITLE), floor(0), maxReachedFloor(0), currentSlot(0),
+    : screenWidth(1280), screenHeight(720), player(nullptr), camera({ 0 }), state(STATE_TITLE), floor(0), maxReachedFloor(0), currentSlot(0),
     debugMode(false), showMenu(false), showStorage(false), showReforgeMenu(false), showWarpMenu(false),
     showCraftMenu(false),
-    showPrompt(false), currentTab(EQUIP), sceneTimer(0.0f),
-    menuInputDelay(0.0f),
-    bossDefeated(false)
+    showPrompt(false), currentTab(EQUIP), sceneTimer(0.0f), bossDefeated(false)
 {
-    // ウィンドウサイズ変更可、VSync有効
-    SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_VSYNC_HINT);
-    InitWindow(windowWidth, windowHeight, "3D Hack and Slash RPG Refactored");
+    InitWindow(screenWidth, screenHeight, "3D Hack and Slash RPG Refactored");
     SetTargetFPS(60);
-
-    // 内部解像度用のレンダーターゲット作成
-    renderTarget = LoadRenderTexture(gameWidth, gameHeight);
-    SetTextureFilter(renderTarget.texture, TEXTURE_FILTER_BILINEAR);
-
-    // 初期のマウススケール設定
-    SetMouseScale((float)gameWidth / (float)windowWidth, (float)gameHeight / (float)windowHeight);
-
     DataManager::LoadAllData();
 
-    // 日本語フォント読み込み (サイズ64)
-    std::vector<int> cps;
-    for (int i = 32; i < 127; i++) cps.push_back(i);
-    for (int i = 0x3000; i <= 0x30FF; i++) cps.push_back(i);
-    for (int i = 0x4E00; i <= 0x9FAF; i++) cps.push_back(i);
-
-    font = LoadFontEx("jp_font.ttf", 64, cps.data(), (int)cps.size());
-    if (font.texture.id == 0) font = LoadFontEx("C:/Windows/Fonts/msgothic.ttc", 64, cps.data(), (int)cps.size());
-    if (font.texture.id == 0) font = GetFontDefault();
-    else SetTextureFilter(font.texture, TEXTURE_FILTER_BILINEAR);
+    std::vector<int> cps; for (int i = 32; i < 127; i++) cps.push_back(i); for (int i = 0x3000; i <= 0x30FF; i++) cps.push_back(i); for (int i = 0x4E00; i <= 0x9FAF; i++) cps.push_back(i);
+    font = LoadFontEx("jp_font.ttf", 32, cps.data(), (int)cps.size());
+    if (font.texture.id == 0) font = LoadFontEx("C:/Windows/Fonts/msgothic.ttc", 32, cps.data(), (int)cps.size());
+    if (font.texture.id == 0) font = GetFontDefault(); else SetTextureFilter(font.texture, TEXTURE_FILTER_BILINEAR);
 }
 
 Game::~Game() {
     if (player) delete player;
-    UnloadRenderTexture(renderTarget);
     UnloadFont(font);
+    DataManager::UnloadAllData(); // モデル解放
     CloseWindow();
 }
 
@@ -87,55 +67,67 @@ void Game::Run() { while (!WindowShouldClose()) { Update(); Draw(); } }
 
 void Game::Update() {
     float dt = GetFrameTime();
-
-    if (IsKeyPressed(KEY_F11)) ToggleFullscreen();
-
-    // マウススケールの更新（ウィンドウサイズ変更対応）
-    float screenW = (float)GetScreenWidth();
-    float screenH = (float)GetScreenHeight();
-    float scale = fminf(screenW / (float)gameWidth, screenH / (float)gameHeight);
-    float offsetX = (screenW - ((float)gameWidth * scale)) * 0.5f;
-    float offsetY = (screenH - ((float)gameHeight * scale)) * 0.5f;
-    SetMouseOffset(-(int)offsetX, -(int)offsetY);
-    SetMouseScale(1.0f / scale, 1.0f / scale);
-
     if (state == STATE_TITLE) return;
-    if (state == STATE_GAMEOVER) { if (IsMouseButtonPressed(0) || IsKeyPressed(KEY_SPACE)) ApplyDeathPenalty(); return; }
+
+    if (state == STATE_GAMEOVER) {
+        if (IsMouseButtonPressed(0) || IsKeyPressed(KEY_SPACE)) {
+            ApplyDeathPenalty();
+        }
+        return;
+    }
 
     if (IsKeyPressed(KEY_F1)) debugMode = !debugMode;
     if (IsKeyPressed(KEY_TAB)) showMenu = !showMenu;
     if (debugMode) { if (IsKeyPressed(KEY_N)) NextFloor(); if (IsKeyPressed(KEY_R)) ReturnHome(); }
 
-    if (menuInputDelay > 0) menuInputDelay -= dt;
-
     bool stopPlayer = showMenu || showPrompt || showStorage || showReforgeMenu || showWarpMenu || showCraftMenu;
+    if (UI::showDetail) stopPlayer = true;
 
-    Vector3 offsetVec = Vector3Subtract(camera.position, camera.target); camera.target = player->position; camera.position = Vector3Add(player->position, offsetVec);
+    Vector3 offset = Vector3Subtract(camera.position, camera.target); camera.target = player->position; camera.position = Vector3Add(player->position, offset);
     if (!stopPlayer) { if (IsMouseButtonDown(1) || GetMouseWheelMove() != 0) UpdateCamera(&camera, CAMERA_THIRD_PERSON); }
 
     player->Update(camera, dungeon, enemies, fxManager, stopPlayer);
     fxManager.Update(dt, dungeon); fxManager.CheckProjectileCollisions(enemies, *player, dungeon); dungeon.UpdateVisibility(player->position);
 
     if (!stopPlayer) {
-        if (player->hp <= 0 && state != STATE_HOME) state = STATE_GAMEOVER;
+        if (player->hp <= 0 && state != STATE_HOME) {
+            state = STATE_GAMEOVER;
+        }
+
         for (int i = (int)enemies.size() - 1; i >= 0; i--) {
             enemies[i].Update(*player, dungeon, fxManager);
-            if (enemies[i].hp <= 0) {
-                player->AddExp(enemies[i].expValue, fxManager); player->gold += enemies[i].data.gold;
+
+            if (enemies[i].hp <= 0 && !enemies[i].isDying) {
+                player->AddExp(enemies[i].expValue, fxManager);
+                player->gold += enemies[i].data.gold;
+
                 for (int id : enemies[i].data.drops) {
                     ItemData cfg = DataManager::GetItemConfigCopy(id);
-                    if (cfg.id != -1 && (float)GetRandomValue(0, 1000) / 1000.0f < cfg.dropChance) {
-                        if (cfg.type == "EQUIP" || cfg.type == "ARMOR") cfg.modifierId = DataManager::GetRandomModifierId();
-                        droppedItems.push_back({ enemies[i].position, cfg });
+                    if (cfg.id != -1) {
+                        float chance = cfg.dropChance;
+                        if ((float)GetRandomValue(0, 10000) / 10000.0f <= chance) {
+                            if (cfg.type == "EQUIP" || cfg.type == "ARMOR") cfg.modifierId = DataManager::GetRandomModifierId();
+                            droppedItems.push_back({ enemies[i].position, cfg });
+                        }
                     }
                 }
+
+                enemies[i].StartDeath();
+            }
+
+            if (enemies[i].isDead) {
                 enemies.erase(enemies.begin() + i);
             }
         }
+
         if (floor > 0 && floor % 10 == 0 && enemies.empty() && !bossDefeated) { bossDefeated = true; logs.insert(logs.begin(), { "BOSS DEFEATED!", 5.0f, GOLD }); }
+
         for (int i = (int)droppedItems.size() - 1; i >= 0; i--) {
             if (Vector3Distance(player->position, droppedItems[i].pos) < 1.0f) {
-                if (player->AddToInventory(droppedItems[i].data)) { logs.insert(logs.begin(), { "Picked up: " + Player::GetFullItemName(droppedItems[i].data), 4.0f, WHITE }); droppedItems.erase(droppedItems.begin() + i); }
+                if (player->AddToInventory(droppedItems[i].data)) {
+                    logs.insert(logs.begin(), { "Picked up: " + Player::GetFullItemName(droppedItems[i].data), 4.0f, WHITE });
+                    droppedItems.erase(droppedItems.begin() + i);
+                }
             }
         }
         if (sceneTimer > 0) sceneTimer -= dt;
@@ -151,11 +143,7 @@ void Game::Update() {
         if (state == STATE_HOME) {
             if (Vector3Distance(player->position, dungeon.storageBoxPos) < 2.0f && IsMouseButtonPressed(0)) showStorage = true;
             if (Vector3Distance(player->position, dungeon.reforgeStationPos) < 2.0f && IsMouseButtonPressed(0)) showReforgeMenu = true;
-
-            if (dungeon.portalPos.x != -999 && Vector3Distance(player->position, dungeon.portalPos) < 2.0f && IsMouseButtonPressed(0)) {
-                showWarpMenu = true;
-                menuInputDelay = 0.5f;
-            }
+            if (dungeon.portalPos.x != -999 && Vector3Distance(player->position, dungeon.portalPos) < 2.0f && IsMouseButtonPressed(0)) showWarpMenu = true;
             if (dungeon.craftStationPos.x != -999 && Vector3Distance(player->position, dungeon.craftStationPos) < 2.0f && IsMouseButtonPressed(0)) showCraftMenu = true;
         }
     }
@@ -163,58 +151,52 @@ void Game::Update() {
 }
 
 void Game::Draw() {
-    BeginTextureMode(renderTarget);
+    BeginDrawing();
     if (state == STATE_TITLE) {
-        int slot = UI::DrawTitleScreen(font, gameWidth, gameHeight);
+        int slot = UI::DrawTitleScreen(font);
         if (slot > 0) { SaveHeader h = DataManager::GetSaveHeader(slot); if (h.exists) LoadAndStart(slot); else NewGameAndStart(slot); }
     }
     else if (state == STATE_GAMEOVER) {
-        ClearBackground(BLACK); DrawTextEx(font, "YOU DIED", { (float)gameWidth / 2 - 100, (float)gameHeight / 2 - 50 }, 60, 2, RED); DrawTextEx(font, "素材と消耗品を失って帰還します...", { (float)gameWidth / 2 - 180, (float)gameHeight / 2 + 30 }, 24, 1, WHITE); DrawTextEx(font, "Click to Continue", { (float)gameWidth / 2 - 80, (float)gameHeight / 2 + 80 }, 20, 1, LIGHTGRAY);
+        ClearBackground(BLACK);
+        DrawTextEx(font, "YOU DIED", { (float)screenWidth / 2 - 100, (float)screenHeight / 2 - 50 }, 60, 2, RED);
+        DrawTextEx(font, "素材と消耗品を失って帰還します...", { (float)screenWidth / 2 - 180, (float)screenHeight / 2 + 30 }, 24, 1, WHITE);
+        DrawTextEx(font, "Click to Continue", { (float)screenWidth / 2 - 80, (float)screenHeight / 2 + 80 }, 20, 1, LIGHTGRAY);
     }
     else {
         ClearBackground(BLACK); BeginMode3D(camera);
         dungeon.Draw();
         if (floor > 0 && floor % 10 == 0 && !bossDefeated && dungeon.stairsDownPos.x != -999) DrawCube(dungeon.stairsDownPos, 2.1f, 2.0f, 2.1f, BLACK);
         fxManager.Draw();
+
         for (auto& item : droppedItems) {
             if (!debugMode && !dungeon.IsDiscovered(item.pos.x, item.pos.z)) continue;
             DrawCube(item.pos, 0.5f, 0.4f, 0.5f, YELLOW); DrawCubeWires(item.pos, 0.5f, 0.4f, 0.5f, ORANGE);
         }
-        for (auto& e : enemies) if (debugMode || dungeon.IsDiscovered(e.position.x, e.position.z)) e.Draw(debugMode);
+
+        // 【変更】プレイヤー位置を渡す
+        for (auto& e : enemies) if (debugMode || dungeon.IsDiscovered(e.position.x, e.position.z)) e.Draw(debugMode, camera, font, player->position);
+
         player->Draw(debugMode);
         EndMode3D();
 
         fxManager.Draw2D(font, camera);
-
-        UI::DrawHUD(*player, enemies, dungeon, camera, floor, debugMode, font, gameWidth, gameHeight);
-        UI::DrawLogs(logs, *player, camera, font, gameWidth, gameHeight);
-        UI::DrawOverheadUI(*player, enemies, droppedItems, dungeon, camera, font, gameWidth, gameHeight);
-
-        // 【重要】詳細ウィンドウが開いているかチェック
-        bool detailOpen = UI::IsDetailOpen();
-        // 詳細が開いていない場合のみ入力有効
-        bool inputEnabled = !detailOpen;
+        UI::DrawHUD(*player, enemies, dungeon, camera, floor, debugMode, font);
+        UI::DrawLogs(logs, *player, camera, font);
+        UI::DrawNearbyItems(*player, droppedItems, dungeon, camera, font);
 
         if (showMenu) {
-            // メニュー操作の有効/無効を渡す
-            UI::DrawMenu(*player, dungeon, currentTab, font, gameWidth, gameHeight, inputEnabled);
-
-            if (currentTab == SYSTEM_TAB && inputEnabled) {
-                Rectangle saveBtn = { 120, 250, 300, 80 };
-                if (CheckCollisionPointRec(GetMousePosition(), saveBtn) && IsMouseButtonPressed(0) && dungeon.isHome) { SaveCurrentSlot(); logs.insert(logs.begin(), { "GAME SAVED!", 3.0f, GREEN }); }
-                Rectangle titleBtn = { 120, 400, 300, 80 };
-                if (CheckCollisionPointRec(GetMousePosition(), titleBtn) && IsMouseButtonPressed(0)) state = STATE_TITLE;
+            UI::DrawMenu(*player, dungeon, currentTab, font);
+            if (currentTab == SYSTEM_TAB) {
+                Rectangle saveBtn = { 120, 200, 200, 60 };
+                if (!UI::showDetail && CheckCollisionPointRec(GetMousePosition(), saveBtn) && IsMouseButtonPressed(0) && dungeon.isHome) { SaveCurrentSlot(); logs.insert(logs.begin(), { "GAME SAVED!", 3.0f, GREEN }); }
+                Rectangle titleBtn = { 120, 300, 200, 60 };
+                if (!UI::showDetail && CheckCollisionPointRec(GetMousePosition(), titleBtn) && IsMouseButtonPressed(0)) state = STATE_TITLE;
             }
         }
-        if (showStorage) UI::DrawStorage(*player, font, showStorage, storageItems, storageEquip, gameWidth, gameHeight, inputEnabled);
-        if (showReforgeMenu) UI::DrawReforgeMenu(*player, font, showReforgeMenu, gameWidth, gameHeight, inputEnabled);
-
-        if (showWarpMenu) {
-            // ワープメニューも詳細が開いているときは操作不可
-            int sf = UI::DrawWarpMenu(maxReachedFloor, font, showWarpMenu, (menuInputDelay <= 0 && inputEnabled), gameWidth, gameHeight);
-            if (sf > 0) WarpToFloor(sf);
-        }
-        if (showCraftMenu) UI::DrawCraftingMenu(*player, font, showCraftMenu, gameWidth, gameHeight, inputEnabled);
+        if (showStorage) UI::DrawStorage(*player, font, showStorage, storageItems, storageEquip);
+        if (showReforgeMenu) UI::DrawReforgeMenu(*player, font, showReforgeMenu);
+        if (showWarpMenu) { int sf = UI::DrawWarpMenu(maxReachedFloor, font, showWarpMenu); if (sf > 0) WarpToFloor(sf); }
+        if (showCraftMenu) UI::DrawCraftingMenu(*player, font, showCraftMenu);
 
         if (showPrompt) {
             const char* m = "UNKNOWN";
@@ -222,36 +204,20 @@ void Game::Draw() {
             else if (Vector3Distance(player->position, dungeon.stairsDownPos) < 2.0f) m = "GO_DEEPER";
             else if (Vector3Distance(player->position, dungeon.stairsUpPos) < 2.0f) m = "RETURN_HOME";
             else if (dungeon.portalPos.x != -999 && Vector3Distance(player->position, dungeon.portalPos) < 2.0f) m = "RETURN_HOME";
-            int res = UI::DrawPrompt(m, gameWidth, gameHeight, font);
+            int res = UI::DrawPrompt(m, screenWidth, screenHeight, font);
             if (res == 1) { if (Vector3Distance(player->position, dungeon.stairsDownPos) < 2.0f) NextFloor(); else ReturnHome(); showPrompt = false; sceneTimer = 2.0f; }
             else if (res == 2) { showPrompt = false; sceneTimer = 1.0f; }
         }
-
-        // 【重要】詳細ウィンドウは最後に描画 (最前面)
-        UI::DrawItemDetail(font, gameWidth, gameHeight);
     }
-    EndTextureMode();
-
-    BeginDrawing();
-    ClearBackground(BLACK);
-    float screenW = (float)GetScreenWidth();
-    float screenH = (float)GetScreenHeight();
-    float scale = fminf(screenW / (float)gameWidth, screenH / (float)gameHeight);
-    float destW = (float)gameWidth * scale;
-    float destH = (float)gameHeight * scale;
-    float destX = (screenW - destW) * 0.5f;
-    float destY = (screenH - destH) * 0.5f;
-
-    DrawTexturePro(renderTarget.texture,
-        { 0.0f, 0.0f, (float)renderTarget.texture.width, (float)-renderTarget.texture.height },
-        { destX, destY, destW, destH },
-        { 0.0f, 0.0f }, 0.0f, WHITE);
     EndDrawing();
 }
 
 void Game::ApplyDeathPenalty() {
-    player->inventoryItems.clear(); player->hp = player->maxHp;
-    logs.clear(); logs.insert(logs.begin(), { "Returned to Home...", 5.0f, WHITE }); logs.insert(logs.begin(), { "Lost materials.", 5.0f, RED });
+    player->inventoryItems.clear();
+    player->hp = player->maxHp;
+    logs.clear();
+    logs.insert(logs.begin(), { "Returned to Home...", 5.0f, WHITE });
+    logs.insert(logs.begin(), { "Lost materials.", 5.0f, RED });
     ReturnHome();
 }
 

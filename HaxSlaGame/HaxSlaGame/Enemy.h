@@ -18,11 +18,21 @@ public:
     Vector3 lastPos;
     int stuckCount;
 
+    // アニメーション管理用
+    int animFrameCounter;
+
+    // 死亡アニメーション管理用
+    bool isDying;
+    bool isDead;
+
     Enemy(Vector3 sp, EnemyData d, int fl);
 
     void Update(Player& p, Dungeon& d, EffectManager& fx);
-    void Draw(bool debug);
+    // 【変更】プレイヤーの位置(playerPos)を受け取るように引数を追加
+    void Draw(bool debug, Camera3D cam, Font font, Vector3 playerPos);
     void ApplyKnockback(Vector3 dir, float force, Dungeon& d);
+
+    void StartDeath();
 
 private:
     void MoveSmart(Vector3 t, Dungeon& d);
