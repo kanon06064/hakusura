@@ -1,5 +1,5 @@
 #pragma once
-#include "Definitions.h"
+#include "Definitions.h" // これが必要
 #include "raylib.h"
 #include <vector>
 
@@ -24,7 +24,7 @@ public:
 
     static int itemPage, equipPage, debugPage, storageInvPage, storageBoxPage, itemSubTab;
 
-    // 【修正】アクセス権をpublicに
+    // 詳細ウィンドウ管理用
     static bool showDetail;
     static ItemData focusingItem;
     static float detailOpenTimer;

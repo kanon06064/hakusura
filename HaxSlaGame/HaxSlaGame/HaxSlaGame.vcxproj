@@ -132,6 +132,7 @@
     <None Include="ui_text.json" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="AudioManager.cpp" />
     <ClCompile Include="DataManager.cpp" />
     <ClCompile Include="Dungeon.cpp" />
     <ClCompile Include="EffectManager.cpp" />
@@ -142,6 +143,7 @@
     <ClCompile Include="UI.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="AudioManager.h" />
     <ClInclude Include="DataManager.h" />
     <ClInclude Include="Definitions.h" />
     <ClInclude Include="Dungeon.h" />

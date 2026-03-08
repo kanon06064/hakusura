@@ -6,6 +6,15 @@
 
 class Player;
 
+// モデル管理用構造体
+struct GameModel {
+    Model model;
+    Texture2D texture;
+    ModelAnimation* anims;
+    int animCount;
+    bool loaded;
+};
+
 class DataManager {
 public:
     static std::vector<EnemyData> allEnemyData;
@@ -14,7 +23,10 @@ public:
     static std::vector<Modifier> modifiers;
     static std::vector<CraftRecipe> recipes;
 
-    // 【追加】テスト用モデルデータ（コウモリ）
+    // モデルデータ管理
+    static std::map<std::string, GameModel> loadedModels;
+
+    // 後方互換性のため
     static Model batModel;
     static Texture2D batTexture;
     static ModelAnimation* batAnims;
@@ -22,10 +34,12 @@ public:
     static bool isBatModelLoaded;
 
     static void LoadAllData();
-    static void UnloadAllData(); // 【追加】終了処理用
+    static void UnloadAllData();
 
     static EnemyData GetRandomEnemyForFloor(int floor);
-    static EnemyData GetBossEnemy();
+    // 【変更】階層に応じてボスを決定するため引数を追加
+    static EnemyData GetBossEnemy(int floor);
+
     static ItemData GetItemConfigCopy(int id);
 
     static Modifier GetModifier(int id);

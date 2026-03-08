@@ -1,5 +1,5 @@
 #pragma once
-#include "Definitions.h"
+#include "Definitions.h" // ‚±‚ê‚ª•K—v
 #include <vector>
 
 class Dungeon;

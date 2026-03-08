@@ -28,12 +28,12 @@ public:
     Enemy(Vector3 sp, EnemyData d, int fl);
 
     void Update(Player& p, Dungeon& d, EffectManager& fx);
-    // 【変更】プレイヤーの位置(playerPos)を受け取るように引数を追加
     void Draw(bool debug, Camera3D cam, Font font, Vector3 playerPos);
     void ApplyKnockback(Vector3 dir, float force, Dungeon& d);
 
     void StartDeath();
 
 private:
-    void MoveSmart(Vector3 t, Dungeon& d);
+    // 【変更】壁に当たったかどうかを返すように bool に変更
+    bool MoveSmart(Vector3 t, Dungeon& d);
 };

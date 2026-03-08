@@ -1,5 +1,5 @@
 #pragma once
-#include "Definitions.h"
+#include "Definitions.h" // これが必要
 #include "raymath.h"
 #include <vector>
 
@@ -11,7 +11,7 @@ public:
     Vector3 portalPos;
     Vector3 healStationPos;
     Vector3 reforgeStationPos;
-    Vector3 craftStationPos; // クラフトステーション
+    Vector3 craftStationPos;
     Vector3 bossSpawnPos;
     std::vector<Vector3> treasureSpots;
 

@@ -3,6 +3,7 @@
 #include "Dungeon.h"
 #include "EffectManager.h"
 #include "DataManager.h"
+#include "AudioManager.h"
 #include "rlgl.h"
 #include <math.h>
 #include <string>
@@ -10,7 +11,18 @@
 
 Enemy::Enemy(Vector3 sp, EnemyData d, int fl) {
     position = sp; data = d; eType = (EnemyType)d.type; state = STATE_PATROL; level = fl;
-    maxHp = d.hp + (level * 10.0f); hp = maxHp; speed = d.speed; detectRange = d.detect; attackRange = d.atkRange; expValue = d.exp;
+
+    // パラメータ計算
+    maxHp = d.hp + (level * 10.0f);
+    hp = maxHp;
+    speed = d.speed;
+    detectRange = d.detect;
+    attackRange = d.atkRange;
+
+    // 階層に応じて経験値を増加させる
+    int levelBonus = (int)((float)d.exp * 0.1f * (float)level) + level;
+    expValue = d.exp + levelBonus;
+
     radius = 0.45f; attackTimer = 0; hudTimer = 0;
     lastAttackDir = { 1,0,0 };
     patrolTarget = sp;
@@ -28,7 +40,8 @@ void Enemy::StartDeath() {
     isDying = true;
     animFrameCounter = 0;
 
-    if (!DataManager::isBatModelLoaded || data.id != 0) {
+    std::string key = data.modelName;
+    if (key.empty() || DataManager::loadedModels.count(key) == 0) {
         isDead = true;
     }
 }
@@ -40,25 +53,45 @@ void Enemy::ApplyKnockback(Vector3 dir, float f, Dungeon& d) {
     if (!d.CheckCollisionRadius(Vector3Add(position, { 0, 0, kb.z }), radius)) position.z += kb.z;
 }
 
-void Enemy::MoveSmart(Vector3 target, Dungeon& d) {
-    if (eType == E_TRAP) return;
+// 【修正】壁に当たったら true を返すように変更
+bool Enemy::MoveSmart(Vector3 target, Dungeon& d) {
+    if (eType == E_TRAP) return false;
 
     Vector3 dir = Vector3Normalize(Vector3Subtract(target, position));
     Vector3 vel = Vector3Scale(dir, speed);
+    bool hitWall = false;
 
+    // X軸移動
     if (!d.CheckCollisionRadius(Vector3Add(position, { vel.x, 0, 0 }), radius)) {
         position.x += vel.x;
     }
+    else {
+        hitWall = true; // X軸で壁に当たった
+    }
+
+    // Z軸移動
     if (!d.CheckCollisionRadius(Vector3Add(position, { 0, 0, vel.z }), radius)) {
         position.z += vel.z;
     }
+    else {
+        hitWall = true; // Z軸で壁に当たった
+    }
+
+    return hitWall;
 }
 
 void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
     if (isDying) {
-        if (DataManager::isBatModelLoaded && data.id == 0 && DataManager::batAnimCount > 1) {
-            animFrameCounter++;
-            if (animFrameCounter >= DataManager::batAnims[1].frameCount) {
+        std::string key = data.modelName;
+        if (!key.empty() && DataManager::loadedModels.count(key) > 0) {
+            GameModel& gm = DataManager::loadedModels[key];
+            if (gm.animCount > 1) {
+                animFrameCounter++;
+                if (animFrameCounter >= gm.anims[1].frameCount) {
+                    isDead = true;
+                }
+            }
+            else {
                 isDead = true;
             }
         }
@@ -96,6 +129,8 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
             lastAttackDir = Vector3Normalize(Vector3Subtract(p.position, position));
             Vector3 spawnPos = Vector3Add(position, { 0, 0.8f, 0 });
 
+            AudioManager::PlaySE(SE_ENEMY_ATTACK);
+
             if (eType == E_ARCHER) {
                 fx.SpawnProjectile(spawnPos, lastAttackDir, 18.0f, 0, false);
                 attackTimer = 1.8f;
@@ -127,13 +162,20 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
         }
     }
     else {
+        // STATE_PATROL
         if (Vector3Distance(position, patrolTarget) < 1.2f) {
             patrolTarget = d.GetRandomFloorPos();
             stuckCount = 0;
         }
 
-        MoveSmart(patrolTarget, d);
+        // 【修正】壁に当たったらターゲットを変更する
+        bool hitWall = MoveSmart(patrolTarget, d);
+        if (hitWall) {
+            patrolTarget = d.GetRandomFloorPos();
+            stuckCount = 0;
+        }
 
+        // スタック対策（動きが小さい場合）
         if (Vector3Distance(position, lastPos) < 0.02f) stuckCount++;
         else stuckCount = 0;
 
@@ -147,25 +189,26 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
 
 void Enemy::Draw(bool debug, Camera3D cam, Font font, Vector3 playerPos) {
     int currentAnimIndex = -1;
-    bool isBat = false;
+    bool hasModel = false;
 
-    if (DataManager::isBatModelLoaded && (data.id == 0)) {
-        isBat = true;
+    std::string key = data.modelName;
+    if (!key.empty() && DataManager::loadedModels.count(key) > 0) {
+        hasModel = true;
+        GameModel& gm = DataManager::loadedModels[key];
 
-        DataManager::batModel.transform = MatrixIdentity();
+        gm.model.transform = MatrixIdentity();
 
-        // 0:Attack, 1:Die, 2:Idle, 3:Run
-        int animIndex = 2; // Default: Idle
+        int animIndex = 2; // Idle
 
         if (isDying) animIndex = 1;
         else if (state == STATE_ATTACK) animIndex = 0;
         else if (state == STATE_CHASE || state == STATE_PATROL) animIndex = 3;
 
-        if (animIndex >= DataManager::batAnimCount) animIndex = 0;
+        if (animIndex >= gm.animCount) animIndex = 0;
         currentAnimIndex = animIndex;
 
-        if (DataManager::batAnimCount > 0) {
-            ModelAnimation& anim = DataManager::batAnims[animIndex];
+        if (gm.animCount > 0) {
+            ModelAnimation& anim = gm.anims[animIndex];
             int frame = animFrameCounter;
             if (isDying) {
                 if (frame >= anim.frameCount - 1) frame = anim.frameCount - 1;
@@ -173,10 +216,9 @@ void Enemy::Draw(bool debug, Camera3D cam, Font font, Vector3 playerPos) {
             else {
                 frame = frame % anim.frameCount;
             }
-            UpdateModelAnimation(DataManager::batModel, anim, frame);
+            UpdateModelAnimation(gm.model, anim, frame);
         }
 
-        // --- 向き計算 ---
         float rotationAngle = 0.0f;
         Vector3 targetDir = { 0, 0, 1 };
 
@@ -190,23 +232,22 @@ void Enemy::Draw(bool debug, Camera3D cam, Font font, Vector3 playerPos) {
 
             if (Vector3Length(targetDir) > 0.01f) {
                 rotationAngle = atan2f(targetDir.x, targetDir.z) * RAD2DEG;
-                // 【修正】前回の -90.0f が原因で横を向いていた可能性が高いので削除
-                // もしこれで真後ろを向くようなら += 180.0f にしてください
+                // モデルによっては補正が必要
+                // rotationAngle -= 90.0f; 
             }
         }
 
-        // 【修正】大きさを 0.01f に変更
         float scale = 0.01f;
 
         Matrix matRotX = MatrixRotateX(-90.0f * DEG2RAD);
         Matrix matRotY = MatrixRotateY(rotationAngle * DEG2RAD);
 
-        DataManager::batModel.transform = MatrixMultiply(DataManager::batModel.transform, matRotX);
-        DataManager::batModel.transform = MatrixMultiply(DataManager::batModel.transform, matRotY);
+        gm.model.transform = MatrixMultiply(gm.model.transform, matRotX);
+        gm.model.transform = MatrixMultiply(gm.model.transform, matRotY);
 
-        DrawModel(DataManager::batModel, position, scale, WHITE);
+        DrawModel(gm.model, position, scale, WHITE);
 
-        DataManager::batModel.transform = MatrixIdentity();
+        gm.model.transform = MatrixIdentity();
     }
     else {
         Color c = (eType == E_SWORD) ? MAROON :
@@ -225,20 +266,8 @@ void Enemy::Draw(bool debug, Camera3D cam, Font font, Vector3 playerPos) {
         Color debugColor = (animFrameCounter % 10 < 5) ? GREEN : YELLOW;
         DrawSphere(headPos, 0.2f, debugColor);
 
-        if (isBat) {
+        if (hasModel) {
             DrawCubeWires(position, 2.0f, 2.0f, 2.0f, RED);
-        }
-
-        if (isBat && animFrameCounter % 60 == 0) {
-            int frame = animFrameCounter;
-            if (DataManager::batAnimCount > 0 && !isDying) {
-                frame = animFrameCounter % DataManager::batAnims[currentAnimIndex].frameCount;
-            }
-            std::cout << "Bat[ID:0] | State: " << state
-                << " | Anim: " << currentAnimIndex
-                << " | Frame: " << frame;
-            if (DataManager::batAnimCount > 0) std::cout << " / " << DataManager::batAnims[currentAnimIndex].frameCount;
-            std::cout << std::endl;
         }
     }
 }

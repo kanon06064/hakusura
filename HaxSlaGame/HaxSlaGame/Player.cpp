@@ -3,6 +3,7 @@
 #include "Enemy.h"
 #include "DataManager.h"
 #include "EffectManager.h"
+#include "AudioManager.h"
 #include "raymath.h"
 #include <math.h>
 
@@ -95,6 +96,7 @@ bool Player::IsSkillAvailable(int id) {
 void Player::UnlockSkill(int id) {
     if (IsSkillAvailable(id) && skillPoints >= skillTree[id].cost) {
         skillPoints -= skillTree[id].cost; skillTree[id].unlocked = true;
+        AudioManager::PlaySE(SE_SKILL);
         RecalculateStats();
     }
 }
@@ -107,6 +109,7 @@ float Player::GetSkillCooldown(SkillType type) { switch (type) { case SKILL_ACTI
                                                                                        void Player::LevelUp(EffectManager& fx) {
                                                                                            level++; exp -= expToNext; expToNext = (int)((float)expToNext * 1.5f);
                                                                                            skillPoints += 3; fx.SpawnDamageText(position, 999);
+                                                                                           AudioManager::PlaySE(SE_LEVELUP); // ÅyèCê≥ÅzSE_LEVELUPÇégóp
                                                                                            RecalculateStats(); hp = maxHp;
                                                                                        }
 
@@ -123,7 +126,12 @@ float Player::GetSkillCooldown(SkillType type) { switch (type) { case SKILL_ACTI
 
                                                                                        void Player::UseItem(int idx) {
                                                                                            if (idx < 0 || idx >= (int)inventoryItems.size()) return;
-                                                                                           if (inventoryItems[idx].type == "CONSUMABLE") { hp = fminf(maxHp, hp + inventoryItems[idx].heal); inventoryItems[idx].count--; if (inventoryItems[idx].count <= 0) inventoryItems.erase(inventoryItems.begin() + idx); }
+                                                                                           if (inventoryItems[idx].type == "CONSUMABLE") {
+                                                                                               hp = fminf(maxHp, hp + inventoryItems[idx].heal);
+                                                                                               inventoryItems[idx].count--;
+                                                                                               if (inventoryItems[idx].count <= 0) inventoryItems.erase(inventoryItems.begin() + idx);
+                                                                                               AudioManager::PlaySE(SE_HEAL); // ÅyèCê≥ÅzSE_HEALÇégóp
+                                                                                           }
                                                                                        }
 
                                                                                        void Player::EquipWeapon(int invIdx, int slot) {
@@ -133,6 +141,7 @@ float Player::GetSkillCooldown(SkillType type) { switch (type) { case SKILL_ACTI
                                                                                            equippedData[slot] = inventoryEquip[invIdx]; equippedWeapons[slot] = (WeaponType)equippedData[slot].weaponSubtype;
                                                                                            inventoryEquip.erase(inventoryEquip.begin() + invIdx);
                                                                                            if (activeSlot == slot) currentWeapon = equippedWeapons[slot];
+                                                                                           AudioManager::PlaySE(SE_CLICK);
                                                                                            RecalculateStats();
                                                                                        }
 
@@ -141,6 +150,7 @@ float Player::GetSkillCooldown(SkillType type) { switch (type) { case SKILL_ACTI
                                                                                            inventoryEquip.push_back(equippedData[slot]);
                                                                                            equippedData[slot] = ItemData(); equippedWeapons[slot] = NONE;
                                                                                            if (activeSlot == slot) currentWeapon = NONE;
+                                                                                           AudioManager::PlaySE(SE_CLICK);
                                                                                            RecalculateStats();
                                                                                        }
 
@@ -152,6 +162,7 @@ float Player::GetSkillCooldown(SkillType type) { switch (type) { case SKILL_ACTI
                                                                                            if (equippedArmor[slot].id != -1) inventoryEquip.push_back(equippedArmor[slot]);
                                                                                            equippedArmor[slot] = inventoryEquip[invIdx];
                                                                                            inventoryEquip.erase(inventoryEquip.begin() + invIdx);
+                                                                                           AudioManager::PlaySE(SE_CLICK);
                                                                                            RecalculateStats();
                                                                                        }
 
@@ -159,6 +170,7 @@ float Player::GetSkillCooldown(SkillType type) { switch (type) { case SKILL_ACTI
                                                                                            if (equippedArmor[slot].id == -1 || (int)inventoryEquip.size() >= MAX_EQUIP_INV) return;
                                                                                            inventoryEquip.push_back(equippedArmor[slot]);
                                                                                            equippedArmor[slot] = ItemData();
+                                                                                           AudioManager::PlaySE(SE_CLICK);
                                                                                            RecalculateStats();
                                                                                        }
 
@@ -168,12 +180,20 @@ float Player::GetSkillCooldown(SkillType type) { switch (type) { case SKILL_ACTI
                                                                                            if (dashCooldownTimer > 0) dashCooldownTimer -= dt; if (smashCooldownTimer > 0) smashCooldownTimer -= dt; if (stealthCooldownTimer > 0) stealthCooldownTimer -= dt;
                                                                                            if (dashTimer > 0) dashTimer -= dt; if (stealthTimer > 0) stealthTimer -= dt; else isStealth = false;
 
-                                                                                           if (IsKeyPressed(KEY_ONE) && IsSkillUnlocked(SKILL_ACTIVE_DASH) && dashCooldownTimer <= 0) { dashTimer = 0.2f; dashCooldownTimer = GetSkillMaxCooldown(SKILL_ACTIVE_DASH); fx.SpawnEffect(position, { 0.0f,1.0f,0.0f }, FX_HIT, WHITE); }
+                                                                                           if (IsKeyPressed(KEY_ONE) && IsSkillUnlocked(SKILL_ACTIVE_DASH) && dashCooldownTimer <= 0) {
+                                                                                               dashTimer = 0.2f; dashCooldownTimer = GetSkillMaxCooldown(SKILL_ACTIVE_DASH);
+                                                                                               fx.SpawnEffect(position, { 0.0f,1.0f,0.0f }, FX_HIT, WHITE);
+                                                                                               AudioManager::PlaySE(SE_SKILL);
+                                                                                           }
                                                                                            if (IsKeyPressed(KEY_TWO) && IsSkillUnlocked(SKILL_ACTIVE_SMASH) && smashCooldownTimer <= 0 && currentWeapon != NONE && attackTimer <= 0) {
                                                                                                Ray ray = GetMouseRay(GetMousePosition(), cam); if (ray.direction.y != 0) { float t = (position.y - ray.position.y) / ray.direction.y; Vector3 tp = Vector3Add(ray.position, Vector3Scale(ray.direction, t)); lastAimDir = Vector3Normalize(Vector3Subtract(tp, position)); lastAimDir.y = 0; lastAimDir = Vector3Normalize(lastAimDir); }
                                                                                                PerformSmash(lastAimDir, enemies, d, fx); smashCooldownTimer = GetSkillMaxCooldown(SKILL_ACTIVE_SMASH); attackTimer = 0.8f;
                                                                                            }
-                                                                                           if (IsKeyPressed(KEY_THREE) && IsSkillUnlocked(SKILL_ACTIVE_STEALTH) && stealthCooldownTimer <= 0) { isStealth = true; stealthTimer = 10.0f; stealthCooldownTimer = GetSkillMaxCooldown(SKILL_ACTIVE_STEALTH); fx.SpawnEffect(position, { 0.0f,1.0f,0.0f }, FX_HIT, BLUE); }
+                                                                                           if (IsKeyPressed(KEY_THREE) && IsSkillUnlocked(SKILL_ACTIVE_STEALTH) && stealthCooldownTimer <= 0) {
+                                                                                               isStealth = true; stealthTimer = 10.0f; stealthCooldownTimer = GetSkillMaxCooldown(SKILL_ACTIVE_STEALTH);
+                                                                                               fx.SpawnEffect(position, { 0.0f,1.0f,0.0f }, FX_HIT, BLUE);
+                                                                                               AudioManager::PlaySE(SE_SKILL);
+                                                                                           }
                                                                                            if (IsKeyPressed(KEY_Q)) { activeSlot = 1 - activeSlot; currentWeapon = equippedWeapons[activeSlot]; }
 
                                                                                            Vector3 cf = Vector3Normalize(Vector3Subtract(cam.target, cam.position)); cf.y = 0; cf = Vector3Normalize(cf); Vector3 cr = { -cf.z, 0, cf.x }, md = { 0.0f,0.0f,0.0f };
@@ -187,6 +207,7 @@ float Player::GetSkillCooldown(SkillType type) { switch (type) { case SKILL_ACTI
                                                                                        }
 
                                                                                        void Player::PerformAttack(Vector3 ad, std::vector<Enemy>& enemies, Dungeon& d, EffectManager& fx) {
+                                                                                           AudioManager::PlaySE(SE_ATTACK); // ÅyèCê≥ÅzçUåÇSEÇämé¿Ç…åƒÇ—èoÇ∑
                                                                                            Vector3 attackOrigin = Vector3Add(position, { 0.0f, 0.8f, 0.0f });
                                                                                            if (currentWeapon == BOW || currentWeapon == WAND) { float speed = (currentWeapon == BOW) ? 25.0f : 15.0f; int type = (currentWeapon == BOW) ? 0 : 1; fx.SpawnProjectile(attackOrigin, ad, speed, type, true); }
                                                                                            else {
@@ -200,6 +221,7 @@ switch (currentWeapon) { case SWORD: if (dist < 4.5f && Vector3DotProduct(ad, Ve
                                                                                        }
 
                                                                                        void Player::PerformSmash(Vector3 ad, std::vector<Enemy>& enemies, Dungeon& d, EffectManager& fx) {
+                                                                                           AudioManager::PlaySE(SE_SKILL);
                                                                                            Vector3 attackOrigin = Vector3Add(position, { 0.0f, 0.8f, 0.0f }); fx.SpawnEffect(attackOrigin, ad, FX_SMASH, RED);
                                                                                            for (auto& e : enemies) {
                                                                                                if (!d.HasLineOfSight(position, e.position)) continue;

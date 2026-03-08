@@ -8,13 +8,15 @@
 
 using json = nlohmann::json;
 
+// 静的メンバ変数の実体定義
 std::vector<EnemyData> DataManager::allEnemyData;
 std::vector<ItemData> DataManager::itemConfigs;
 std::map<std::string, std::string> DataManager::uiStrings;
 std::vector<Modifier> DataManager::modifiers;
 std::vector<CraftRecipe> DataManager::recipes;
 
-// モデルデータの初期化
+std::map<std::string, GameModel> DataManager::loadedModels;
+
 Model DataManager::batModel = { 0 };
 Texture2D DataManager::batTexture = { 0 };
 ModelAnimation* DataManager::batAnims = nullptr;
@@ -64,9 +66,17 @@ void DataManager::LoadAllData() {
         if (eF.is_open()) {
             json j; eF >> j; allEnemyData.clear();
             for (auto& i : j) {
-                EnemyData d; d.id = i.value("id", 0); d.name = i.value("name", ""); d.type = i.value("type", 0);
-                d.hp = i.value("hp", 0.0f); d.speed = i.value("speed", 0.0f); d.minFloor = i.value("minFloor", 1);
-                d.atkRange = i.value("atkRange", 2.0f); d.exp = i.value("exp", 0); d.gold = i.value("gold", 0);
+                EnemyData d;
+                d.id = i.value("id", 0);
+                d.name = i.value("name", "");
+                d.modelName = i.value("model", "");
+                d.type = i.value("type", 0);
+                d.hp = i.value("hp", 0.0f);
+                d.speed = i.value("speed", 0.0f);
+                d.minFloor = i.value("minFloor", 1);
+                d.atkRange = i.value("atkRange", 2.0f);
+                d.exp = i.value("exp", 0);
+                d.gold = i.value("gold", 0);
                 if (i.contains("drops")) d.drops = i["drops"].get<std::vector<int>>();
                 allEnemyData.push_back(d);
             }
@@ -89,40 +99,93 @@ void DataManager::LoadAllData() {
     }
     catch (const std::exception& e) { std::cerr << "JSON Load Error: " << e.what() << std::endl; }
 
-    // 【修正】IQMに戻す
-    if (FileExists("resources/Bat.iqm") && FileExists("resources/Albedo.png")) {
-        batModel = LoadModel("resources/Bat.iqm"); // IQM
-        batTexture = LoadTexture("resources/Albedo.png");
-        SetMaterialTexture(&batModel.materials[0], MATERIAL_MAP_DIFFUSE, batTexture);
+    for (const auto& enemy : allEnemyData) {
+        std::string name = enemy.modelName;
+        if (name.empty()) continue;
+        if (loadedModels.count(name) > 0) continue;
 
-        batAnims = LoadModelAnimations("resources/Bat.iqm", &batAnimCount); // IQM
+        std::string iqmPath = "resources/" + name + ".iqm";
+        std::string texPath = "resources/" + name + "_Albedo.png";
 
-        isBatModelLoaded = true;
-        std::cout << "Bat Model Loaded! Anim Count: " << batAnimCount << std::endl;
+        if (!FileExists(texPath.c_str())) texPath = "resources/Albedo.png";
+
+        if (FileExists(iqmPath.c_str()) && FileExists(texPath.c_str())) {
+            GameModel gm;
+            gm.model = LoadModel(iqmPath.c_str());
+            gm.texture = LoadTexture(texPath.c_str());
+            SetMaterialTexture(&gm.model.materials[0], MATERIAL_MAP_DIFFUSE, gm.texture);
+            gm.anims = LoadModelAnimations(iqmPath.c_str(), &gm.animCount);
+            gm.loaded = true;
+            loadedModels[name] = gm;
+            std::cout << "Loaded Model: " << name << " (Anims: " << gm.animCount << ")" << std::endl;
+        }
+        else {
+            std::cout << "Failed to load model: " << name << " (" << iqmPath << ")" << std::endl;
+        }
     }
-    else {
-        std::cout << "Warning: Bat.iqm or Albedo.png not found in resources/" << std::endl;
+
+    if (loadedModels.count("Bat")) {
+        batModel = loadedModels["Bat"].model;
+        batTexture = loadedModels["Bat"].texture;
+        batAnims = loadedModels["Bat"].anims;
+        batAnimCount = loadedModels["Bat"].animCount;
+        isBatModelLoaded = true;
     }
 }
 
 void DataManager::UnloadAllData() {
-    if (isBatModelLoaded) {
-        UnloadTexture(batTexture);
-        UnloadModelAnimations(batAnims, batAnimCount);
-        UnloadModel(batModel);
-        isBatModelLoaded = false;
+    for (auto& pair : loadedModels) {
+        if (pair.second.loaded) {
+            UnloadTexture(pair.second.texture);
+            UnloadModelAnimations(pair.second.anims, pair.second.animCount);
+            UnloadModel(pair.second.model);
+        }
     }
+    loadedModels.clear();
+    isBatModelLoaded = false;
 }
 
+// 【変更】特定のボス（ID:15, 17, 18, 22）を雑魚として出さないように除外
 EnemyData DataManager::GetRandomEnemyForFloor(int floor) {
-    std::vector<EnemyData> c; for (auto& e : allEnemyData) if (floor >= e.minFloor) c.push_back(e);
-    return c.empty() ? EnemyData{ 0, "Slime", 0, 30, 0.05f } : c[GetRandomValue(0, (int)c.size() - 1)];
+    std::vector<EnemyData> c;
+    for (auto& e : allEnemyData) {
+        // ボス専用IDは除外
+        if (e.id == 15 || e.id == 17 || e.id == 18 || e.id == 22) continue;
+
+        if (floor >= e.minFloor) c.push_back(e);
+    }
+    return c.empty() ? EnemyData{ 0, "Slime", "", 0, 30, 0.05f } : c[GetRandomValue(0, (int)c.size() - 1)];
 }
-EnemyData DataManager::GetBossEnemy() {
-    if (allEnemyData.empty()) return { 0, "Boss", 0, 1000, 0.1f };
-    EnemyData boss = allEnemyData[0]; for (auto& e : allEnemyData) if (e.minFloor > boss.minFloor) boss = e;
+
+// 【変更】100階は魔王、それ以外は中ボス3体からランダム
+EnemyData DataManager::GetBossEnemy(int floor) {
+    if (allEnemyData.empty()) return { 0, "Boss", "", 0, 1000, 0.1f };
+
+    if (floor == 100) {
+        // 100階は魔王 (ID:22)
+        for (const auto& e : allEnemyData) {
+            if (e.id == 22) return e;
+        }
+    }
+    else {
+        // それ以外のボス階は ブラックナイト(15), サイクロプス(17), フライングデーモン(18) からランダム
+        std::vector<EnemyData> bosses;
+        for (const auto& e : allEnemyData) {
+            if (e.id == 15 || e.id == 17 || e.id == 18) {
+                bosses.push_back(e);
+            }
+        }
+        if (!bosses.empty()) {
+            return bosses[GetRandomValue(0, (int)bosses.size() - 1)];
+        }
+    }
+
+    // データが見つからない場合のフォールバック（一番強い敵を返す）
+    EnemyData boss = allEnemyData[0];
+    for (auto& e : allEnemyData) if (e.minFloor > boss.minFloor) boss = e;
     return boss;
 }
+
 ItemData DataManager::GetItemConfigCopy(int id) {
     for (auto& cfg : itemConfigs) if (cfg.id == id) return cfg;
     ItemData empty; empty.id = -1; return empty;
@@ -138,7 +201,9 @@ int DataManager::GetRandomModifierId() {
 }
 
 void DataManager::SaveGame(int slot, Player* p, int currentFloor, int maxReachedFloor, const std::vector<ItemData>& sItems, const std::vector<ItemData>& sEquip) {
-    json root; root["floor"] = currentFloor; root["maxReachedFloor"] = maxReachedFloor;
+    json root;
+    root["floor"] = currentFloor;
+    root["maxReachedFloor"] = maxReachedFloor;
     root["player"] = {
         {"level", p->level}, {"exp", p->exp}, {"expToNext", p->expToNext},
         {"hp", p->hp}, {"maxHp", p->maxHp}, {"attackPower", p->attackPower},
@@ -146,12 +211,15 @@ void DataManager::SaveGame(int slot, Player* p, int currentFloor, int maxReached
     };
     root["inventoryItems"] = json::array(); for (const auto& item : p->inventoryItems) root["inventoryItems"].push_back(ItemToJson(item));
     root["inventoryEquip"] = json::array(); for (const auto& item : p->inventoryEquip) root["inventoryEquip"].push_back(ItemToJson(item));
-    root["equipped0"] = ItemToJson(p->equippedData[0]); root["equipped1"] = ItemToJson(p->equippedData[1]);
+    root["equipped0"] = ItemToJson(p->equippedData[0]);
+    root["equipped1"] = ItemToJson(p->equippedData[1]);
     root["armor"] = json::array(); for (int i = 0; i < 5; i++) root["armor"].push_back(ItemToJson(p->equippedArmor[i]));
     root["unlockedSkills"] = json::array(); for (const auto& node : p->skillTree) if (node.unlocked) root["unlockedSkills"].push_back(node.id);
     root["storageItems"] = json::array(); for (const auto& item : sItems) root["storageItems"].push_back(ItemToJson(item));
     root["storageEquip"] = json::array(); for (const auto& item : sEquip) root["storageEquip"].push_back(ItemToJson(item));
-    std::ofstream o("save" + std::to_string(slot) + ".json"); o << root.dump(4);
+
+    std::ofstream o("save" + std::to_string(slot) + ".json");
+    o << root.dump(4);
 }
 
 bool DataManager::LoadGame(int slot, Player* p, int& currentFloor, int& maxReachedFloor, std::vector<ItemData>& sItems, std::vector<ItemData>& sEquip) {

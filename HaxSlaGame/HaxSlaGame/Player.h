@@ -1,6 +1,7 @@
 #pragma once
-#include "Definitions.h"
+#include "Definitions.h" // ‚±‚ê‚ª•K—v
 #include <vector>
+#include <string>
 
 class Dungeon;
 class Enemy;
@@ -21,7 +22,7 @@ public:
 
     WeaponType equippedWeapons[2], currentWeapon;
     ItemData equippedData[2];
-    ItemData equippedArmor[5]; // –h‹ï
+    ItemData equippedArmor[5];
 
     std::vector<ItemData> inventoryItems;
     std::vector<ItemData> inventoryEquip;

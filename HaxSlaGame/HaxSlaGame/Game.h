@@ -1,11 +1,11 @@
 #pragma once
 #include "raylib.h"
+#include "Definitions.h"
 #include "Dungeon.h"
 #include "Player.h"
 #include "Enemy.h"
 #include "EffectManager.h"
 #include "UI.h"
-#include "Definitions.h"
 #include <vector>
 
 class Game {
@@ -14,6 +14,7 @@ public:
     ~Game();
     void Run();
     void WarpToFloor(int targetFloor);
+    void StartDebugRoom();
 
 private:
     void InitGame();
@@ -23,13 +24,15 @@ private:
     void NextFloor();
     void ReturnHome();
 
-    // ゲームオーバー・セーブロード関連
     void ApplyDeathPenalty();
     void SaveCurrentSlot();
     void LoadAndStart(int slot);
     void NewGameAndStart(int slot);
 
-    // メンバ変数（ここが抜けていたためエラーになっていました）
+    void InitDebugRoom();
+    void UpdateDebugRoom();
+    void DrawDebugRoom();
+
     int screenWidth;
     int screenHeight;
     Font font;
