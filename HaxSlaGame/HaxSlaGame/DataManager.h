@@ -33,11 +33,13 @@ public:
     static int batAnimCount;
     static bool isBatModelLoaded;
 
+    // y’Ç‰Ázƒ^ƒCƒgƒ‹‰æ‘œ—p
+    static Texture2D titleBg;
+
     static void LoadAllData();
     static void UnloadAllData();
 
     static EnemyData GetRandomEnemyForFloor(int floor);
-    // y•ÏXzŠK‘w‚É‰‚¶‚Äƒ{ƒX‚ğŒˆ’è‚·‚é‚½‚ßˆø”‚ğ’Ç‰Á
     static EnemyData GetBossEnemy(int floor);
 
     static ItemData GetItemConfigCopy(int id);

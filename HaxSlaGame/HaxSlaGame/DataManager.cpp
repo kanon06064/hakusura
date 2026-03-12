@@ -23,6 +23,9 @@ ModelAnimation* DataManager::batAnims = nullptr;
 int DataManager::batAnimCount = 0;
 bool DataManager::isBatModelLoaded = false;
 
+// 【追加】タイトル画像の実体
+Texture2D DataManager::titleBg = { 0 };
+
 // JSON変換ヘルパー
 static json ItemToJson(const ItemData& item) {
     return {
@@ -99,6 +102,7 @@ void DataManager::LoadAllData() {
     }
     catch (const std::exception& e) { std::cerr << "JSON Load Error: " << e.what() << std::endl; }
 
+    // 敵モデルの一括読み込み
     for (const auto& enemy : allEnemyData) {
         std::string name = enemy.modelName;
         if (name.empty()) continue;
@@ -131,6 +135,11 @@ void DataManager::LoadAllData() {
         batAnimCount = loadedModels["Bat"].animCount;
         isBatModelLoaded = true;
     }
+
+    // 【追加】タイトル画像の読み込み
+    if (FileExists("resources/title_bg.png")) {
+        titleBg = LoadTexture("resources/title_bg.png");
+    }
 }
 
 void DataManager::UnloadAllData() {
@@ -143,32 +152,31 @@ void DataManager::UnloadAllData() {
     }
     loadedModels.clear();
     isBatModelLoaded = false;
+
+    // 【追加】タイトル画像の解放
+    if (titleBg.id != 0) {
+        UnloadTexture(titleBg);
+    }
 }
 
-// 【変更】特定のボス（ID:15, 17, 18, 22）を雑魚として出さないように除外
 EnemyData DataManager::GetRandomEnemyForFloor(int floor) {
     std::vector<EnemyData> c;
     for (auto& e : allEnemyData) {
-        // ボス専用IDは除外
         if (e.id == 15 || e.id == 17 || e.id == 18 || e.id == 22) continue;
-
         if (floor >= e.minFloor) c.push_back(e);
     }
     return c.empty() ? EnemyData{ 0, "Slime", "", 0, 30, 0.05f } : c[GetRandomValue(0, (int)c.size() - 1)];
 }
 
-// 【変更】100階は魔王、それ以外は中ボス3体からランダム
 EnemyData DataManager::GetBossEnemy(int floor) {
     if (allEnemyData.empty()) return { 0, "Boss", "", 0, 1000, 0.1f };
 
     if (floor == 100) {
-        // 100階は魔王 (ID:22)
         for (const auto& e : allEnemyData) {
             if (e.id == 22) return e;
         }
     }
     else {
-        // それ以外のボス階は ブラックナイト(15), サイクロプス(17), フライングデーモン(18) からランダム
         std::vector<EnemyData> bosses;
         for (const auto& e : allEnemyData) {
             if (e.id == 15 || e.id == 17 || e.id == 18) {
@@ -180,7 +188,6 @@ EnemyData DataManager::GetBossEnemy(int floor) {
         }
     }
 
-    // データが見つからない場合のフォールバック（一番強い敵を返す）
     EnemyData boss = allEnemyData[0];
     for (auto& e : allEnemyData) if (e.minFloor > boss.minFloor) boss = e;
     return boss;
