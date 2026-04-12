@@ -5,21 +5,45 @@
 #include "DataManager.h"
 #include "AudioManager.h"
 #include "rlgl.h"
+#include "raymath.h"
 #include <math.h>
 #include <string>
 #include <iostream>
 
+// ==========================================
+// ボーンのアニメーション姿勢行列を計算する関数
+// ==========================================
+Matrix GetBoneMatrix(Model model, ModelAnimation anim, int frame, int boneIndex) {
+    if (boneIndex < 0 || boneIndex >= model.boneCount) return MatrixIdentity();
+
+    // 【修正点】
+    // Raylib (IQM等) では、anim.framePoses に格納されているTransformは
+    // すでに親ボーンの変換を含んだ「モデル空間での絶対Transform」になっています。
+    // そのため、親ボーンを再帰的に掛け合わせる必要はありません。
+    Transform boneTransform = anim.framePoses[frame][boneIndex];
+
+    // Scale -> Rotation -> Translation の順に行列を合成
+    Matrix mat = MatrixMultiply(
+        MatrixMultiply(
+            MatrixScale(boneTransform.scale.x, boneTransform.scale.y, boneTransform.scale.z),
+            QuaternionToMatrix(boneTransform.rotation)
+        ),
+        MatrixTranslate(boneTransform.translation.x, boneTransform.translation.y, boneTransform.translation.z)
+    );
+
+    return mat;
+}
+// ==========================================
+
 Enemy::Enemy(Vector3 sp, EnemyData d, int fl) {
     position = sp; data = d; eType = (EnemyType)d.type; state = STATE_PATROL; level = fl;
 
-    // パラメータ計算
     maxHp = d.hp + (level * 10.0f);
     hp = maxHp;
     speed = d.speed;
     detectRange = d.detect;
     attackRange = d.atkRange;
 
-    // 階層に応じて経験値を増加させる
     int levelBonus = (int)((float)d.exp * 0.1f * (float)level) + level;
     expValue = d.exp + levelBonus;
 
@@ -53,7 +77,6 @@ void Enemy::ApplyKnockback(Vector3 dir, float f, Dungeon& d) {
     if (!d.CheckCollisionRadius(Vector3Add(position, { 0, 0, kb.z }), radius)) position.z += kb.z;
 }
 
-// 【修正】壁に当たったら true を返すように変更
 bool Enemy::MoveSmart(Vector3 target, Dungeon& d) {
     if (eType == E_TRAP) return false;
 
@@ -61,20 +84,18 @@ bool Enemy::MoveSmart(Vector3 target, Dungeon& d) {
     Vector3 vel = Vector3Scale(dir, speed);
     bool hitWall = false;
 
-    // X軸移動
     if (!d.CheckCollisionRadius(Vector3Add(position, { vel.x, 0, 0 }), radius)) {
         position.x += vel.x;
     }
     else {
-        hitWall = true; // X軸で壁に当たった
+        hitWall = true;
     }
 
-    // Z軸移動
     if (!d.CheckCollisionRadius(Vector3Add(position, { 0, 0, vel.z }), radius)) {
         position.z += vel.z;
     }
     else {
-        hitWall = true; // Z軸で壁に当たった
+        hitWall = true;
     }
 
     return hitWall;
@@ -162,20 +183,17 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
         }
     }
     else {
-        // STATE_PATROL
         if (Vector3Distance(position, patrolTarget) < 1.2f) {
             patrolTarget = d.GetRandomFloorPos();
             stuckCount = 0;
         }
 
-        // 【修正】壁に当たったらターゲットを変更する
         bool hitWall = MoveSmart(patrolTarget, d);
         if (hitWall) {
             patrolTarget = d.GetRandomFloorPos();
             stuckCount = 0;
         }
 
-        // スタック対策（動きが小さい場合）
         if (Vector3Distance(position, lastPos) < 0.02f) stuckCount++;
         else stuckCount = 0;
 
@@ -207,15 +225,17 @@ void Enemy::Draw(bool debug, Camera3D cam, Font font, Vector3 playerPos) {
         if (animIndex >= gm.animCount) animIndex = 0;
         currentAnimIndex = animIndex;
 
+        int frame = animFrameCounter;
+        ModelAnimation anim = gm.anims[currentAnimIndex];
+
+        if (isDying) {
+            if (frame >= anim.frameCount - 1) frame = anim.frameCount - 1;
+        }
+        else {
+            frame = frame % anim.frameCount;
+        }
+
         if (gm.animCount > 0) {
-            ModelAnimation& anim = gm.anims[animIndex];
-            int frame = animFrameCounter;
-            if (isDying) {
-                if (frame >= anim.frameCount - 1) frame = anim.frameCount - 1;
-            }
-            else {
-                frame = frame % anim.frameCount;
-            }
             UpdateModelAnimation(gm.model, anim, frame);
         }
 
@@ -232,8 +252,6 @@ void Enemy::Draw(bool debug, Camera3D cam, Font font, Vector3 playerPos) {
 
             if (Vector3Length(targetDir) > 0.01f) {
                 rotationAngle = atan2f(targetDir.x, targetDir.z) * RAD2DEG;
-                // モデルによっては補正が必要
-                // rotationAngle -= 90.0f; 
             }
         }
 
@@ -246,6 +264,44 @@ void Enemy::Draw(bool debug, Camera3D cam, Font font, Vector3 playerPos) {
         gm.model.transform = MatrixMultiply(gm.model.transform, matRotY);
 
         DrawModel(gm.model, position, scale, WHITE);
+
+        // ==========================================
+        // ボーンから行列を取得し、アタッチメント位置を計算
+        // ==========================================
+        int handBoneIndex = -1;
+        for (int i = 0; i < gm.model.boneCount; i++) {
+            std::string bName(gm.model.bones[i].name);
+            if (bName == "Hand_R" || bName == "Dagger") {
+                handBoneIndex = i;
+                break;
+            }
+        }
+
+        if (handBoneIndex != -1) {
+            // モデル全体のワールド座標・回転・スケールの行列を作成
+            Matrix matScale = MatrixScale(scale, scale, scale);
+            Matrix matTrans = MatrixTranslate(position.x, position.y, position.z);
+            Matrix modelBaseTransform = MatrixMultiply(MatrixMultiply(gm.model.transform, matScale), matTrans);
+
+            // アニメーションデータからボーンの行列を取得（再帰なしバージョン）
+            Matrix boneMatrix = GetBoneMatrix(gm.model, anim, frame, handBoneIndex);
+
+            // ローカルボーン行列をワールド行列に変換
+            Matrix boneWorldTransform = MatrixMultiply(boneMatrix, modelBaseTransform);
+
+            if (debug) {
+                // ボーンの現在位置 (ワールド空間)
+                Vector3 boneWorldPos = { boneWorldTransform.m12, boneWorldTransform.m13, boneWorldTransform.m14 };
+                DrawCube(boneWorldPos, 0.2f, 0.2f, 0.2f, GREEN);
+                DrawCubeWires(boneWorldPos, 0.2f, 0.2f, 0.2f, LIME);
+
+                // ボーンの正面方向 (Z軸) を赤い線で描画し、向きを確認可能にする
+                Vector3 boneForward = { boneWorldTransform.m8, boneWorldTransform.m9, boneWorldTransform.m10 };
+                Vector3 tip = Vector3Add(boneWorldPos, Vector3Scale(Vector3Normalize(boneForward), 0.8f));
+                DrawLine3D(boneWorldPos, tip, RED);
+            }
+        }
+        // ==========================================
 
         gm.model.transform = MatrixIdentity();
     }
