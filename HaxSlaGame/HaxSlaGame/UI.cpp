@@ -124,27 +124,22 @@ void UI::DrawDetailWindow(Font font) {
     }
 }
 
-// 【変更】タイトル画面の描画処理を修正
 int UI::DrawTitleScreen(Font font) {
     int sw = GetScreenWidth(); int sh = GetScreenHeight();
 
-    // 画像がロードされている場合は背景として描画
     if (DataManager::titleBg.id != 0) {
         Rectangle source = { 0.0f, 0.0f, (float)DataManager::titleBg.width, (float)DataManager::titleBg.height };
         Rectangle dest = { 0.0f, 0.0f, (float)sw, (float)sh };
         Vector2 origin = { 0.0f, 0.0f };
-        // 画像を画面いっぱいに描画
         DrawTexturePro(DataManager::titleBg, source, dest, origin, 0.0f, WHITE);
     }
     else {
-        // 画像が見つからなかった場合のフォールバック（以前の表示）
         DrawRectangleGradientV(0, 0, sw, sh, DARKBLUE, BLACK);
         const char* title = "3D Hack & Slash";
         Vector2 tSize = MeasureTextEx(font, title, 60, 2);
         DrawTextEx(font, title, { (float)(sw - tSize.x) / 2, 100.0f }, 60, 2, GOLD);
     }
 
-    // 削除確認ダイアログ
     if (deleteConfirmSlot > 0) {
         DrawRectangle(0, 0, sw, sh, Fade(BLACK, 0.8f));
         int w = 500, h = 250;
@@ -167,15 +162,23 @@ int UI::DrawTitleScreen(Font font) {
     }
 
     int selectedSlot = 0;
-    // スロットボタンの位置を少し下にずらして、画像ロゴと被らないように調整
     for (int i = 1; i <= 3; i++) {
         SaveHeader h = DataManager::GetSaveHeader(i);
-        float y = 350.0f + (float)(i - 1) * 100.0f; // Y座標を300から350に変更
+        float y = 350.0f + (float)(i - 1) * 100.0f;
         Rectangle r = { (float)sw / 2 - 200, y, 400.0f, 80.0f };
         std::string label; Color c;
 
-        // 背景が画像になるため、ボタンを半透明にして馴染ませる
-        if (h.exists) { label = TextFormat("Slot %d: Lv.%d  Floor %d", i, h.playerLevel, h.floor); c = Fade(DARKGREEN, 0.8f); }
+        // ★ ラッシュモードのセーブデータの場合は表記と色を変える
+        if (h.exists) {
+            if (h.isPortfolioMode) {
+                label = TextFormat("Slot %d: [RUSH] Lv.%d", i, h.playerLevel);
+                c = Fade(GOLD, 0.8f);
+            }
+            else {
+                label = TextFormat("Slot %d: Lv.%d  Floor %d", i, h.playerLevel, h.floor);
+                c = Fade(DARKGREEN, 0.8f);
+            }
+        }
         else { label = TextFormat("Slot %d: (NO DATA)", i); c = Fade(DARKGRAY, 0.8f); }
 
         if (DrawButton(r, label.c_str(), font, c)) { selectedSlot = i; }
@@ -188,6 +191,9 @@ int UI::DrawTitleScreen(Font font) {
         }
     }
 
+    if (DrawButton({ 20, (float)sh - 110, 340, 40 }, u8"ポートフォリオ: 3層ラッシュ開始", font, Fade(ORANGE, 0.8f))) {
+        return 888;
+    }
     if (DrawButton({ 20, (float)sh - 60, 200, 40 }, u8"デバッグルーム", font, Fade(PURPLE, 0.8f))) {
         return 999;
     }
@@ -199,7 +205,16 @@ void UI::DrawHUD(Player& p, std::vector<Enemy>& enemies, Dungeon& d, Camera3D& c
     int sw = GetScreenWidth(), sh = GetScreenHeight();
 
     std::string floorText;
-    if (floor == 0) floorText = "HOME"; else { std::string label = "Floor"; if (DataManager::uiStrings.count("FLOOR")) label = DataManager::uiStrings["FLOOR"]; floorText = TextFormat("%s %d", label.c_str(), floor); }
+    if (floor > 1000) {
+        floorText = TextFormat("STAGE %d", floor - 1000);
+    }
+    else if (floor == 0) floorText = "HOME";
+    else {
+        std::string label = "Floor";
+        if (DataManager::uiStrings.count("FLOOR")) label = DataManager::uiStrings["FLOOR"];
+        floorText = TextFormat("%s %d", label.c_str(), floor);
+    }
+
     Vector2 fSize = MeasureTextEx(font, floorText.c_str(), 24, 1); DrawRectangle(20, 20, (int)fSize.x + 30, 40, Fade(BLACK, 0.6f)); DrawTextEx(font, floorText.c_str(), { 35, 28 }, 24, 1, WHITE);
 
     int listCount = 0;
@@ -395,12 +410,8 @@ void UI::DrawMenu(Player& p, Dungeon& d, MenuTab& tab, Font font) {
     }
     else if (tab == SYSTEM_TAB) {
         DrawTextEx(font, u8"システムメニュー", { 120, 130 }, 24, 1, WHITE);
-        if (d.isHome) {
-            if (UI::DrawButton({ 120, 200, 200, 60 }, u8"セーブ", font, BLUE)) { /* Game.cppで処理 */ }
-            DrawTextEx(font, u8"現在の状況を保存します", { 340, 220 }, 18, 1, LIGHTGRAY);
-        }
-        else { DrawRectangle(120, 200, 200, 60, GRAY); DrawTextEx(font, u8"セーブ (ホームのみ)", { 140, 220 }, 18, 1, DARKGRAY); }
-        if (UI::DrawButton({ 120, 300, 200, 60 }, u8"タイトルへ戻る", font, RED)) { /* Game.cppで処理 */ }
+        if (!d.isHome) { DrawRectangle(120, 200, 200, 60, GRAY); DrawTextEx(font, u8"セーブ (ホームのみ)", { 140, 220 }, 18, 1, DARKGRAY); }
+        else { DrawTextEx(font, u8"現在の状況を保存します", { 340, 220 }, 18, 1, LIGHTGRAY); }
     }
     else if (tab == OPTION_TAB) {
         DrawTextEx(font, u8"サウンド設定", { 150, 150 }, 24, 1, WHITE);

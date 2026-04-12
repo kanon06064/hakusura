@@ -8,7 +8,6 @@
 
 using json = nlohmann::json;
 
-// 静的メンバ変数の実体定義
 std::vector<EnemyData> DataManager::allEnemyData;
 std::vector<ItemData> DataManager::itemConfigs;
 std::map<std::string, std::string> DataManager::uiStrings;
@@ -23,10 +22,8 @@ ModelAnimation* DataManager::batAnims = nullptr;
 int DataManager::batAnimCount = 0;
 bool DataManager::isBatModelLoaded = false;
 
-// 【追加】タイトル画像の実体
 Texture2D DataManager::titleBg = { 0 };
 
-// JSON変換ヘルパー
 static json ItemToJson(const ItemData& item) {
     return {
         {"id", item.id}, {"name", item.name}, {"type", item.type},
@@ -73,6 +70,7 @@ void DataManager::LoadAllData() {
                 d.id = i.value("id", 0);
                 d.name = i.value("name", "");
                 d.modelName = i.value("model", "");
+                d.weaponModelName = i.value("weaponModel", "");
                 d.type = i.value("type", 0);
                 d.hp = i.value("hp", 0.0f);
                 d.speed = i.value("speed", 0.0f);
@@ -102,29 +100,43 @@ void DataManager::LoadAllData() {
     }
     catch (const std::exception& e) { std::cerr << "JSON Load Error: " << e.what() << std::endl; }
 
-    // 敵モデルの一括読み込み
     for (const auto& enemy : allEnemyData) {
         std::string name = enemy.modelName;
-        if (name.empty()) continue;
-        if (loadedModels.count(name) > 0) continue;
+        if (!name.empty() && loadedModels.count(name) == 0) {
+            std::string iqmPath = "resources/" + name + ".iqm";
+            std::string texPath = "resources/" + name + "_Albedo.png";
+            if (!FileExists(texPath.c_str())) texPath = "resources/Albedo.png";
 
-        std::string iqmPath = "resources/" + name + ".iqm";
-        std::string texPath = "resources/" + name + "_Albedo.png";
-
-        if (!FileExists(texPath.c_str())) texPath = "resources/Albedo.png";
-
-        if (FileExists(iqmPath.c_str()) && FileExists(texPath.c_str())) {
-            GameModel gm;
-            gm.model = LoadModel(iqmPath.c_str());
-            gm.texture = LoadTexture(texPath.c_str());
-            SetMaterialTexture(&gm.model.materials[0], MATERIAL_MAP_DIFFUSE, gm.texture);
-            gm.anims = LoadModelAnimations(iqmPath.c_str(), &gm.animCount);
-            gm.loaded = true;
-            loadedModels[name] = gm;
-            std::cout << "Loaded Model: " << name << " (Anims: " << gm.animCount << ")" << std::endl;
+            if (FileExists(iqmPath.c_str()) && FileExists(texPath.c_str())) {
+                GameModel gm;
+                gm.model = LoadModel(iqmPath.c_str());
+                gm.texture = LoadTexture(texPath.c_str());
+                SetMaterialTexture(&gm.model.materials[0], MATERIAL_MAP_DIFFUSE, gm.texture);
+                gm.anims = LoadModelAnimations(iqmPath.c_str(), &gm.animCount);
+                gm.loaded = true;
+                loadedModels[name] = gm;
+            }
         }
-        else {
-            std::cout << "Failed to load model: " << name << " (" << iqmPath << ")" << std::endl;
+
+        std::string wName = enemy.weaponModelName;
+        if (!wName.empty() && loadedModels.count(wName) == 0) {
+            std::string wIqmPath = "resources/" + wName + ".iqm";
+            if (!FileExists(wIqmPath.c_str())) wIqmPath = "resources/" + wName + ".obj";
+
+            std::string wTexPath = "resources/" + wName + "_Albedo.png";
+            if (!FileExists(wTexPath.c_str())) wTexPath = "resources/Albedo.png";
+
+            if (FileExists(wIqmPath.c_str())) {
+                GameModel wGm;
+                wGm.model = LoadModel(wIqmPath.c_str());
+                if (FileExists(wTexPath.c_str())) {
+                    wGm.texture = LoadTexture(wTexPath.c_str());
+                    SetMaterialTexture(&wGm.model.materials[0], MATERIAL_MAP_DIFFUSE, wGm.texture);
+                }
+                wGm.anims = LoadModelAnimations(wIqmPath.c_str(), &wGm.animCount);
+                wGm.loaded = true;
+                loadedModels[wName] = wGm;
+            }
         }
     }
 
@@ -136,7 +148,6 @@ void DataManager::LoadAllData() {
         isBatModelLoaded = true;
     }
 
-    // 【追加】タイトル画像の読み込み
     if (FileExists("resources/title_bg.png")) {
         titleBg = LoadTexture("resources/title_bg.png");
     }
@@ -153,7 +164,6 @@ void DataManager::UnloadAllData() {
     loadedModels.clear();
     isBatModelLoaded = false;
 
-    // 【追加】タイトル画像の解放
     if (titleBg.id != 0) {
         UnloadTexture(titleBg);
     }
@@ -165,11 +175,11 @@ EnemyData DataManager::GetRandomEnemyForFloor(int floor) {
         if (e.id == 15 || e.id == 17 || e.id == 18 || e.id == 22) continue;
         if (floor >= e.minFloor) c.push_back(e);
     }
-    return c.empty() ? EnemyData{ 0, "Slime", "", 0, 30, 0.05f } : c[GetRandomValue(0, (int)c.size() - 1)];
+    return c.empty() ? EnemyData{ 0, "Slime", "", "", 0, 30, 0.05f } : c[GetRandomValue(0, (int)c.size() - 1)];
 }
 
 EnemyData DataManager::GetBossEnemy(int floor) {
-    if (allEnemyData.empty()) return { 0, "Boss", "", 0, 1000, 0.1f };
+    if (allEnemyData.empty()) return { 0, "Boss", "", "", 0, 1000, 0.1f };
 
     if (floor == 100) {
         for (const auto& e : allEnemyData) {
@@ -207,10 +217,12 @@ int DataManager::GetRandomModifierId() {
     return modifiers[GetRandomValue(1, (int)modifiers.size() - 1)].id;
 }
 
-void DataManager::SaveGame(int slot, Player* p, int currentFloor, int maxReachedFloor, const std::vector<ItemData>& sItems, const std::vector<ItemData>& sEquip) {
+// ★引数とJSONに isPortfolioMode を追加
+void DataManager::SaveGame(int slot, Player* p, int currentFloor, int maxReachedFloor, const std::vector<ItemData>& sItems, const std::vector<ItemData>& sEquip, bool isPortfolio) {
     json root;
     root["floor"] = currentFloor;
     root["maxReachedFloor"] = maxReachedFloor;
+    root["isPortfolioMode"] = isPortfolio; // JSONに保存
     root["player"] = {
         {"level", p->level}, {"exp", p->exp}, {"expToNext", p->expToNext},
         {"hp", p->hp}, {"maxHp", p->maxHp}, {"attackPower", p->attackPower},
@@ -229,10 +241,13 @@ void DataManager::SaveGame(int slot, Player* p, int currentFloor, int maxReached
     o << root.dump(4);
 }
 
-bool DataManager::LoadGame(int slot, Player* p, int& currentFloor, int& maxReachedFloor, std::vector<ItemData>& sItems, std::vector<ItemData>& sEquip) {
+// ★引数とJSON読込に isPortfolioMode を追加
+bool DataManager::LoadGame(int slot, Player* p, int& currentFloor, int& maxReachedFloor, std::vector<ItemData>& sItems, std::vector<ItemData>& sEquip, bool& isPortfolio) {
     std::ifstream i("save" + std::to_string(slot) + ".json"); if (!i.is_open()) return false;
     try {
         json root; i >> root; currentFloor = root.value("floor", 0); maxReachedFloor = root.value("maxReachedFloor", 0);
+        isPortfolio = root.value("isPortfolioMode", false); // JSONから復元
+
         auto& jp = root["player"];
         p->level = jp.value("level", 1); p->exp = jp.value("exp", 0); p->expToNext = jp.value("expToNext", 100);
         p->hp = jp.value("hp", 100.0f); p->maxHp = jp.value("maxHp", 100.0f);
@@ -256,7 +271,17 @@ bool DataManager::LoadGame(int slot, Player* p, int& currentFloor, int& maxReach
 SaveHeader DataManager::GetSaveHeader(int slot) {
     SaveHeader h; h.exists = false;
     std::ifstream i("save" + std::to_string(slot) + ".json");
-    if (i.is_open()) { try { json j; i >> j; h.exists = true; h.floor = j.value("floor", 0); h.playerLevel = j["player"].value("level", 1); h.timestamp = "Data " + std::to_string(slot); } catch (...) {} }
+    if (i.is_open()) {
+        try {
+            json j; i >> j;
+            h.exists = true;
+            h.floor = j.value("floor", 0);
+            h.playerLevel = j["player"].value("level", 1);
+            h.timestamp = "Data " + std::to_string(slot);
+            h.isPortfolioMode = j.value("isPortfolioMode", false); // ★追加
+        }
+        catch (...) {}
+    }
     return h;
 }
 

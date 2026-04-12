@@ -6,7 +6,6 @@
 
 class Player;
 
-// モデル管理用構造体
 struct GameModel {
     Model model;
     Texture2D texture;
@@ -23,17 +22,14 @@ public:
     static std::vector<Modifier> modifiers;
     static std::vector<CraftRecipe> recipes;
 
-    // モデルデータ管理
     static std::map<std::string, GameModel> loadedModels;
 
-    // 後方互換性のため
     static Model batModel;
     static Texture2D batTexture;
     static ModelAnimation* batAnims;
     static int batAnimCount;
     static bool isBatModelLoaded;
 
-    // 【追加】タイトル画像用
     static Texture2D titleBg;
 
     static void LoadAllData();
@@ -47,8 +43,9 @@ public:
     static Modifier GetModifier(int id);
     static int GetRandomModifierId();
 
-    static void SaveGame(int slot, Player* p, int currentFloor, int maxReachedFloor, const std::vector<ItemData>& sItems, const std::vector<ItemData>& sEquip);
-    static bool LoadGame(int slot, Player* p, int& currentFloor, int& maxReachedFloor, std::vector<ItemData>& sItems, std::vector<ItemData>& sEquip);
+    // ★セーブ/ロード関数に isPortfolioMode フラグを追加
+    static void SaveGame(int slot, Player* p, int currentFloor, int maxReachedFloor, const std::vector<ItemData>& sItems, const std::vector<ItemData>& sEquip, bool isPortfolio);
+    static bool LoadGame(int slot, Player* p, int& currentFloor, int& maxReachedFloor, std::vector<ItemData>& sItems, std::vector<ItemData>& sEquip, bool& isPortfolio);
     static SaveHeader GetSaveHeader(int slot);
 
     static void DeleteSave(int slot);

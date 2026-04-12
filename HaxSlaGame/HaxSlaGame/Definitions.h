@@ -22,7 +22,7 @@ enum EffectType { FX_SLASH, FX_THRUST, FX_SMASH, FX_HIT };
 enum RoomType { RT_NORMAL, RT_SMALL, RT_LARGE, RT_TREASURE, RT_HEAL, RT_BOSS };
 enum SkillType { SKILL_PASSIVE, SKILL_ACTIVE_DASH, SKILL_ACTIVE_SMASH, SKILL_ACTIVE_STEALTH };
 
-// 【変更】SEの種類を細分化
+// サウンド
 enum SoundType {
     SE_ATTACK,
     SE_ENEMY_ATTACK,
@@ -31,8 +31,8 @@ enum SoundType {
     SE_STAIRS,
     SE_SAVE,
     SE_REFORGE,
-    SE_LEVELUP, // 追加
-    SE_HEAL     // 追加
+    SE_LEVELUP,
+    SE_HEAL
 };
 
 enum MusicType {
@@ -106,6 +106,7 @@ struct EnemyData {
     int id = 0;
     std::string name = "";
     std::string modelName = "";
+    std::string weaponModelName = "";
     int type = 0;
     float hp = 0.0f;
     float speed = 0.0f;
@@ -136,6 +137,7 @@ struct SaveHeader {
     int playerLevel = 1;
     int floor = 0;
     std::string timestamp = "";
+    bool isPortfolioMode = false; // ★追加：ラッシュモード判別用フラグ
 };
 
 struct CraftMaterial {

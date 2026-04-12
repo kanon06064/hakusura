@@ -8,6 +8,10 @@
 #include "UI.h"
 #include <vector>
 
+// ★ ImGui インクルード
+#include "imgui.h"
+#include "rlImGui.h"
+
 class Game {
 public:
     Game();
@@ -32,6 +36,9 @@ private:
     void InitDebugRoom();
     void UpdateDebugRoom();
     void DrawDebugRoom();
+
+    // ★ ポートフォリオ用：3層ラッシュモード
+    void StartPortfolioMode();
 
     int screenWidth;
     int screenHeight;
@@ -63,4 +70,5 @@ private:
     float sceneTimer;
 
     bool bossDefeated;
+    bool isPortfolioMode; // ★追加: ポートフォリオモードのフラグ
 };

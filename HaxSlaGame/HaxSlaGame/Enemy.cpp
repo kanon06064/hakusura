@@ -9,20 +9,14 @@
 #include <math.h>
 #include <string>
 #include <iostream>
+#include <algorithm>
+#include <cctype>
 
-// ==========================================
-// ボーンのアニメーション姿勢行列を計算する関数
-// ==========================================
 Matrix GetBoneMatrix(Model model, ModelAnimation anim, int frame, int boneIndex) {
     if (boneIndex < 0 || boneIndex >= model.boneCount) return MatrixIdentity();
 
-    // 【修正点】
-    // Raylib (IQM等) では、anim.framePoses に格納されているTransformは
-    // すでに親ボーンの変換を含んだ「モデル空間での絶対Transform」になっています。
-    // そのため、親ボーンを再帰的に掛け合わせる必要はありません。
     Transform boneTransform = anim.framePoses[frame][boneIndex];
 
-    // Scale -> Rotation -> Translation の順に行列を合成
     Matrix mat = MatrixMultiply(
         MatrixMultiply(
             MatrixScale(boneTransform.scale.x, boneTransform.scale.y, boneTransform.scale.z),
@@ -33,7 +27,6 @@ Matrix GetBoneMatrix(Model model, ModelAnimation anim, int frame, int boneIndex)
 
     return mat;
 }
-// ==========================================
 
 Enemy::Enemy(Vector3 sp, EnemyData d, int fl) {
     position = sp; data = d; eType = (EnemyType)d.type; state = STATE_PATROL; level = fl;
@@ -266,36 +259,62 @@ void Enemy::Draw(bool debug, Camera3D cam, Font font, Vector3 playerPos) {
         DrawModel(gm.model, position, scale, WHITE);
 
         // ==========================================
-        // ボーンから行列を取得し、アタッチメント位置を計算
+        // ★強化版：ボーン名検索によるアタッチメント処理
         // ==========================================
         int handBoneIndex = -1;
+        int weaponBoneIndex = -1;
+
         for (int i = 0; i < gm.model.boneCount; i++) {
             std::string bName(gm.model.bones[i].name);
-            if (bName == "Hand_R" || bName == "Dagger") {
+            std::string lowerName = bName;
+            std::transform(lowerName.begin(), lowerName.end(), lowerName.begin(), ::tolower);
+
+            // 武器専用ボーン(sword, spear, dagger 等)
+            if (lowerName.find("sword") != std::string::npos ||
+                lowerName.find("spear") != std::string::npos ||
+                lowerName.find("dagger") != std::string::npos) {
+                weaponBoneIndex = i;
+            }
+            // 手のボーン (フォールバック用)
+            if (lowerName.find("hand_r") != std::string::npos ||
+                lowerName.find("handright") != std::string::npos ||
+                lowerName.find("handaright") != std::string::npos) {
                 handBoneIndex = i;
-                break;
             }
         }
 
-        if (handBoneIndex != -1) {
-            // モデル全体のワールド座標・回転・スケールの行列を作成
+        // 武器専用ボーンがあればそちらを最優先
+        int targetBoneIndex = (weaponBoneIndex != -1) ? weaponBoneIndex : handBoneIndex;
+
+        if (targetBoneIndex != -1) {
             Matrix matScale = MatrixScale(scale, scale, scale);
             Matrix matTrans = MatrixTranslate(position.x, position.y, position.z);
             Matrix modelBaseTransform = MatrixMultiply(MatrixMultiply(gm.model.transform, matScale), matTrans);
 
-            // アニメーションデータからボーンの行列を取得（再帰なしバージョン）
-            Matrix boneMatrix = GetBoneMatrix(gm.model, anim, frame, handBoneIndex);
-
-            // ローカルボーン行列をワールド行列に変換
+            Matrix boneMatrix = GetBoneMatrix(gm.model, anim, frame, targetBoneIndex);
             Matrix boneWorldTransform = MatrixMultiply(boneMatrix, modelBaseTransform);
 
-            if (debug) {
-                // ボーンの現在位置 (ワールド空間)
+            // 個別武器モデルの描画
+            if (!data.weaponModelName.empty() && DataManager::loadedModels.count(data.weaponModelName) > 0) {
+                GameModel& wGm = DataManager::loadedModels[data.weaponModelName];
+                wGm.model.transform = boneWorldTransform;
+
+                // 武器モデル自体にアニメーションがあれば再生を同期（オプション）
+                if (wGm.animCount > 0) {
+                    UpdateModelAnimation(wGm.model, wGm.anims[0], frame % wGm.anims[0].frameCount);
+                }
+
+                // すでに敵側のスケールが乗っているので 1.0f で描画
+                DrawModel(wGm.model, { 0,0,0 }, 1.0f, WHITE);
+
+                wGm.model.transform = MatrixIdentity(); // リセット
+            }
+            else if (debug) {
+                // デバッグ用キューブ
                 Vector3 boneWorldPos = { boneWorldTransform.m12, boneWorldTransform.m13, boneWorldTransform.m14 };
                 DrawCube(boneWorldPos, 0.2f, 0.2f, 0.2f, GREEN);
                 DrawCubeWires(boneWorldPos, 0.2f, 0.2f, 0.2f, LIME);
 
-                // ボーンの正面方向 (Z軸) を赤い線で描画し、向きを確認可能にする
                 Vector3 boneForward = { boneWorldTransform.m8, boneWorldTransform.m9, boneWorldTransform.m10 };
                 Vector3 tip = Vector3Add(boneWorldPos, Vector3Scale(Vector3Normalize(boneForward), 0.8f));
                 DrawLine3D(boneWorldPos, tip, RED);
