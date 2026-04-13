@@ -20,10 +20,15 @@ public:
 
     // アニメーション管理用
     int animFrameCounter;
-
-    // 死亡アニメーション管理用
     bool isDying;
     bool isDead;
+
+    // ★追加: ボス専用AIフラグと状態管理
+    bool isBoss;
+    int bossAttackType; // 0:なし, 1:近接3段, 2:遠距離3way, 3:突進, 4:広範囲AoE
+    int bossComboStep;
+    float bossActionTimer;
+    Vector3 bossTargetDir;
 
     Enemy(Vector3 sp, EnemyData d, int fl);
 
@@ -34,6 +39,5 @@ public:
     void StartDeath();
 
 private:
-    // 【変更】壁に当たったかどうかを返すように bool に変更
     bool MoveSmart(Vector3 t, Dungeon& d);
 };

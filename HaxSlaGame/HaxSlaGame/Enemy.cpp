@@ -50,6 +50,12 @@ Enemy::Enemy(Vector3 sp, EnemyData d, int fl) {
 
     isDying = false;
     isDead = false;
+
+    isBoss = false;
+    bossAttackType = 0;
+    bossComboStep = 0;
+    bossActionTimer = 0.0f;
+    bossTargetDir = { 0,0,0 };
 }
 
 void Enemy::StartDeath() {
@@ -64,7 +70,7 @@ void Enemy::StartDeath() {
 }
 
 void Enemy::ApplyKnockback(Vector3 dir, float f, Dungeon& d) {
-    if (isDying) return;
+    if (isDying || isBoss) return;
     Vector3 kb = Vector3Scale(dir, f);
     if (!d.CheckCollisionRadius(Vector3Add(position, { kb.x, 0, 0 }), radius)) position.x += kb.x;
     if (!d.CheckCollisionRadius(Vector3Add(position, { 0, 0, kb.z }), radius)) position.z += kb.z;
@@ -128,71 +134,238 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
         if (p.isStealth) effectiveDetect = 3.0f;
     }
 
-    if (dist < attackRange && canSee && dist < effectiveDetect) state = STATE_ATTACK;
-    else if (dist < effectiveDetect && canSee) state = STATE_CHASE;
-    else state = STATE_PATROL;
-
-    if (state == STATE_CHASE || state == STATE_ATTACK) {
-        stuckCount = 0;
-
-        if (eType != E_TRAP) {
-            if (dist > attackRange * 0.7f) MoveSmart(p.position, d);
+    // ==========================================
+    // ★ ボス専用AIロジック
+    // ==========================================
+    if (isBoss) {
+        if (dist < effectiveDetect && canSee) {
+            state = STATE_ATTACK;
+        }
+        else {
+            state = STATE_PATROL;
         }
 
-        if (dist < attackRange && attackTimer <= 0) {
-            lastAttackDir = Vector3Normalize(Vector3Subtract(p.position, position));
-            Vector3 spawnPos = Vector3Add(position, { 0, 0.8f, 0 });
+        if (state == STATE_ATTACK) {
+            stuckCount = 0;
+            patrolTarget = p.position;
 
-            AudioManager::PlaySE(SE_ENEMY_ATTACK);
+            if (bossAttackType == 0) {
+                if (attackTimer <= 0.0f) {
+                    bossAttackType = GetRandomValue(1, 4); // 1:近接3段, 2:弾3way, 3:突進, 4:広範囲AoE
+                    bossComboStep = 0;
+                    bossTargetDir = Vector3Normalize(Vector3Subtract(p.position, position));
+                    lastAttackDir = bossTargetDir;
 
-            if (eType == E_ARCHER) {
-                fx.SpawnProjectile(spawnPos, lastAttackDir, 18.0f, 0, false);
-                attackTimer = 1.8f;
-            }
-            else if (eType == E_MAGE) {
-                fx.SpawnProjectile(spawnPos, lastAttackDir, 8.0f, 1, false);
-                attackTimer = 2.2f;
-            }
-            else if (eType == E_TRAP) {
-                fx.SpawnProjectile(spawnPos, lastAttackDir, 12.0f, 0, false);
-                attackTimer = 2.5f;
+                    // 各攻撃のチャージ（予兆）時間を設定
+                    if (bossAttackType == 1) bossActionTimer = 0.5f;
+                    else if (bossAttackType == 2) bossActionTimer = 0.8f;
+                    else if (bossAttackType == 3) bossActionTimer = 1.0f;
+                    else if (bossAttackType == 4) bossActionTimer = 1.8f;
+                }
+                else {
+                    if (dist > 3.0f) MoveSmart(p.position, d);
+                }
             }
             else {
-                EffectType effectType = FX_SLASH;
-                if (eType == E_SPEAR) effectType = FX_THRUST;
-                else if (eType == E_AXE) effectType = FX_SMASH;
+                // ---------- パターン1：近接3段攻撃 ----------
+                if (bossAttackType == 1) {
+                    bossActionTimer -= GetFrameTime();
+                    if (bossActionTimer <= 0.0f) {
+                        bossComboStep++;
+                        AudioManager::PlaySE(SE_ENEMY_ATTACK);
+                        Vector3 spawnPos = Vector3Add(position, { 0, 0.8f, 0 });
 
-                fx.SpawnEffect(spawnPos, lastAttackDir, effectType, GOLD);
+                        fx.SpawnEffect(spawnPos, bossTargetDir, FX_SLASH, GOLD);
 
-                float rawDmg = 10.0f + level * 2;
-                float dmg = fmaxf(1.0f, rawDmg - p.defense);
-                p.hp -= dmg;
+                        // 予測線に合わせた前方円形の当たり判定
+                        Vector3 hitCenter = Vector3Add(position, Vector3Scale(bossTargetDir, 2.0f));
+                        if (Vector3Distance(hitCenter, p.position) < 2.5f) {
+                            float rawDmg = 10.0f + level * 2;
+                            if (bossComboStep == 3) rawDmg *= 1.5f;
+                            float dmg = fmaxf(1.0f, rawDmg - p.defense);
+                            p.hp -= dmg;
+                            fx.SpawnDamageText(p.position, (int)dmg);
+                            fx.SpawnEffect(p.position, { 0,0,0 }, FX_HIT, RED);
+                        }
 
-                fx.SpawnDamageText(p.position, (int)dmg);
-                fx.SpawnEffect(p.position, { 0,0,0 }, FX_HIT, RED);
+                        if (bossComboStep >= 3) {
+                            bossAttackType = 0;
+                            attackTimer = 1.5f;
+                        }
+                        else {
+                            bossActionTimer = 0.5f; // 次の段へのチャージ
+                            bossTargetDir = Vector3Normalize(Vector3Subtract(p.position, position));
+                            lastAttackDir = bossTargetDir;
+                            MoveSmart(Vector3Add(position, Vector3Scale(bossTargetDir, 2.0f)), d);
+                        }
+                    }
+                }
+                // ---------- パターン2：遠距離3way弾 ----------
+                else if (bossAttackType == 2) {
+                    bossActionTimer -= GetFrameTime();
+                    if (bossActionTimer <= 0.0f) {
+                        AudioManager::PlaySE(SE_ENEMY_ATTACK);
+                        Vector3 spawnPos = Vector3Add(position, { 0, 1.0f, 0 });
 
-                attackTimer = 1.5f;
+                        for (int i = -1; i <= 1; i++) {
+                            float angle = i * 20.0f * DEG2RAD;
+                            float c = cosf(angle), s = sinf(angle);
+                            Vector3 dir = {
+                                bossTargetDir.x * c - bossTargetDir.z * s,
+                                0.0f,
+                                bossTargetDir.x * s + bossTargetDir.z * c
+                            };
+                            fx.SpawnProjectile(spawnPos, dir, 12.0f, 1, false);
+                        }
+                        bossAttackType = 0;
+                        attackTimer = 1.5f;
+                    }
+                }
+                // ---------- パターン3：突進攻撃 ----------
+                else if (bossAttackType == 3) {
+                    bossActionTimer -= GetFrameTime();
+                    if (bossComboStep == 0) { // 予備動作中
+                        if (bossActionTimer <= 0.0f) {
+                            bossComboStep = 1;
+                            bossActionTimer = 0.6f;
+                            AudioManager::PlaySE(SE_ENEMY_ATTACK);
+                        }
+                        else {
+                            if (GetRandomValue(0, 100) < 20) fx.SpawnEffect(Vector3Add(position, { 0,0.5f,0 }), { 0,1,0 }, FX_HIT, ORANGE);
+                        }
+                    }
+                    else if (bossComboStep == 1) { // 突進中
+                        float oldSpeed = speed;
+                        speed = speed * 3.5f;
+                        bool hitWall = MoveSmart(Vector3Add(position, Vector3Scale(bossTargetDir, 10.0f)), d);
+                        speed = oldSpeed;
+
+                        fx.SpawnEffect(Vector3Add(position, { 0,1,0 }), { 0,0,0 }, FX_HIT, Fade(RED, 0.3f));
+
+                        if (Vector3Distance(position, p.position) < radius + p.radius + 0.8f) {
+                            float rawDmg = 15.0f + level * 2;
+                            float dmg = fmaxf(1.0f, rawDmg - p.defense);
+                            p.hp -= dmg;
+                            fx.SpawnDamageText(p.position, (int)dmg);
+                            fx.SpawnEffect(p.position, { 0,0,0 }, FX_HIT, RED);
+
+                            bossAttackType = 0;
+                            attackTimer = 2.0f;
+                        }
+
+                        if (hitWall || bossActionTimer <= 0.0f) {
+                            bossAttackType = 0;
+                            attackTimer = 2.0f;
+                        }
+                    }
+                }
+                // ---------- パターン4：ボス中心の広範囲AoE ----------
+                else if (bossAttackType == 4) {
+                    bossActionTimer -= GetFrameTime();
+                    if (bossActionTimer <= 0.0f) {
+                        AudioManager::PlaySE(SE_ENEMY_ATTACK);
+                        for (int i = 0; i < 12; i++) {
+                            float angle = i * 30.0f * DEG2RAD;
+                            Vector3 dir = { cosf(angle), 0.0f, sinf(angle) };
+                            fx.SpawnEffect(Vector3Add(position, { 0, 0.5f, 0 }), dir, FX_SMASH, PURPLE);
+                        }
+
+                        float aoeRadius = 7.0f;
+                        if (Vector3Distance(position, p.position) < aoeRadius) {
+                            float rawDmg = 20.0f + level * 2;
+                            float dmg = fmaxf(1.0f, rawDmg - p.defense);
+                            p.hp -= dmg;
+                            fx.SpawnDamageText(p.position, (int)dmg);
+                            fx.SpawnEffect(p.position, { 0,0,0 }, FX_HIT, RED);
+                        }
+                        bossAttackType = 0;
+                        attackTimer = 2.5f;
+                    }
+                    else {
+                        if (GetRandomValue(0, 100) < 15) fx.SpawnEffect(Vector3Add(position, { 0,0.5f,0 }), { 0,1,0 }, FX_HIT, MAGENTA);
+                    }
+                }
             }
         }
+        else {
+            if (Vector3Distance(position, patrolTarget) < 1.2f) { patrolTarget = d.GetRandomFloorPos(); stuckCount = 0; }
+            bool hitWall = MoveSmart(patrolTarget, d);
+            if (hitWall) { patrolTarget = d.GetRandomFloorPos(); stuckCount = 0; }
+            if (Vector3Distance(position, lastPos) < 0.02f) stuckCount++; else stuckCount = 0;
+            if (stuckCount > 60) { patrolTarget = d.GetRandomFloorPos(); stuckCount = 0; }
+        }
     }
-    else {
-        if (Vector3Distance(position, patrolTarget) < 1.2f) {
-            patrolTarget = d.GetRandomFloorPos();
+    else
+    {
+        // ==========================================
+        // 通常の敵AI
+        // ==========================================
+        if (dist < attackRange && canSee && dist < effectiveDetect) state = STATE_ATTACK;
+        else if (dist < effectiveDetect && canSee) state = STATE_CHASE;
+        else state = STATE_PATROL;
+
+        if (state == STATE_CHASE || state == STATE_ATTACK) {
             stuckCount = 0;
+
+            if (eType != E_TRAP) {
+                if (dist > attackRange * 0.7f) MoveSmart(p.position, d);
+            }
+
+            if (dist < attackRange && attackTimer <= 0) {
+                lastAttackDir = Vector3Normalize(Vector3Subtract(p.position, position));
+                Vector3 spawnPos = Vector3Add(position, { 0, 0.8f, 0 });
+
+                AudioManager::PlaySE(SE_ENEMY_ATTACK);
+
+                if (eType == E_ARCHER) {
+                    fx.SpawnProjectile(spawnPos, lastAttackDir, 18.0f, 0, false);
+                    attackTimer = 1.8f;
+                }
+                else if (eType == E_MAGE) {
+                    fx.SpawnProjectile(spawnPos, lastAttackDir, 8.0f, 1, false);
+                    attackTimer = 2.2f;
+                }
+                else if (eType == E_TRAP) {
+                    fx.SpawnProjectile(spawnPos, lastAttackDir, 12.0f, 0, false);
+                    attackTimer = 2.5f;
+                }
+                else {
+                    EffectType effectType = FX_SLASH;
+                    if (eType == E_SPEAR) effectType = FX_THRUST;
+                    else if (eType == E_AXE) effectType = FX_SMASH;
+
+                    fx.SpawnEffect(spawnPos, lastAttackDir, effectType, GOLD);
+
+                    float rawDmg = 10.0f + level * 2;
+                    float dmg = fmaxf(1.0f, rawDmg - p.defense);
+                    p.hp -= dmg;
+
+                    fx.SpawnDamageText(p.position, (int)dmg);
+                    fx.SpawnEffect(p.position, { 0,0,0 }, FX_HIT, RED);
+
+                    attackTimer = 1.5f;
+                }
+            }
         }
+        else {
+            if (Vector3Distance(position, patrolTarget) < 1.2f) {
+                patrolTarget = d.GetRandomFloorPos();
+                stuckCount = 0;
+            }
 
-        bool hitWall = MoveSmart(patrolTarget, d);
-        if (hitWall) {
-            patrolTarget = d.GetRandomFloorPos();
-            stuckCount = 0;
-        }
+            bool hitWall = MoveSmart(patrolTarget, d);
+            if (hitWall) {
+                patrolTarget = d.GetRandomFloorPos();
+                stuckCount = 0;
+            }
 
-        if (Vector3Distance(position, lastPos) < 0.02f) stuckCount++;
-        else stuckCount = 0;
+            if (Vector3Distance(position, lastPos) < 0.02f) stuckCount++;
+            else stuckCount = 0;
 
-        if (stuckCount > 60) {
-            patrolTarget = d.GetRandomFloorPos();
-            stuckCount = 0;
+            if (stuckCount > 60) {
+                patrolTarget = d.GetRandomFloorPos();
+                stuckCount = 0;
+            }
         }
     }
     lastPos = position;
@@ -212,7 +385,16 @@ void Enemy::Draw(bool debug, Camera3D cam, Font font, Vector3 playerPos) {
         int animIndex = 2; // Idle
 
         if (isDying) animIndex = 1;
-        else if (state == STATE_ATTACK) animIndex = 0;
+        else if (state == STATE_ATTACK) {
+            if (isBoss) {
+                if (bossAttackType != 0) animIndex = 0;
+                else animIndex = 2;
+                if (bossAttackType == 0 && Vector3Distance(position, lastPos) > 0.01f) animIndex = 3;
+            }
+            else {
+                animIndex = 0;
+            }
+        }
         else if (state == STATE_CHASE || state == STATE_PATROL) animIndex = 3;
 
         if (animIndex >= gm.animCount) animIndex = 0;
@@ -236,11 +418,14 @@ void Enemy::Draw(bool debug, Camera3D cam, Font font, Vector3 playerPos) {
         Vector3 targetDir = { 0, 0, 1 };
 
         if (!isDying) {
-            if (state == STATE_CHASE || state == STATE_ATTACK) {
-                targetDir = Vector3Subtract(playerPos, position);
+            if (isBoss) {
+                if (bossAttackType != 0) targetDir = lastAttackDir;
+                else if (state == STATE_ATTACK || state == STATE_CHASE) targetDir = Vector3Subtract(playerPos, position);
+                else targetDir = Vector3Subtract(patrolTarget, position);
             }
             else {
-                targetDir = Vector3Subtract(patrolTarget, position);
+                if (state == STATE_CHASE || state == STATE_ATTACK) targetDir = Vector3Subtract(playerPos, position);
+                else targetDir = Vector3Subtract(patrolTarget, position);
             }
 
             if (Vector3Length(targetDir) > 0.01f) {
@@ -258,9 +443,7 @@ void Enemy::Draw(bool debug, Camera3D cam, Font font, Vector3 playerPos) {
 
         DrawModel(gm.model, position, scale, WHITE);
 
-        // ==========================================
-        // ★強化版：ボーン名検索によるアタッチメント処理
-        // ==========================================
+        // 武器アタッチメント
         int handBoneIndex = -1;
         int weaponBoneIndex = -1;
 
@@ -269,13 +452,11 @@ void Enemy::Draw(bool debug, Camera3D cam, Font font, Vector3 playerPos) {
             std::string lowerName = bName;
             std::transform(lowerName.begin(), lowerName.end(), lowerName.begin(), ::tolower);
 
-            // 武器専用ボーン(sword, spear, dagger 等)
             if (lowerName.find("sword") != std::string::npos ||
                 lowerName.find("spear") != std::string::npos ||
                 lowerName.find("dagger") != std::string::npos) {
                 weaponBoneIndex = i;
             }
-            // 手のボーン (フォールバック用)
             if (lowerName.find("hand_r") != std::string::npos ||
                 lowerName.find("handright") != std::string::npos ||
                 lowerName.find("handaright") != std::string::npos) {
@@ -283,7 +464,6 @@ void Enemy::Draw(bool debug, Camera3D cam, Font font, Vector3 playerPos) {
             }
         }
 
-        // 武器専用ボーンがあればそちらを最優先
         int targetBoneIndex = (weaponBoneIndex != -1) ? weaponBoneIndex : handBoneIndex;
 
         if (targetBoneIndex != -1) {
@@ -294,23 +474,17 @@ void Enemy::Draw(bool debug, Camera3D cam, Font font, Vector3 playerPos) {
             Matrix boneMatrix = GetBoneMatrix(gm.model, anim, frame, targetBoneIndex);
             Matrix boneWorldTransform = MatrixMultiply(boneMatrix, modelBaseTransform);
 
-            // 個別武器モデルの描画
             if (!data.weaponModelName.empty() && DataManager::loadedModels.count(data.weaponModelName) > 0) {
                 GameModel& wGm = DataManager::loadedModels[data.weaponModelName];
                 wGm.model.transform = boneWorldTransform;
 
-                // 武器モデル自体にアニメーションがあれば再生を同期（オプション）
                 if (wGm.animCount > 0) {
                     UpdateModelAnimation(wGm.model, wGm.anims[0], frame % wGm.anims[0].frameCount);
                 }
-
-                // すでに敵側のスケールが乗っているので 1.0f で描画
                 DrawModel(wGm.model, { 0,0,0 }, 1.0f, WHITE);
-
-                wGm.model.transform = MatrixIdentity(); // リセット
+                wGm.model.transform = MatrixIdentity();
             }
             else if (debug) {
-                // デバッグ用キューブ
                 Vector3 boneWorldPos = { boneWorldTransform.m12, boneWorldTransform.m13, boneWorldTransform.m14 };
                 DrawCube(boneWorldPos, 0.2f, 0.2f, 0.2f, GREEN);
                 DrawCubeWires(boneWorldPos, 0.2f, 0.2f, 0.2f, LIME);
@@ -320,8 +494,6 @@ void Enemy::Draw(bool debug, Camera3D cam, Font font, Vector3 playerPos) {
                 DrawLine3D(boneWorldPos, tip, RED);
             }
         }
-        // ==========================================
-
         gm.model.transform = MatrixIdentity();
     }
     else {
@@ -340,9 +512,71 @@ void Enemy::Draw(bool debug, Camera3D cam, Font font, Vector3 playerPos) {
         Vector3 headPos = Vector3Add(position, { 0, 2.5f, 0 });
         Color debugColor = (animFrameCounter % 10 < 5) ? GREEN : YELLOW;
         DrawSphere(headPos, 0.2f, debugColor);
+        if (hasModel) DrawCubeWires(position, 2.0f, 2.0f, 2.0f, RED);
+    }
 
-        if (hasModel) {
-            DrawCubeWires(position, 2.0f, 2.0f, 2.0f, RED);
+    // ==========================================
+    // ★ 予測線（Telegraph）の描画
+    // ==========================================
+    if (!isDying && isBoss && bossAttackType != 0) {
+        float maxTime = 1.0f;
+        if (bossAttackType == 1) maxTime = 0.5f;
+        else if (bossAttackType == 2) maxTime = 0.8f;
+        else if (bossAttackType == 3) maxTime = 1.0f;
+        else if (bossAttackType == 4) maxTime = 1.8f;
+
+        bool showTelegraph = true;
+        if (bossAttackType == 3 && bossComboStep == 1) showTelegraph = false; // 突進実行中は非表示
+
+        if (showTelegraph) {
+            float progress = 1.0f - (bossActionTimer / maxTime);
+            if (progress < 0.0f) progress = 0.0f;
+            if (progress > 1.0f) progress = 1.0f;
+
+            Color warnColor = Fade(RED, progress * 0.4f); // チャージ完了に近づくほど濃くなる
+            Color warnLineColor = Fade(MAROON, progress * 0.8f);
+
+            if (bossAttackType == 1) { // 近接3段（前方の円）
+                Vector3 hitCenter = Vector3Add(position, Vector3Scale(bossTargetDir, 2.0f));
+                DrawCylinder({ hitCenter.x, 0.05f, hitCenter.z }, 2.5f, 2.5f, 0.05f, 32, warnColor);
+                DrawCylinderWires({ hitCenter.x, 0.05f, hitCenter.z }, 2.5f, 2.5f, 0.05f, 32, warnLineColor);
+            }
+            else if (bossAttackType == 2) { // 3way弾
+                for (int i = -1; i <= 1; i++) {
+                    float angle = i * 20.0f * DEG2RAD;
+                    float c = cosf(angle), s = sinf(angle);
+                    Vector3 dir = {
+                        bossTargetDir.x * c - bossTargetDir.z * s,
+                        0.0f,
+                        bossTargetDir.x * s + bossTargetDir.z * c
+                    };
+
+                    float len = 20.0f;
+                    float w = 1.5f;
+                    float rot = atan2f(dir.x, dir.z) * RAD2DEG;
+                    rlPushMatrix();
+                    rlTranslatef(position.x, 0.05f, position.z);
+                    rlRotatef(rot, 0.0f, 1.0f, 0.0f);
+                    DrawCube({ 0.0f, 0.0f, len / 2.0f }, w, 0.05f, len, warnColor);
+                    DrawCubeWires({ 0.0f, 0.0f, len / 2.0f }, w, 0.05f, len, warnLineColor);
+                    rlPopMatrix();
+                }
+            }
+            else if (bossAttackType == 3) { // 突進
+                float len = 10.0f + 2.75f;
+                float w = 5.5f;
+                float rot = atan2f(bossTargetDir.x, bossTargetDir.z) * RAD2DEG;
+                rlPushMatrix();
+                rlTranslatef(position.x, 0.05f, position.z);
+                rlRotatef(rot, 0.0f, 1.0f, 0.0f);
+                DrawCube({ 0.0f, 0.0f, len / 2.0f }, w, 0.05f, len, warnColor);
+                DrawCubeWires({ 0.0f, 0.0f, len / 2.0f }, w, 0.05f, len, warnLineColor);
+                rlPopMatrix();
+            }
+            else if (bossAttackType == 4) { // 広範囲AoE
+                DrawCylinder({ position.x, 0.05f, position.z }, 7.0f, 7.0f, 0.05f, 32, warnColor);
+                DrawCylinderWires({ position.x, 0.05f, position.z }, 7.0f, 7.0f, 0.05f, 32, warnLineColor);
+            }
         }
     }
 }

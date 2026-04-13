@@ -150,6 +150,7 @@ void Game::SaveCurrentSlot() {
 void Game::SpawnEnemies(int count) {
     if (state == STATE_HOME) return; enemies.clear();
 
+    // ★ ボス生成時に isBoss = true を付与する
     if (isPortfolioMode) {
         if (floor == 1) {
             for (int i = 0; i < count; i++) {
@@ -160,7 +161,9 @@ void Game::SpawnEnemies(int count) {
             if (dungeon.bossSpawnPos.x != -999) {
                 EnemyData bossData = DataManager::GetBossEnemy(10);
                 Enemy boss(dungeon.bossSpawnPos, bossData, 50);
-                boss.maxHp *= 3.0f; boss.hp = boss.maxHp; boss.radius = 1.5f; enemies.push_back(boss);
+                boss.maxHp *= 3.0f; boss.hp = boss.maxHp; boss.radius = 1.5f;
+                boss.isBoss = true; // ★追加
+                enemies.push_back(boss);
             }
             bossDefeated = false;
         }
@@ -168,7 +171,9 @@ void Game::SpawnEnemies(int count) {
             if (dungeon.bossSpawnPos.x != -999) {
                 EnemyData bossData = DataManager::GetBossEnemy(100);
                 Enemy boss(dungeon.bossSpawnPos, bossData, 100);
-                boss.maxHp *= 3.0f; boss.hp = boss.maxHp; boss.radius = 1.5f; enemies.push_back(boss);
+                boss.maxHp *= 3.0f; boss.hp = boss.maxHp; boss.radius = 1.5f;
+                boss.isBoss = true; // ★追加
+                enemies.push_back(boss);
             }
             bossDefeated = false;
         }
@@ -180,7 +185,9 @@ void Game::SpawnEnemies(int count) {
         if (dungeon.bossSpawnPos.x != -999) {
             EnemyData bossData = DataManager::GetBossEnemy(floor);
             Enemy boss(dungeon.bossSpawnPos, bossData, floor);
-            boss.maxHp *= 3.0f; boss.hp = boss.maxHp; boss.radius = 1.5f; enemies.push_back(boss);
+            boss.maxHp *= 3.0f; boss.hp = boss.maxHp; boss.radius = 1.5f;
+            boss.isBoss = true; // ★追加
+            enemies.push_back(boss);
         }
         bossDefeated = false; return;
     }
@@ -367,7 +374,6 @@ void Game::Draw() {
         ClearBackground(BLACK); BeginMode3D(camera);
         dungeon.Draw();
 
-        // ★ 階段の黒ブロックのバグを完全に修正
         if (floor > 0 && dungeon.stairsDownPos.x != -999) {
             bool hideStairs = false;
             if (isPortfolioMode && (floor == 2 || floor == 3) && !bossDefeated) hideStairs = true;
@@ -496,11 +502,11 @@ void Game::NextFloor() {
         }
         else if (floor == 2) {
             dungeon.Generate(false, 10);
-            SpawnEnemies(0);
+            SpawnEnemies(0); // ★ SpawnEnemies(count) 内部でボスが湧く
         }
         else if (floor == 3) {
             dungeon.Generate(false, 100);
-            SpawnEnemies(0);
+            SpawnEnemies(0); // ★ 同上
         }
         Vector3 startPos = dungeon.GetStartPosition(); player->position = { startPos.x, 0.5f, startPos.z };
         droppedItems.clear(); fxManager.projectiles.clear(); fxManager.effects.clear(); fxManager.damageTexts.clear();
