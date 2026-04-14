@@ -12,6 +12,9 @@
 #include <algorithm>
 #include <cctype>
 
+// ==========================================
+// ボーンのアニメーション姿勢行列を計算する関数
+// ==========================================
 Matrix GetBoneMatrix(Model model, ModelAnimation anim, int frame, int boneIndex) {
     if (boneIndex < 0 || boneIndex >= model.boneCount) return MatrixIdentity();
 
@@ -51,6 +54,7 @@ Enemy::Enemy(Vector3 sp, EnemyData d, int fl) {
     isDying = false;
     isDead = false;
 
+    // ★ボスパラメータの初期化
     isBoss = false;
     bossAttackType = 0;
     bossComboStep = 0;
@@ -70,7 +74,7 @@ void Enemy::StartDeath() {
 }
 
 void Enemy::ApplyKnockback(Vector3 dir, float f, Dungeon& d) {
-    if (isDying || isBoss) return;
+    if (isDying || isBoss) return; // ★ボスはノックバック無効
     Vector3 kb = Vector3Scale(dir, f);
     if (!d.CheckCollisionRadius(Vector3Add(position, { kb.x, 0, 0 }), radius)) position.x += kb.x;
     if (!d.CheckCollisionRadius(Vector3Add(position, { 0, 0, kb.z }), radius)) position.z += kb.z;
@@ -139,7 +143,7 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
     // ==========================================
     if (isBoss) {
         if (dist < effectiveDetect && canSee) {
-            state = STATE_ATTACK;
+            state = STATE_ATTACK; // ボスは発見したら常に攻撃態勢
         }
         else {
             state = STATE_PATROL;
@@ -149,20 +153,23 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
             stuckCount = 0;
             patrolTarget = p.position;
 
+            // 何の攻撃もしていない（クールダウン中）なら、ランダムで次の攻撃を決める
             if (bossAttackType == 0) {
                 if (attackTimer <= 0.0f) {
                     bossAttackType = GetRandomValue(1, 4); // 1:近接3段, 2:弾3way, 3:突進, 4:広範囲AoE
                     bossComboStep = 0;
-                    animFrameCounter = 0; // ★モーションをリセットしてチャージポーズに入る
+                    animFrameCounter = 0; // モーションをリセットしてチャージポーズに入る
                     bossTargetDir = Vector3Normalize(Vector3Subtract(p.position, position));
                     lastAttackDir = bossTargetDir;
 
+                    // 各攻撃の予備動作（チャージ時間）を設定
                     if (bossAttackType == 1) bossActionTimer = 0.5f;
                     else if (bossAttackType == 2) bossActionTimer = 0.8f;
                     else if (bossAttackType == 3) bossActionTimer = 1.0f;
                     else if (bossAttackType == 4) bossActionTimer = 1.8f;
                 }
                 else {
+                    // クールダウン中はプレイヤーにジリジリ近づく
                     if (dist > 3.0f) MoveSmart(p.position, d);
                 }
             }
@@ -171,17 +178,18 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
                 if (bossAttackType == 1) {
                     bossActionTimer -= GetFrameTime();
                     if (bossActionTimer <= 0.0f) {
-                        animFrameCounter = 0; // ★1段ごとに攻撃アニメーションを最初から再生させる
+                        animFrameCounter = 0; // 1段ごとに攻撃アニメーションを最初から再生させる
                         bossComboStep++;
                         AudioManager::PlaySE(SE_ENEMY_ATTACK);
                         Vector3 spawnPos = Vector3Add(position, { 0, 0.8f, 0 });
 
                         fx.SpawnEffect(spawnPos, bossTargetDir, FX_SLASH, GOLD);
 
+                        // 当たり判定 (予測線の円形に合わせる)
                         Vector3 hitCenter = Vector3Add(position, Vector3Scale(bossTargetDir, 2.0f));
                         if (Vector3Distance(hitCenter, p.position) < 2.5f) {
                             float rawDmg = 10.0f + level * 2;
-                            if (bossComboStep == 3) rawDmg *= 1.5f;
+                            if (bossComboStep == 3) rawDmg *= 1.5f; // 3段目は1.5倍ダメージ
                             float dmg = fmaxf(1.0f, rawDmg - p.defense);
                             p.hp -= dmg;
                             fx.SpawnDamageText(p.position, (int)dmg);
@@ -189,14 +197,14 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
                         }
 
                         if (bossComboStep >= 3) {
-                            bossAttackType = 0;
-                            attackTimer = 1.5f;
+                            bossAttackType = 0; // コンボ終了
+                            attackTimer = 1.5f; // 隙を作る
                         }
                         else {
-                            bossActionTimer = 0.5f;
+                            bossActionTimer = 0.5f; // 次の攻撃までの間隔
                             bossTargetDir = Vector3Normalize(Vector3Subtract(p.position, position));
                             lastAttackDir = bossTargetDir;
-                            MoveSmart(Vector3Add(position, Vector3Scale(bossTargetDir, 2.0f)), d);
+                            MoveSmart(Vector3Add(position, Vector3Scale(bossTargetDir, 2.0f)), d); // 少し踏み込む
                         }
                     }
                 }
@@ -204,7 +212,7 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
                 else if (bossAttackType == 2) {
                     bossActionTimer -= GetFrameTime();
                     if (bossActionTimer <= 0.0f) {
-                        animFrameCounter = 0; // ★撃つ瞬間に攻撃モーション
+                        animFrameCounter = 0; // 撃つ瞬間に攻撃モーション
                         AudioManager::PlaySE(SE_ENEMY_ATTACK);
                         Vector3 spawnPos = Vector3Add(position, { 0, 1.0f, 0 });
 
@@ -225,25 +233,28 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
                 // ---------- パターン3：突進攻撃 ----------
                 else if (bossAttackType == 3) {
                     bossActionTimer -= GetFrameTime();
-                    if (bossComboStep == 0) {
+                    if (bossComboStep == 0) { // 予備動作中
                         if (bossActionTimer <= 0.0f) {
                             bossComboStep = 1;
-                            bossActionTimer = 0.6f;
-                            animFrameCounter = 0; // ★走り出す瞬間にモーションリセット
+                            bossActionTimer = 0.6f; // 突進する時間
+                            animFrameCounter = 0; // 走り出す瞬間にモーションリセット
                             AudioManager::PlaySE(SE_ENEMY_ATTACK);
                         }
                         else {
+                            // チャージエフェクト
                             if (GetRandomValue(0, 100) < 20) fx.SpawnEffect(Vector3Add(position, { 0,0.5f,0 }), { 0,1,0 }, FX_HIT, ORANGE);
                         }
                     }
-                    else if (bossComboStep == 1) {
+                    else if (bossComboStep == 1) { // 突進中
                         float oldSpeed = speed;
-                        speed = speed * 3.5f;
+                        speed = speed * 3.5f; // 高速移動
                         bool hitWall = MoveSmart(Vector3Add(position, Vector3Scale(bossTargetDir, 10.0f)), d);
                         speed = oldSpeed;
 
+                        // 突進の軌跡エフェクト
                         fx.SpawnEffect(Vector3Add(position, { 0,1,0 }), { 0,0,0 }, FX_HIT, Fade(RED, 0.3f));
 
+                        // プレイヤーを轢いたか判定
                         if (Vector3Distance(position, p.position) < radius + p.radius + 0.8f) {
                             float rawDmg = 15.0f + level * 2;
                             float dmg = fmaxf(1.0f, rawDmg - p.defense);
@@ -252,7 +263,7 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
                             fx.SpawnEffect(p.position, { 0,0,0 }, FX_HIT, RED);
 
                             bossAttackType = 0;
-                            attackTimer = 2.0f;
+                            attackTimer = 2.0f; // 大きな隙
                         }
 
                         if (hitWall || bossActionTimer <= 0.0f) {
@@ -265,15 +276,16 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
                 else if (bossAttackType == 4) {
                     bossActionTimer -= GetFrameTime();
                     if (bossActionTimer <= 0.0f) {
-                        animFrameCounter = 0; // ★発動の瞬間にモーションリセット
+                        animFrameCounter = 0; // 発動の瞬間にモーションリセット
                         AudioManager::PlaySE(SE_ENEMY_ATTACK);
+                        // 八方にスマッシュエフェクトを発生させて円形を表現
                         for (int i = 0; i < 12; i++) {
                             float angle = i * 30.0f * DEG2RAD;
                             Vector3 dir = { cosf(angle), 0.0f, sinf(angle) };
                             fx.SpawnEffect(Vector3Add(position, { 0, 0.5f, 0 }), dir, FX_SMASH, PURPLE);
                         }
 
-                        float aoeRadius = 7.0f;
+                        float aoeRadius = 7.0f; // かなり広い
                         if (Vector3Distance(position, p.position) < aoeRadius) {
                             float rawDmg = 20.0f + level * 2;
                             float dmg = fmaxf(1.0f, rawDmg - p.defense);
@@ -282,15 +294,19 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
                             fx.SpawnEffect(p.position, { 0,0,0 }, FX_HIT, RED);
                         }
                         bossAttackType = 0;
-                        attackTimer = 2.5f;
+                        attackTimer = 2.5f; // 大技なので隙大
                     }
                     else {
-                        if (GetRandomValue(0, 100) < 15) fx.SpawnEffect(Vector3Add(position, { 0,0.5f,0 }), { 0,1,0 }, FX_HIT, MAGENTA);
+                        // 吸い込み・チャージの予兆エフェクト
+                        if (GetRandomValue(0, 100) < 15) {
+                            fx.SpawnEffect(Vector3Add(position, { 0,0.5f,0 }), { 0,1,0 }, FX_HIT, MAGENTA);
+                        }
                     }
                 }
             }
         }
         else {
+            // パトロール（見失った場合）
             if (Vector3Distance(position, patrolTarget) < 1.2f) { patrolTarget = d.GetRandomFloorPos(); stuckCount = 0; }
             bool hitWall = MoveSmart(patrolTarget, d);
             if (hitWall) { patrolTarget = d.GetRandomFloorPos(); stuckCount = 0; }
@@ -371,6 +387,8 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
             }
         }
     }
+
+    // ★ 描画の時に比較するため、Updateの最後で位置を記録
     lastPos = position;
 }
 
@@ -403,7 +421,7 @@ void Enemy::Draw(bool debug, Camera3D cam, Font font, Vector3 playerPos) {
                 else {
                     // クールダウン中
                     if (attackTimer > 1.0f) animIndex = 2; // 撃ち終わりの余韻はIdle
-                    else animIndex = (Vector3Distance(position, lastPos) > 0.005f) ? 3 : 2;
+                    else animIndex = 3; // ジリジリ近づいて移動中なのでRun
                 }
             }
             else {
@@ -411,7 +429,8 @@ void Enemy::Draw(bool debug, Camera3D cam, Font font, Vector3 playerPos) {
             }
         }
         else if (state == STATE_CHASE || state == STATE_PATROL) {
-            animIndex = (Vector3Distance(position, lastPos) > 0.005f) ? 3 : 2;
+            // ★ 通常移動中は常に走る (Run) に修正
+            animIndex = 3;
         }
 
         if (animIndex >= gm.animCount) animIndex = 0;
