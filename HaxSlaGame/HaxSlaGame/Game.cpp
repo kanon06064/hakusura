@@ -7,9 +7,10 @@
 #include <algorithm>
 
 Game::Game()
-    : screenWidth(1280), screenHeight(720), player(nullptr), camera({ 0 }), state(STATE_TITLE), floor(0), maxReachedFloor(0), currentSlot(0),
+    : screenWidth(1280), screenHeight(720), player(nullptr), camera({ 0 }), state(STATE_TITLE),
+    floor(0), currentDungeonId(0), unlockedDungeonId(0), currentSlot(0),
     debugMode(false), showMenu(false), showStorage(false), showReforgeMenu(false), showWarpMenu(false),
-    showCraftMenu(false),
+    showCraftMenu(false), showQuestMenu(false),
     showPrompt(false), currentTab(EQUIP), sceneTimer(0.0f), bossDefeated(false), isPortfolioMode(false)
 {
     InitWindow(screenWidth, screenHeight, "3D Hack and Slash RPG Refactored");
@@ -20,6 +21,7 @@ Game::Game()
 
     SetTargetFPS(60);
     DataManager::LoadAllData();
+    maxFloors = { 0, 0, 0 };
 
     std::vector<int> cps; for (int i = 32; i < 127; i++) cps.push_back(i); for (int i = 0x3000; i <= 0x30FF; i++) cps.push_back(i); for (int i = 0x4E00; i <= 0x9FAF; i++) cps.push_back(i);
     font = LoadFontEx("jp_font.ttf", 32, cps.data(), (int)cps.size());
@@ -40,13 +42,18 @@ Game::~Game() {
 }
 
 void Game::InitGame() {
-    floor = 0; maxReachedFloor = 0; state = STATE_HOME; bossDefeated = false; dungeon.Generate(true, 0);
+    floor = 0;
+    currentDungeonId = 0;
+    unlockedDungeonId = 0;
+    maxFloors = { 0, 0, 0 };
+
+    state = STATE_HOME; bossDefeated = false; dungeon.Generate(true, 0);
     isPortfolioMode = false;
     if (player) delete player;
     Vector3 startPos = dungeon.GetStartPosition(); startPos.y = 0.5f; player = new Player(startPos);
     camera = { {player->position.x + 10.0f, 15.0f, player->position.z + 10.0f}, player->position, {0.0f, 1.0f, 0.0f}, 45.0f, 0 };
     fxManager.projectiles.clear(); fxManager.effects.clear(); fxManager.damageTexts.clear(); enemies.clear(); droppedItems.clear(); storageItems.clear(); storageEquip.clear();
-    debugMode = false; showMenu = false; showStorage = false; showReforgeMenu = false; showWarpMenu = false; showCraftMenu = false; showPrompt = false; currentTab = EQUIP; sceneTimer = 0;
+    debugMode = false; showMenu = false; showStorage = false; showReforgeMenu = false; showWarpMenu = false; showCraftMenu = false; showQuestMenu = false; showPrompt = false; currentTab = EQUIP; sceneTimer = 0;
 
     AudioManager::PlayBGM(BGM_HOME);
 }
@@ -85,7 +92,9 @@ void Game::StartPortfolioMode() {
     player->currentWeapon = player->equippedWeapons[0];
     player->RecalculateStats();
     player->hp = player->maxHp;
-    maxReachedFloor = 100;
+
+    unlockedDungeonId = 2;
+    maxFloors = { 30, 50, 100 };
 
     SaveCurrentSlot();
     logs.insert(logs.begin(), { "RUSH MODE STARTED!", 5.0f, ORANGE });
@@ -125,7 +134,7 @@ void Game::StartDebugRoom() {
 
 void Game::LoadAndStart(int slot) {
     currentSlot = slot; InitGame();
-    if (DataManager::LoadGame(slot, player, floor, maxReachedFloor, storageItems, storageEquip, isPortfolioMode)) {
+    if (DataManager::LoadGame(slot, player, floor, currentDungeonId, unlockedDungeonId, maxFloors, storageItems, storageEquip, isPortfolioMode)) {
         if (floor == 0) {
             state = STATE_HOME; dungeon.Generate(true, 0);
             AudioManager::PlayBGM(BGM_HOME);
@@ -140,9 +149,10 @@ void Game::LoadAndStart(int slot) {
 }
 
 void Game::NewGameAndStart(int slot) { currentSlot = slot; InitGame(); }
+
 void Game::SaveCurrentSlot() {
     if (player) {
-        DataManager::SaveGame(currentSlot, player, floor, maxReachedFloor, storageItems, storageEquip, isPortfolioMode);
+        DataManager::SaveGame(currentSlot, player, floor, currentDungeonId, unlockedDungeonId, maxFloors, storageItems, storageEquip, isPortfolioMode);
         AudioManager::PlaySE(SE_SAVE);
     }
 }
@@ -153,22 +163,26 @@ void Game::SpawnEnemies(int count) {
     if (isPortfolioMode) {
         if (floor == 1) {
             for (int i = 0; i < count; i++) {
-                enemies.push_back(Enemy(dungeon.GetRandomFloorPos(), DataManager::GetRandomEnemyForFloor(30), 30));
+                enemies.push_back(Enemy(dungeon.GetRandomFloorPos(), DataManager::GetRandomEnemyForFloor(30, 0), 30));
             }
         }
         else if (floor == 2) {
             if (dungeon.bossSpawnPos.x != -999) {
-                EnemyData bossData = DataManager::GetBossEnemy(10);
+                EnemyData bossData = DataManager::GetBossEnemy(30, 0);
                 Enemy boss(dungeon.bossSpawnPos, bossData, 50);
-                boss.maxHp *= 3.0f; boss.hp = boss.maxHp; boss.radius = 1.5f; enemies.push_back(boss);
+                boss.maxHp *= 3.0f; boss.hp = boss.maxHp; boss.radius = 1.5f;
+                boss.isBoss = true;
+                enemies.push_back(boss);
             }
             bossDefeated = false;
         }
         else if (floor == 3) {
             if (dungeon.bossSpawnPos.x != -999) {
-                EnemyData bossData = DataManager::GetBossEnemy(100);
+                EnemyData bossData = DataManager::GetBossEnemy(100, 2);
                 Enemy boss(dungeon.bossSpawnPos, bossData, 100);
-                boss.maxHp *= 3.0f; boss.hp = boss.maxHp; boss.radius = 1.5f; enemies.push_back(boss);
+                boss.maxHp *= 3.0f; boss.hp = boss.maxHp; boss.radius = 1.5f;
+                boss.isBoss = true;
+                enemies.push_back(boss);
             }
             bossDefeated = false;
         }
@@ -176,15 +190,24 @@ void Game::SpawnEnemies(int count) {
     }
 
     if (floor > 0 && floor % 10 == 5) return;
+
+    int enemyLevel = floor;
+    if (currentDungeonId == 1) enemyLevel += 30;
+    if (currentDungeonId == 2) enemyLevel += 60;
+
     if (floor > 0 && floor % 10 == 0) {
         if (dungeon.bossSpawnPos.x != -999) {
-            EnemyData bossData = DataManager::GetBossEnemy(floor);
-            Enemy boss(dungeon.bossSpawnPos, bossData, floor);
-            boss.maxHp *= 3.0f; boss.hp = boss.maxHp; boss.radius = 1.5f; enemies.push_back(boss);
+            EnemyData bossData = DataManager::GetBossEnemy(floor, currentDungeonId);
+            Enemy boss(dungeon.bossSpawnPos, bossData, enemyLevel);
+            boss.maxHp *= 3.0f; boss.hp = boss.maxHp; boss.radius = 1.5f;
+            boss.isBoss = true;
+            enemies.push_back(boss);
         }
         bossDefeated = false; return;
     }
-    for (int i = 0; i < count; i++) enemies.push_back(Enemy(dungeon.GetRandomFloorPos(), DataManager::GetRandomEnemyForFloor(floor), floor));
+    for (int i = 0; i < count; i++) {
+        enemies.push_back(Enemy(dungeon.GetRandomFloorPos(), DataManager::GetRandomEnemyForFloor(floor, currentDungeonId), enemyLevel));
+    }
 }
 
 void Game::Run() { while (!WindowShouldClose()) { Update(); Draw(); } }
@@ -243,7 +266,7 @@ void Game::Update() {
     if (IsKeyPressed(KEY_TAB)) { if (!UI::showDetail) { showMenu = !showMenu; AudioManager::PlaySE(SE_CLICK); } }
     if (debugMode) { if (IsKeyPressed(KEY_N)) NextFloor(); if (IsKeyPressed(KEY_R)) ReturnHome(); }
 
-    bool stopPlayer = showMenu || showPrompt || showStorage || showReforgeMenu || showWarpMenu || showCraftMenu;
+    bool stopPlayer = showMenu || showPrompt || showStorage || showReforgeMenu || showWarpMenu || showCraftMenu || showQuestMenu;
     if (UI::showDetail) stopPlayer = true;
 
     Vector3 offset = Vector3Subtract(camera.position, camera.target); camera.target = player->position; camera.position = Vector3Add(player->position, offset);
@@ -293,10 +316,24 @@ void Game::Update() {
         else {
             if (floor > 0 && floor % 10 == 0 && enemies.empty() && !bossDefeated) {
                 bossDefeated = true;
-                logs.insert(logs.begin(), { "BOSS DEFEATED!", 5.0f, GOLD });
-                if (floor == 100) {
-                    state = STATE_GAMECLEAR;
-                    AudioManager::PlayBGM(BGM_NONE);
+
+                int maxF = (currentDungeonId == 0) ? 30 : (currentDungeonId == 1) ? 50 : 100;
+
+                if (floor == maxF) {
+                    if (currentDungeonId == unlockedDungeonId && unlockedDungeonId < 2) {
+                        unlockedDungeonId++;
+                        logs.insert(logs.begin(), { "NEXT DUNGEON UNLOCKED!", 5.0f, LIME });
+                    }
+                    if (currentDungeonId == 2) {
+                        state = STATE_GAMECLEAR;
+                        AudioManager::PlayBGM(BGM_NONE);
+                    }
+                    else {
+                        logs.insert(logs.begin(), { "DUNGEON CLEARED!", 5.0f, GOLD });
+                    }
+                }
+                else {
+                    logs.insert(logs.begin(), { "BOSS DEFEATED!", 5.0f, GOLD });
                 }
             }
         }
@@ -314,10 +351,15 @@ void Game::Update() {
         if (sceneTimer > 0) sceneTimer -= dt;
         else {
             bool canUseStairs = true;
+            int maxF = (currentDungeonId == 0) ? 30 : (currentDungeonId == 1) ? 50 : 100;
+
             if (!isPortfolioMode && floor > 0 && floor % 10 == 0 && !bossDefeated) canUseStairs = false;
             if (isPortfolioMode && (floor == 2 || floor == 3) && !bossDefeated) canUseStairs = false;
 
-            if (canUseStairs && Vector3Distance(player->position, dungeon.stairsDownPos) < 2.0f) showPrompt = true;
+            if (canUseStairs && Vector3Distance(player->position, dungeon.stairsDownPos) < 2.0f) {
+                if (floor == maxF) showPrompt = true;
+                else showPrompt = true;
+            }
             if (Vector3Distance(player->position, dungeon.stairsUpPos) < 2.0f) showPrompt = true;
             if (state == STATE_DUNGEON && dungeon.portalPos.x != -999 && Vector3Distance(player->position, dungeon.portalPos) < 2.0f) showPrompt = true;
         }
@@ -331,6 +373,10 @@ void Game::Update() {
             if (Vector3Distance(player->position, dungeon.reforgeStationPos) < 2.0f && IsMouseButtonPressed(0)) { showReforgeMenu = true; AudioManager::PlaySE(SE_CLICK); }
             if (dungeon.portalPos.x != -999 && Vector3Distance(player->position, dungeon.portalPos) < 2.0f && IsMouseButtonPressed(0)) { showWarpMenu = true; AudioManager::PlaySE(SE_CLICK); }
             if (dungeon.craftStationPos.x != -999 && Vector3Distance(player->position, dungeon.craftStationPos) < 2.0f && IsMouseButtonPressed(0)) { showCraftMenu = true; AudioManager::PlaySE(SE_CLICK); }
+
+            if (dungeon.questBoardPos.x != -999 && Vector3Distance(player->position, dungeon.questBoardPos) < 2.0f && IsMouseButtonPressed(0)) {
+                showQuestMenu = true; AudioManager::PlaySE(SE_CLICK);
+            }
         }
     }
     for (int i = (int)logs.size() - 1; i >= 0; i--) { logs[i].life -= dt; if (logs[i].life <= 0) logs.erase(logs.begin() + i); }
@@ -367,15 +413,12 @@ void Game::Draw() {
         ClearBackground(BLACK); BeginMode3D(camera);
         dungeon.Draw();
 
-        // ★ 階段の黒ブロックのバグを完全に修正
-        if (floor > 0 && dungeon.stairsDownPos.x != -999) {
-            bool hideStairs = false;
-            if (isPortfolioMode && (floor == 2 || floor == 3) && !bossDefeated) hideStairs = true;
-            if (!isPortfolioMode && floor % 10 == 0 && !bossDefeated) hideStairs = true;
+        bool hideStairs = false;
+        if (!isPortfolioMode && floor > 0 && floor % 10 == 0 && !bossDefeated) hideStairs = true;
+        if (isPortfolioMode && (floor == 2 || floor == 3) && !bossDefeated) hideStairs = true;
 
-            if (hideStairs) {
-                DrawCube(dungeon.stairsDownPos, 2.1f, 2.0f, 2.1f, BLACK);
-            }
+        if (hideStairs && dungeon.stairsDownPos.x != -999) {
+            DrawCube(dungeon.stairsDownPos, 2.1f, 2.0f, 2.1f, BLACK);
         }
 
         fxManager.Draw();
@@ -410,20 +453,44 @@ void Game::Draw() {
         }
         if (showStorage) UI::DrawStorage(*player, font, showStorage, storageItems, storageEquip);
         if (showReforgeMenu) UI::DrawReforgeMenu(*player, font, showReforgeMenu);
-        if (showWarpMenu) { int sf = UI::DrawWarpMenu(maxReachedFloor, font, showWarpMenu); if (sf > 0) WarpToFloor(sf); }
+
+        if (showWarpMenu) {
+            UI::DrawWarpMenu(this, unlockedDungeonId, maxFloors, font, showWarpMenu);
+        }
+
         if (showCraftMenu) UI::DrawCraftingMenu(*player, font, showCraftMenu);
 
+        if (showQuestMenu) {
+            int sw = GetScreenWidth(), sh = GetScreenHeight();
+            DrawRectangle(50, 50, sw - 100, sh - 100, Fade(BLACK, 0.95f));
+            DrawRectangleLinesEx({ 50, 50, (float)sw - 100, (float)sh - 100 }, 3, GREEN);
+            DrawTextEx(font, u8"クエストボード", { 80, 70 }, 24, 1, GREEN);
+            DrawTextEx(font, u8"（後日、JSON連動クエスト機能が実装されます）", { 80, 120 }, 20, 1, WHITE);
+            if (UI::DrawButton({ (float)sw - 160, 60, 100, 40 }, u8"閉じる", font, RED)) showQuestMenu = false;
+        }
+
         if (showPrompt) {
+            int maxF = (currentDungeonId == 0) ? 30 : (currentDungeonId == 1) ? 50 : 100;
             const char* m = "UNKNOWN";
+
             if (floor == 0) m = "ENTER_DUNGEON";
+            else if (floor == maxF) m = "RETURN_HOME";
             else if (Vector3Distance(player->position, dungeon.stairsDownPos) < 2.0f) m = "GO_DEEPER";
             else if (Vector3Distance(player->position, dungeon.stairsUpPos) < 2.0f) m = "RETURN_HOME";
             else if (dungeon.portalPos.x != -999 && Vector3Distance(player->position, dungeon.portalPos) < 2.0f) m = "RETURN_HOME";
 
             int res = UI::DrawPrompt(m, screenWidth, screenHeight, font);
             if (res == 1) {
-                if (Vector3Distance(player->position, dungeon.stairsDownPos) < 2.0f) NextFloor();
-                else ReturnHome();
+                if (floor == 0) {
+                    currentDungeonId = 0;
+                    NextFloor();
+                }
+                else if (floor > 0 && floor != maxF && Vector3Distance(player->position, dungeon.stairsDownPos) < 2.0f) {
+                    NextFloor();
+                }
+                else {
+                    ReturnHome();
+                }
                 AudioManager::PlaySE(SE_STAIRS);
                 showPrompt = false;
                 sceneTimer = 2.0f;
@@ -439,7 +506,7 @@ void Game::Draw() {
         ImGui::Separator();
         if (player) {
             ImGui::Text("Player POS: (%.1f, %.1f, %.1f)", player->position.x, player->position.y, player->position.z);
-            ImGui::Text("Floor: %d", floor);
+            ImGui::Text("Dungeon: %d  Floor: %d", currentDungeonId, floor);
             ImGui::Text("HP: %.0f / %.0f", player->hp, player->maxHp);
             ImGui::Text("Level: %d  EXP: %d", player->level, player->exp);
             ImGui::Separator();
@@ -447,13 +514,26 @@ void Game::Draw() {
         ImGui::Text("Enemies Count: %d", (int)enemies.size());
         if (ImGui::BeginChild("EnemyList", ImVec2(0, 150), true)) {
             for (size_t i = 0; i < enemies.size(); i++) {
-                ImGui::Text("[%d] %s  HP: %.1f/%.1f", (int)i, enemies[i].data.name.c_str(), enemies[i].hp, enemies[i].maxHp);
+                // ★ 日本語の data.name ではなく、英語の data.modelName を表示することで文字化けを回避！
+                ImGui::Text("[%d] %s  HP: %.1f/%.1f", (int)i, enemies[i].data.modelName.c_str(), enemies[i].hp, enemies[i].maxHp);
             }
             ImGui::EndChild();
         }
         if (ImGui::Button("Heal Player")) { if (player) player->hp = player->maxHp; }
         ImGui::SameLine();
         if (ImGui::Button("Kill All Enemies")) { for (auto& e : enemies) e.hp = 0; }
+
+        // ★ レベル+99 デバッグボタン
+        ImGui::Separator();
+        if (ImGui::Button("Level +99")) {
+            if (player) {
+                player->level += 99;
+                player->skillPoints += 99 * 3; // レベルアップ相当のSP付与
+                player->RecalculateStats();    // 最大HPや攻撃力などを再計算
+                player->hp = player->maxHp;    // 回復
+            }
+        }
+
         ImGui::End();
     }
     rlImGuiEnd();
@@ -508,19 +588,25 @@ void Game::NextFloor() {
         return;
     }
 
-    floor++; if (floor > maxReachedFloor) maxReachedFloor = floor;
+    floor++;
+    if (floor > maxFloors[currentDungeonId]) maxFloors[currentDungeonId] = floor;
+
     state = STATE_DUNGEON; bossDefeated = false;
     dungeon.Generate(false, floor);
     Vector3 startPos = dungeon.GetStartPosition(); player->position = { startPos.x, 0.5f, startPos.z };
     droppedItems.clear(); fxManager.projectiles.clear(); fxManager.effects.clear(); fxManager.damageTexts.clear();
+
+    int enemyLevel = floor;
+    if (currentDungeonId == 1) enemyLevel += 30;
+    if (currentDungeonId == 2) enemyLevel += 60;
     SpawnEnemies(10 + floor);
 
     AudioManager::PlayBGM(BGM_DUNGEON);
 
     if (floor % 10 != 0 && floor % 10 != 5) {
         std::vector<int> candidateItemIds;
-        EnemyData currentEnemy = DataManager::GetRandomEnemyForFloor(floor); for (int id : currentEnemy.drops) candidateItemIds.push_back(id);
-        EnemyData nextEnemy = DataManager::GetRandomEnemyForFloor(floor + 1); for (int id : nextEnemy.drops) candidateItemIds.push_back(id);
+        EnemyData currentEnemy = DataManager::GetRandomEnemyForFloor(enemyLevel, currentDungeonId); for (int id : currentEnemy.drops) candidateItemIds.push_back(id);
+        EnemyData nextEnemy = DataManager::GetRandomEnemyForFloor(enemyLevel + 1, currentDungeonId); for (int id : nextEnemy.drops) candidateItemIds.push_back(id);
         for (const auto& pos : dungeon.treasureSpots) {
             ItemData item;
             if (!candidateItemIds.empty()) { int rndIdx = GetRandomValue(0, (int)candidateItemIds.size() - 1); item = DataManager::GetItemConfigCopy(candidateItemIds[rndIdx]); }
@@ -530,14 +616,21 @@ void Game::NextFloor() {
     }
 }
 
-void Game::WarpToFloor(int targetFloor) {
-    floor = targetFloor; state = STATE_DUNGEON; bossDefeated = false;
+void Game::WarpToFloor(int targetDungeon, int targetFloor) {
+    currentDungeonId = targetDungeon;
+    floor = targetFloor;
+    state = STATE_DUNGEON; bossDefeated = false;
+
     dungeon.Generate(false, floor);
     Vector3 startPos = dungeon.GetStartPosition(); player->position = { startPos.x, 0.5f, startPos.z };
     droppedItems.clear(); fxManager.projectiles.clear(); fxManager.effects.clear(); fxManager.damageTexts.clear();
-    SpawnEnemies(10 + floor);
-    showWarpMenu = false;
 
+    int enemyLevel = floor;
+    if (currentDungeonId == 1) enemyLevel += 30;
+    if (currentDungeonId == 2) enemyLevel += 60;
+    SpawnEnemies(10 + floor);
+
+    showWarpMenu = false;
     AudioManager::PlayBGM(BGM_DUNGEON);
     AudioManager::PlaySE(SE_STAIRS);
 }

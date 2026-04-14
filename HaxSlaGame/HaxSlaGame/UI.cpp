@@ -4,6 +4,7 @@
 #include "Dungeon.h"
 #include "DataManager.h"
 #include "AudioManager.h"
+#include "Game.h" // ★ワープ関数を呼ぶために追加
 #include "raymath.h"
 #include <math.h>
 
@@ -12,6 +13,7 @@ int UI::storageInvPage = 0; int UI::storageBoxPage = 0; int UI::itemSubTab = 0;
 int UI::reforgeItemIdx = -1;
 int UI::warpScroll = 0;
 int UI::craftingScroll = 0;
+int UI::selectedDungeonTab = 0; // ★追加：ワープ画面のダンジョン選択タブ
 Vector2 UI::skillOffset = { 0.0f, 0.0f };
 Vector2 UI::mapOffset = { 0.0f, 0.0f };
 
@@ -168,7 +170,6 @@ int UI::DrawTitleScreen(Font font) {
         Rectangle r = { (float)sw / 2 - 200, y, 400.0f, 80.0f };
         std::string label; Color c;
 
-        // ★ ラッシュモードのセーブデータの場合は表記と色を変える
         if (h.exists) {
             if (h.isPortfolioMode) {
                 label = TextFormat("Slot %d: [RUSH] Lv.%d", i, h.playerLevel);
@@ -620,7 +621,10 @@ void UI::DrawReforgeMenu(Player& p, Font font, bool& isOpen) {
     DrawDetailWindow(font);
 }
 
-int UI::DrawWarpMenu(int maxFloor, Font font, bool& isOpen) {
+// ★ ワープUIを大改修。引数に Gameクラスへのポインタ、解放状況、配列を渡す
+void UI::DrawWarpMenu(void* gamePtr, int unlockedDungeon, const std::vector<int>& maxFloors, Font font, bool& isOpen) {
+    Game* game = (Game*)gamePtr;
+
     static bool wasOpen = false;
     static float openTimer = 0.0f;
     if (isOpen && !wasOpen) openTimer = 0.0f;
@@ -629,24 +633,60 @@ int UI::DrawWarpMenu(int maxFloor, Font font, bool& isOpen) {
     bool locked = (openTimer < 0.3f);
 
     int sw = GetScreenWidth(), sh = GetScreenHeight();
-    DrawRectangle(250, 100, sw - 500, sh - 200, Fade(BLACK, 0.95f)); DrawRectangleLines(250, 100, sw - 500, sh - 200, SKYBLUE);
-    DrawTextEx(font, u8"ワープポータル", { 280, 120 }, 24, 1, WHITE);
-    if (UI::DrawButton({ (float)sw - 370, 115, 100, 40 }, u8"閉じる", font, locked ? Fade(RED, 0.5f) : RED) && !locked) { isOpen = false; return 0; }
-    int selected = 0; std::vector<int> warpFloors; for (int i = 5; i <= maxFloor; i += 5) warpFloors.push_back(i);
-    if (warpFloors.empty()) { DrawTextEx(font, u8"ワープ可能な階層がありません", { 300, 200 }, 20, 1, GRAY); }
-    else {
-        const int perPage = 8; int maxP = (int)ceil((float)warpFloors.size() / perPage);
-        for (int i = 0; i < perPage; i++) {
-            int idx = warpScroll * perPage + i; if (idx >= (int)warpFloors.size()) break;
-            int f = warpFloors[idx]; std::string label = TextFormat(u8"%d 階層", f); if (f % 10 == 0) label += u8" (ボス)"; else if (f % 10 == 5) label += u8" (休憩)";
-            float btnX = 280; float btnW = (float)sw - 560.0f; Rectangle r = { btnX, 180.0f + i * 50, btnW, 40 };
-            if (UI::DrawButton(r, label.c_str(), font, locked ? Fade(DARKBLUE, 0.5f) : DARKBLUE) && !locked) selected = f;
+    DrawRectangle(250, 50, sw - 500, sh - 100, Fade(BLACK, 0.95f));
+    DrawRectangleLines(250, 50, sw - 500, sh - 100, SKYBLUE);
+    DrawTextEx(font, u8"ダンジョン転送ポータル", { 280, 70 }, 24, 1, WHITE);
+    if (UI::DrawButton({ (float)sw - 370, 65, 100, 40 }, u8"閉じる", font, locked ? Fade(RED, 0.5f) : RED) && !locked) { isOpen = false; return; }
+
+    // ダンジョン選択タブ
+    const char* dNames[] = { u8"第一層 (B1~B30)", u8"第二層 (B31~B50)", u8"最深部 (B51~B100)" };
+    for (int i = 0; i < 3; i++) {
+        Rectangle tabR = { 280.0f + i * 210, 130, 200, 40 };
+        Color c = (selectedDungeonTab == i) ? DARKBLUE : DARKGRAY;
+        if (i > unlockedDungeon) c = Fade(BLACK, 0.5f); // 未解放
+
+        if (UI::DrawButton(tabR, dNames[i], font, c) && !locked && i <= unlockedDungeon) {
+            selectedDungeonTab = i;
+            warpScroll = 0; // タブ切り替えでスクロールリセット
         }
-        float bottomY = sh - 150.0f;
+
+        if (i > unlockedDungeon) {
+            DrawTextEx(font, "LOCKED", { tabR.x + 60, tabR.y + 10 }, 18, 1, GRAY);
+        }
+    }
+
+    // 選択されたダンジョンのワープ先リスト
+    int maxF = maxFloors[selectedDungeonTab];
+    std::vector<int> warpFloors;
+    for (int i = 5; i <= maxF; i += 5) warpFloors.push_back(i);
+
+    if (warpFloors.empty()) {
+        DrawTextEx(font, u8"ワープ可能な階層がありません", { 300, 250 }, 20, 1, GRAY);
+    }
+    else {
+        const int perPage = 7;
+        int maxP = (int)ceil((float)warpFloors.size() / perPage);
+
+        for (int i = 0; i < perPage; i++) {
+            int idx = warpScroll * perPage + i;
+            if (idx >= (int)warpFloors.size()) break;
+
+            int f = warpFloors[idx];
+            std::string label = TextFormat(u8"階層 %d", f);
+            if (f % 10 == 0) label += u8" (ボス出現)"; else if (f % 10 == 5) label += u8" (安全地帯)";
+
+            float btnX = 300; float btnW = (float)sw - 600.0f;
+            Rectangle r = { btnX, 200.0f + i * 55, btnW, 45 };
+
+            if (UI::DrawButton(r, label.c_str(), font, locked ? Fade(DARKGREEN, 0.5f) : DARKGREEN) && !locked) {
+                game->WarpToFloor(selectedDungeonTab, f);
+            }
+        }
+
+        float bottomY = sh - 120.0f;
         if (UI::DrawButton({ 300, bottomY, 100, 30 }, "<<", font, locked ? GRAY : GRAY) && !locked && warpScroll > 0) warpScroll--;
         if (UI::DrawButton({ (float)sw - 400, bottomY, 100, 30 }, ">>", font, locked ? GRAY : GRAY) && !locked && warpScroll < maxP - 1) warpScroll++;
     }
-    return selected;
 }
 
 void UI::DrawLogs(std::vector<GameLog>& logs, Player& p, Camera3D& cam, Font font) {

@@ -17,7 +17,9 @@ public:
     Game();
     ~Game();
     void Run();
-    void WarpToFloor(int targetFloor);
+
+    // ★ワープ関数にダンジョンIDの引数を追加
+    void WarpToFloor(int targetDungeon, int targetFloor);
     void StartDebugRoom();
 
 private:
@@ -37,7 +39,6 @@ private:
     void UpdateDebugRoom();
     void DrawDebugRoom();
 
-    // ★ ポートフォリオ用：3層ラッシュモード
     void StartPortfolioMode();
 
     int screenWidth;
@@ -55,8 +56,14 @@ private:
 
     Camera3D camera;
     GameState state;
+
     int floor;
-    int maxReachedFloor;
+
+    // ★ダンジョン進行度管理
+    int currentDungeonId;   // 今いるダンジョン (0:最初の30階, 1:次の50階, 2:最後の100階)
+    int unlockedDungeonId;  // どこまで解放されたか
+    std::vector<int> maxFloors; // 各ダンジョンごとの最高到達階層
+
     int currentSlot;
 
     bool debugMode;
@@ -65,10 +72,11 @@ private:
     bool showReforgeMenu;
     bool showWarpMenu;
     bool showCraftMenu;
+    bool showQuestMenu; // ★追加：クエストボード表示フラグ
     bool showPrompt;
     MenuTab currentTab;
     float sceneTimer;
 
     bool bossDefeated;
-    bool isPortfolioMode; // ★追加: ポートフォリオモードのフラグ
+    bool isPortfolioMode;
 };

@@ -35,17 +35,17 @@ public:
     static void LoadAllData();
     static void UnloadAllData();
 
-    static EnemyData GetRandomEnemyForFloor(int floor);
-    static EnemyData GetBossEnemy(int floor);
+    // ★ 引数にダンジョンIDを追加し、ダンジョンごとに出現する敵を分ける
+    static EnemyData GetRandomEnemyForFloor(int floor, int dungeonId);
+    static EnemyData GetBossEnemy(int floor, int dungeonId);
 
     static ItemData GetItemConfigCopy(int id);
 
     static Modifier GetModifier(int id);
     static int GetRandomModifierId();
 
-    // ★セーブ/ロード関数に isPortfolioMode フラグを追加
-    static void SaveGame(int slot, Player* p, int currentFloor, int maxReachedFloor, const std::vector<ItemData>& sItems, const std::vector<ItemData>& sEquip, bool isPortfolio);
-    static bool LoadGame(int slot, Player* p, int& currentFloor, int& maxReachedFloor, std::vector<ItemData>& sItems, std::vector<ItemData>& sEquip, bool& isPortfolio);
+    static void SaveGame(int slot, Player* p, int currentFloor, int currentDungeon, int unlockedDungeon, const std::vector<int>& maxFloors, const std::vector<ItemData>& sItems, const std::vector<ItemData>& sEquip, bool isPortfolio);
+    static bool LoadGame(int slot, Player* p, int& currentFloor, int& currentDungeon, int& unlockedDungeon, std::vector<int>& maxFloors, std::vector<ItemData>& sItems, std::vector<ItemData>& sEquip, bool& isPortfolio);
     static SaveHeader GetSaveHeader(int slot);
 
     static void DeleteSave(int slot);

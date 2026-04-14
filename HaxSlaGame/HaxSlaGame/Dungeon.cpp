@@ -1,4 +1,5 @@
 ﻿#include "Dungeon.h"
+#include "DataManager.h" 
 #include "raymath.h"
 #include <math.h>
 #include <algorithm>
@@ -19,8 +20,9 @@ void Dungeon::Generate(bool homeMode, int floor) {
     storageBoxPos = { -999,-999,-999 }; portalPos = { -999,-999,-999 };
     healStationPos = { -999,-999,-999 }; reforgeStationPos = { -999,-999,-999 };
     craftStationPos = { -999,-999,-999 }; bossSpawnPos = { -999,-999,-999 };
+    questBoardPos = { -999,-999,-999 };
 
-    if (homeMode) { currentWidth = 40; currentHeight = 40; }
+    if (homeMode) { currentWidth = 60; currentHeight = 60; }
     else {
         currentWidth = 40 + floor; currentHeight = 40 + floor;
         if (currentWidth > MAX_MAP_WIDTH) currentWidth = MAX_MAP_WIDTH;
@@ -30,15 +32,58 @@ void Dungeon::Generate(bool homeMode, int floor) {
     for (int x = 0; x < MAX_MAP_WIDTH; x++) for (int y = 0; y < MAX_MAP_HEIGHT; y++) { map[x][y] = 2; discovered[x][y] = homeMode; }
 
     if (homeMode) {
-        Room c = { currentWidth / 2 - 5, currentHeight / 2 - 5, 10, 10, RT_NORMAL };
-        rooms.push_back(c);
-        for (int ry = c.y; ry < c.y + c.height; ry++) for (int rx = c.x; rx < c.x + c.width; rx++) map[rx][ry] = 0;
+        int cx = 30, cy = 30;
 
-        stairsDownPos = { (float)(c.x + 8) * TILE_SIZE, 0.1f, (float)(c.y + 8) * TILE_SIZE };
-        storageBoxPos = { (float)(c.x + 2) * TILE_SIZE, 0.5f, (float)(c.y + 2) * TILE_SIZE };
-        reforgeStationPos = { (float)(c.x + 5) * TILE_SIZE, 0.5f, (float)(c.y + 2) * TILE_SIZE };
-        portalPos = { (float)(c.x + 2) * TILE_SIZE, 0.5f, (float)(c.y + 8) * TILE_SIZE };
-        craftStationPos = { (float)(c.x + 5) * TILE_SIZE, 0.5f, (float)(c.y + 8) * TILE_SIZE };
+        // 1. 中央部屋 (ポータル, ストレージ, 階段)
+        Room centerRoom = { cx - 5, cy - 5, 10, 10, RT_NORMAL };
+        rooms.push_back(centerRoom);
+        for (int ry = centerRoom.y; ry < centerRoom.y + centerRoom.height; ry++)
+            for (int rx = centerRoom.x; rx < centerRoom.x + centerRoom.width; rx++) map[rx][ry] = 0;
+
+        // 2. 上の部屋 (クラフト)
+        Room topRoom = { cx - 4, cy - 18, 8, 8, RT_NORMAL };
+        rooms.push_back(topRoom);
+        for (int ry = topRoom.y; ry < topRoom.y + topRoom.height; ry++)
+            for (int rx = topRoom.x; rx < topRoom.x + topRoom.width; rx++) map[rx][ry] = 0;
+        DigCorridor(cx, cy, cx, cy - 14);
+
+        // 3. 下の部屋 (回復)
+        Room bottomRoom = { cx - 4, cy + 10, 8, 8, RT_NORMAL };
+        rooms.push_back(bottomRoom);
+        for (int ry = bottomRoom.y; ry < bottomRoom.y + bottomRoom.height; ry++)
+            for (int rx = bottomRoom.x; rx < bottomRoom.x + bottomRoom.width; rx++) map[rx][ry] = 0;
+        DigCorridor(cx, cy, cx, cy + 14);
+
+        // 4. 左の部屋 (リフォージ)
+        Room leftRoom = { cx - 18, cy - 4, 8, 8, RT_NORMAL };
+        rooms.push_back(leftRoom);
+        for (int ry = leftRoom.y; ry < leftRoom.y + leftRoom.height; ry++)
+            for (int rx = leftRoom.x; rx < leftRoom.x + leftRoom.width; rx++) map[rx][ry] = 0;
+        DigCorridor(cx, cy, cx - 14, cy);
+
+        // 5. 右の部屋 (クエストボード)
+        Room rightRoom = { cx + 10, cy - 4, 8, 8, RT_NORMAL };
+        rooms.push_back(rightRoom);
+        for (int ry = rightRoom.y; ry < rightRoom.y + rightRoom.height; ry++)
+            for (int rx = rightRoom.x; rx < rightRoom.x + rightRoom.width; rx++) map[rx][ry] = 0;
+        DigCorridor(cx, cy, cx + 14, cy);
+
+        // 施設の配置
+        portalPos = centerRoom.GetCenter();
+        portalPos.z -= 4.0f; // 奥
+
+        storageBoxPos = centerRoom.GetCenter();
+        storageBoxPos.x -= 4.0f; // 左
+
+        // ★追加：ダンジョンの第1層へ向かう下り階段を配置
+        stairsDownPos = centerRoom.GetCenter();
+        stairsDownPos.x += 4.0f; // 右
+        stairsDownPos.y = 0.1f;
+
+        craftStationPos = topRoom.GetCenter();
+        healStationPos = bottomRoom.GetCenter();
+        reforgeStationPos = leftRoom.GetCenter();
+        questBoardPos = rightRoom.GetCenter();
 
         OptimizeMap();
     }
@@ -112,44 +157,93 @@ void Dungeon::UpdateVisibility(Vector3 p) {
     if (isHome)return; int gx = (int)floorf((p.x + TILE_SIZE / 2) / TILE_SIZE); int gz = (int)floorf((p.z + TILE_SIZE / 2) / TILE_SIZE);
     for (int y = gz - 5; y <= gz + 5; y++)for (int x = gx - 5; x <= gx + 5; x++) if (x >= 0 && x < currentWidth && y >= 0 && y < currentHeight) discovered[x][y] = true;
 }
+
 void Dungeon::Draw() {
     for (int y = 0; y < currentHeight; y++) for (int x = 0; x < currentWidth; x++) {
         if (!discovered[x][y]) continue; if (map[x][y] == 2) continue;
         Vector3 pos = { (float)x * TILE_SIZE, 0.0f, (float)y * TILE_SIZE };
         if (map[x][y] == 1) DrawCube(pos, TILE_SIZE, 2.0f, TILE_SIZE, GRAY); else DrawPlane(pos, { TILE_SIZE, TILE_SIZE }, isHome ? DARKBLUE : DARKGREEN);
     }
-    if (stairsDownPos.x != -999 && IsDiscovered(stairsDownPos.x, stairsDownPos.z)) DrawCube(stairsDownPos, 1.2f, 0.1f, 1.2f, GOLD);
-    if (stairsUpPos.x != -999 && IsDiscovered(stairsUpPos.x, stairsUpPos.z)) DrawCube(stairsUpPos, 1.2f, 0.1f, 1.2f, SKYBLUE);
-    if (isHome && storageBoxPos.x != -999) { DrawCube(storageBoxPos, 1.2f, 1.2f, 1.2f, BROWN); DrawCubeWires(storageBoxPos, 1.2f, 1.2f, 1.2f, BLACK); }
-    if (isHome && reforgeStationPos.x != -999) { DrawCube(reforgeStationPos, 1.2f, 1.2f, 1.2f, PURPLE); DrawCubeWires(reforgeStationPos, 1.2f, 1.2f, 1.2f, VIOLET); }
-    if (isHome && craftStationPos.x != -999) { DrawCube(craftStationPos, 1.2f, 1.2f, 1.2f, ORANGE); DrawCubeWires(craftStationPos, 1.2f, 1.2f, 1.2f, YELLOW); }
 
-    if (portalPos.x != -999 && IsDiscovered(portalPos.x, portalPos.z)) { DrawCylinder(portalPos, 1.0f, 1.0f, 2.5f, 8, Fade(PURPLE, 0.8f)); DrawCylinderWires(portalPos, 1.0f, 1.0f, 2.5f, 8, VIOLET); }
-    if (healStationPos.x != -999 && IsDiscovered(healStationPos.x, healStationPos.z)) { DrawCube(healStationPos, 1.5f, 0.5f, 1.5f, PINK); Vector3 crossV = Vector3Add(healStationPos, { 0, 0.5f, 0 }); DrawCube(crossV, 0.3f, 1.0f, 0.3f, RED); DrawCube(crossV, 1.0f, 0.3f, 0.3f, RED); }
+    auto drawEnv = [](const std::string& key, Vector3 pos) -> bool {
+        if (DataManager::loadedModels.count(key) > 0) {
+            DrawModel(DataManager::loadedModels[key].model, pos, 1.0f, WHITE);
+            return true;
+        }
+        return false;
+        };
+
+    if (stairsDownPos.x != -999 && IsDiscovered(stairsDownPos.x, stairsDownPos.z)) {
+        if (!drawEnv("Obj_StairsDown", stairsDownPos)) DrawCube(stairsDownPos, 1.2f, 0.1f, 1.2f, GOLD);
+    }
+
+    if (stairsUpPos.x != -999 && IsDiscovered(stairsUpPos.x, stairsUpPos.z)) {
+        if (!drawEnv("Obj_StairsUp", stairsUpPos)) DrawCube(stairsUpPos, 1.2f, 0.1f, 1.2f, SKYBLUE);
+    }
+
+    if (isHome && storageBoxPos.x != -999) {
+        if (!drawEnv("Obj_Storage", storageBoxPos)) {
+            DrawCube(storageBoxPos, 1.2f, 1.2f, 1.2f, BROWN);
+            DrawCubeWires(storageBoxPos, 1.2f, 1.2f, 1.2f, BLACK);
+        }
+    }
+
+    if (isHome && reforgeStationPos.x != -999) {
+        if (!drawEnv("Obj_Reforge", reforgeStationPos)) {
+            DrawCube(reforgeStationPos, 1.2f, 1.2f, 1.2f, PURPLE);
+            DrawCubeWires(reforgeStationPos, 1.2f, 1.2f, 1.2f, VIOLET);
+        }
+    }
+
+    if (isHome && craftStationPos.x != -999) {
+        if (!drawEnv("Obj_Craft", craftStationPos)) {
+            DrawCube(craftStationPos, 1.2f, 1.2f, 1.2f, ORANGE);
+            DrawCubeWires(craftStationPos, 1.2f, 1.2f, 1.2f, YELLOW);
+        }
+    }
+
+    if (portalPos.x != -999 && IsDiscovered(portalPos.x, portalPos.z)) {
+        if (!drawEnv("Obj_Portal", portalPos)) {
+            DrawCylinder(portalPos, 1.0f, 1.0f, 2.5f, 8, Fade(PURPLE, 0.8f));
+            DrawCylinderWires(portalPos, 1.0f, 1.0f, 2.5f, 8, VIOLET);
+        }
+    }
+
+    if (healStationPos.x != -999 && IsDiscovered(healStationPos.x, healStationPos.z)) {
+        if (!drawEnv("Obj_Heal", healStationPos)) {
+            DrawCube(healStationPos, 1.5f, 0.5f, 1.5f, PINK);
+            Vector3 crossV = Vector3Add(healStationPos, { 0, 0.5f, 0 });
+            DrawCube(crossV, 0.3f, 1.0f, 0.3f, RED);
+            DrawCube(crossV, 1.0f, 0.3f, 0.3f, RED);
+        }
+    }
+
+    if (isHome && questBoardPos.x != -999) {
+        if (!drawEnv("Obj_QuestBoard", questBoardPos)) {
+            DrawCube(questBoardPos, 2.0f, 2.0f, 0.2f, BEIGE);
+            DrawCubeWires(questBoardPos, 2.0f, 2.0f, 0.2f, DARKBROWN);
+        }
+    }
 }
+
 bool Dungeon::IsWall(float x, float z) { int gx = (int)floorf((x + TILE_SIZE / 2) / TILE_SIZE); int gz = (int)floorf((z + TILE_SIZE / 2) / TILE_SIZE); if (gx < 0 || gx >= currentWidth || gz < 0 || gz >= currentHeight)return true; return map[gx][gz] != 0; }
 bool Dungeon::CheckCollisionRadius(Vector3 p, float r) { return IsWall(p.x - r, p.z) || IsWall(p.x + r, p.z) || IsWall(p.x, p.z - r) || IsWall(p.x, p.z + r); }
 bool Dungeon::HasLineOfSight(Vector3 s, Vector3 e) { float d = Vector3Distance(s, e); Vector3 dir = Vector3Normalize(Vector3Subtract(e, s)); for (float t = 0.5f; t < d; t += 0.5f) { Vector3 p = Vector3Add(s, Vector3Scale(dir, t)); if (IsWall(p.x, p.z))return false; }return true; }
 bool Dungeon::IsDiscovered(float x, float z) { int gx = (int)floorf((x + TILE_SIZE / 2) / TILE_SIZE); int gz = (int)floorf((z + TILE_SIZE / 2) / TILE_SIZE); return (gx >= 0 && gx < currentWidth && gz >= 0 && gz < currentHeight) ? discovered[gx][gz] : false; }
 Vector3 Dungeon::GetStartPosition() { if (stairsUpPos.x != -999)return stairsUpPos; return rooms.empty() ? Vector3{ 0,0,0 } : rooms[0].GetCenter(); }
 
-// 【修正】ランダム位置取得の修正
 Vector3 Dungeon::GetRandomFloorPos() {
     for (int i = 0; i < 50; i++) {
         int r = GetRandomValue(0, (int)rooms.size() - 1);
         if (rooms[r].type == RT_TREASURE || rooms[r].type == RT_HEAL || rooms[r].type == RT_BOSS)continue;
 
-        // 部屋の内側のタイルを選択 (+1, -2 で壁際を避ける)
         int tx = GetRandomValue(rooms[r].x + 1, rooms[r].x + rooms[r].width - 2);
         int ty = GetRandomValue(rooms[r].y + 1, rooms[r].y + rooms[r].height - 2);
-
-        // ワールド座標に変換 (タイルの中心)
         Vector3 c = { (float)tx * TILE_SIZE + TILE_SIZE / 2.0f, 0.5f, (float)ty * TILE_SIZE + TILE_SIZE / 2.0f };
 
         if (stairsUpPos.x != -999 && Vector3Distance(c, stairsUpPos) < 8.0f)continue;
         if (stairsDownPos.x != -999 && Vector3Distance(c, stairsDownPos) < 5.0f)continue;
 
-        // 念のため壁チェック
         if (!IsWall(c.x, c.z)) return c;
     }
     return{ 0,0,0 };

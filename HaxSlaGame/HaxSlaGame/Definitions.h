@@ -137,7 +137,8 @@ struct SaveHeader {
     int playerLevel = 1;
     int floor = 0;
     std::string timestamp = "";
-    bool isPortfolioMode = false; // ★追加：ラッシュモード判別用フラグ
+    bool isPortfolioMode = false;
+    int unlockedDungeonId = 0; // ★追加：どこまでダンジョンが解放されているか
 };
 
 struct CraftMaterial {

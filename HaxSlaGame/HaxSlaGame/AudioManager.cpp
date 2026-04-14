@@ -1,12 +1,19 @@
 #include "AudioManager.h"
 #include <iostream>
+#include <string>
 
-// 【修正】BGM初期音量を0.2に設定
-float AudioManager::bgmVolume = 0.005f;
-float AudioManager::seVolume = 0.01f;
+float AudioManager::bgmVolume = 0.05f;
+float AudioManager::seVolume = 0.1f;
 MusicType AudioManager::currentBGM = BGM_NONE;
 std::map<MusicType, Music> AudioManager::musicMap;
 std::map<SoundType, Sound> AudioManager::soundMap;
+
+// ★ サブフォルダと直下の両方を自動検索するヘルパー関数
+static std::string FindAudioPath(const std::string& filename) {
+    std::string path1 = "resources/Music/" + filename;
+    if (FileExists(path1.c_str())) return path1;
+    return "resources/" + filename;
+}
 
 void AudioManager::Init() {
     InitAudioDevice();
@@ -21,24 +28,22 @@ void AudioManager::Close() {
 
 void AudioManager::LoadAll() {
     // BGM読み込み
-    musicMap[BGM_TITLE] = LoadMusicStream("resources/bgm_title.mp3");
-    musicMap[BGM_HOME] = LoadMusicStream("resources/bgm_home.mp3");
-    musicMap[BGM_DUNGEON] = LoadMusicStream("resources/bgm_dungeon.mp3");
+    musicMap[BGM_TITLE] = LoadMusicStream(FindAudioPath("bgm_title.mp3").c_str());
+    musicMap[BGM_HOME] = LoadMusicStream(FindAudioPath("bgm_home.mp3").c_str());
+    musicMap[BGM_DUNGEON] = LoadMusicStream(FindAudioPath("bgm_dungeon.mp3").c_str());
 
     // SE読み込み
-    soundMap[SE_ATTACK] = LoadSound("resources/se_attack.wav");
-    soundMap[SE_ENEMY_ATTACK] = LoadSound("resources/se_enemy_attack.wav");
-    soundMap[SE_CLICK] = LoadSound("resources/se_click.wav");
-    soundMap[SE_SKILL] = LoadSound("resources/se_skill.wav");
-    soundMap[SE_STAIRS] = LoadSound("resources/se_stairs.wav");
-    soundMap[SE_SAVE] = LoadSound("resources/se_save.wav");
-    soundMap[SE_REFORGE] = LoadSound("resources/se_reforge.wav");
+    soundMap[SE_ATTACK] = LoadSound(FindAudioPath("se_attack.wav").c_str());
+    soundMap[SE_ENEMY_ATTACK] = LoadSound(FindAudioPath("se_enemy_attack.wav").c_str());
+    soundMap[SE_CLICK] = LoadSound(FindAudioPath("se_click.wav").c_str());
+    soundMap[SE_SKILL] = LoadSound(FindAudioPath("se_skill.wav").c_str());
+    soundMap[SE_STAIRS] = LoadSound(FindAudioPath("se_stairs.wav").c_str());
+    soundMap[SE_SAVE] = LoadSound(FindAudioPath("se_save.wav").c_str());
+    soundMap[SE_REFORGE] = LoadSound(FindAudioPath("se_reforge.wav").c_str());
+    soundMap[SE_LEVELUP] = LoadSound(FindAudioPath("se_levelup.wav").c_str());
+    soundMap[SE_HEAL] = LoadSound(FindAudioPath("se_heal.wav").c_str());
 
-    // 【追加】新規SE
-    soundMap[SE_LEVELUP] = LoadSound("resources/se_levelup.wav");
-    soundMap[SE_HEAL] = LoadSound("resources/se_heal.wav");
-
-    // 初期ボリューム適用
+    // ボリューム初期設定
     SetBGMVolume(bgmVolume);
     SetSEVolume(seVolume);
 }

@@ -1,5 +1,5 @@
 #pragma once
-#include "Definitions.h" // これが必要
+#include "Definitions.h"
 #include "raymath.h"
 #include <vector>
 
@@ -13,6 +13,8 @@ public:
     Vector3 reforgeStationPos;
     Vector3 craftStationPos;
     Vector3 bossSpawnPos;
+    Vector3 questBoardPos; // ★追加：クエストボードの位置
+
     std::vector<Vector3> treasureSpots;
 
     bool isHome;
