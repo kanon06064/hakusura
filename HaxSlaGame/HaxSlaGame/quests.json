@@ -1,0 +1,22 @@
+{
+  "id": 1,
+  "title": "スライムの脅威",
+  "description": "最近スライムが増えて困っている。5匹ほど討伐してくれないか？",
+  "type": "HUNT",
+  "targetId": 0,
+  "targetCount": 5,
+  "rewardGold": 100,
+  "rewardItemId": 2,
+  "rewardItemCount": 3
+},
+{
+  "id": 2,
+  "title": "薬の材料集め",
+  "description": "マナキノコを3つ集めてきてほしい。",
+  "type": "GATHER",
+  "targetId": 4,
+  "targetCount": 3,
+  "rewardGold": 250,
+  "rewardItemId": -1,
+  "rewardItemCount": 0
+} 

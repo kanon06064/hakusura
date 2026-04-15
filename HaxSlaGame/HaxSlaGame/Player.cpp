@@ -109,7 +109,7 @@ float Player::GetSkillCooldown(SkillType type) { switch (type) { case SKILL_ACTI
                                                                                        void Player::LevelUp(EffectManager& fx) {
                                                                                            level++; exp -= expToNext; expToNext = (int)((float)expToNext * 1.5f);
                                                                                            skillPoints += 3; fx.SpawnDamageText(position, 999);
-                                                                                           AudioManager::PlaySE(SE_LEVELUP); // 【修正】SE_LEVELUPを使用
+                                                                                           AudioManager::PlaySE(SE_LEVELUP);
                                                                                            RecalculateStats(); hp = maxHp;
                                                                                        }
 
@@ -130,7 +130,7 @@ float Player::GetSkillCooldown(SkillType type) { switch (type) { case SKILL_ACTI
                                                                                                hp = fminf(maxHp, hp + inventoryItems[idx].heal);
                                                                                                inventoryItems[idx].count--;
                                                                                                if (inventoryItems[idx].count <= 0) inventoryItems.erase(inventoryItems.begin() + idx);
-                                                                                               AudioManager::PlaySE(SE_HEAL); // 【修正】SE_HEALを使用
+                                                                                               AudioManager::PlaySE(SE_HEAL);
                                                                                            }
                                                                                        }
 
@@ -174,6 +174,74 @@ float Player::GetSkillCooldown(SkillType type) { switch (type) { case SKILL_ACTI
                                                                                            RecalculateStats();
                                                                                        }
 
+                                                                                       // ★追加: 敵討伐時のクエスト進行
+                                                                                       void Player::UpdateHuntQuest(int enemyId) {
+                                                                                           for (auto& q : activeQuests) {
+                                                                                               if (!q.isCompleted) {
+                                                                                                   QuestData data = DataManager::GetQuestData(q.questId);
+                                                                                                   if (data.type == QUEST_HUNT && data.targetId == enemyId) {
+                                                                                                       q.currentCount++;
+                                                                                                       if (q.currentCount >= data.targetCount) {
+                                                                                                           q.currentCount = data.targetCount;
+                                                                                                           q.isCompleted = true;
+                                                                                                           AudioManager::PlaySE(SE_LEVELUP); // クエスト達成音の代用
+                                                                                                       }
+                                                                                                   }
+                                                                                               }
+                                                                                           }
+                                                                                       }
+
+                                                                                       // ★追加: 納品クエストの条件チェック
+                                                                                       bool Player::CheckGatherQuest(int itemId, int requiredCount) {
+                                                                                           int count = 0;
+                                                                                           for (const auto& item : inventoryItems) {
+                                                                                               if (item.id == itemId) count += item.count;
+                                                                                           }
+                                                                                           return count >= requiredCount;
+                                                                                       }
+
+                                                                                       // ★追加: クエスト完了＆報酬受け取り処理
+                                                                                       void Player::CompleteQuest(int questId) {
+                                                                                           for (auto it = activeQuests.begin(); it != activeQuests.end(); ++it) {
+                                                                                               if (it->questId == questId) {
+                                                                                                   QuestData data = DataManager::GetQuestData(questId);
+
+                                                                                                   gold += data.rewardGold;
+                                                                                                   if (data.rewardItemId != -1 && data.rewardItemCount > 0) {
+                                                                                                       ItemData rewardItem = DataManager::GetItemConfigCopy(data.rewardItemId);
+                                                                                                       rewardItem.count = data.rewardItemCount;
+                                                                                                       AddToInventory(rewardItem);
+                                                                                                   }
+
+                                                                                                   if (data.type == QUEST_GATHER) {
+                                                                                                       int needed = data.targetCount;
+                                                                                                       for (auto invIt = inventoryItems.begin(); invIt != inventoryItems.end(); ) {
+                                                                                                           if (invIt->id == data.targetId) {
+                                                                                                               if (invIt->count <= needed) {
+                                                                                                                   needed -= invIt->count;
+                                                                                                                   invIt = inventoryItems.erase(invIt);
+                                                                                                               }
+                                                                                                               else {
+                                                                                                                   invIt->count -= needed;
+                                                                                                                   needed = 0;
+                                                                                                                   ++invIt;
+                                                                                                               }
+                                                                                                               if (needed <= 0) break;
+                                                                                                           }
+                                                                                                           else {
+                                                                                                               ++invIt;
+                                                                                                           }
+                                                                                                       }
+                                                                                                   }
+
+                                                                                                   clearedQuests.push_back(questId);
+                                                                                                   activeQuests.erase(it);
+                                                                                                   AudioManager::PlaySE(SE_REFORGE); // 報酬獲得音
+                                                                                                   break;
+                                                                                               }
+                                                                                           }
+                                                                                       }
+
                                                                                        void Player::Update(Camera3D& cam, Dungeon& d, std::vector<Enemy>& enemies, EffectManager& fx, bool stop) {
                                                                                            if (stop) return;
                                                                                            float dt = GetFrameTime();
@@ -207,7 +275,7 @@ float Player::GetSkillCooldown(SkillType type) { switch (type) { case SKILL_ACTI
                                                                                        }
 
                                                                                        void Player::PerformAttack(Vector3 ad, std::vector<Enemy>& enemies, Dungeon& d, EffectManager& fx) {
-                                                                                           AudioManager::PlaySE(SE_ATTACK); // 【修正】攻撃SEを確実に呼び出す
+                                                                                           AudioManager::PlaySE(SE_ATTACK);
                                                                                            Vector3 attackOrigin = Vector3Add(position, { 0.0f, 0.8f, 0.0f });
                                                                                            if (currentWeapon == BOW || currentWeapon == WAND) { float speed = (currentWeapon == BOW) ? 25.0f : 15.0f; int type = (currentWeapon == BOW) ? 0 : 1; fx.SpawnProjectile(attackOrigin, ad, speed, type, true); }
                                                                                            else {

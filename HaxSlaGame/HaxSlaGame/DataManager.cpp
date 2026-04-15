@@ -13,6 +13,7 @@ std::vector<ItemData> DataManager::itemConfigs;
 std::map<std::string, std::string> DataManager::uiStrings;
 std::vector<Modifier> DataManager::modifiers;
 std::vector<CraftRecipe> DataManager::recipes;
+std::vector<QuestData> DataManager::quests; // ★追加
 
 std::map<std::string, GameModel> DataManager::loadedModels;
 
@@ -103,6 +104,26 @@ void DataManager::LoadAllData() {
                 modifiers.push_back(m);
             }
         }
+
+        // ★追加: クエストのロード
+        std::ifstream qF("quests.json");
+        if (qF.is_open()) {
+            json j; qF >> j; quests.clear();
+            for (auto& q : j) {
+                QuestData qd;
+                qd.id = q.value("id", 0);
+                qd.title = q.value("title", "");
+                qd.description = q.value("description", "");
+                std::string t = q.value("type", "HUNT");
+                qd.type = (t == "GATHER") ? QUEST_GATHER : QUEST_HUNT;
+                qd.targetId = q.value("targetId", 0);
+                qd.targetCount = q.value("targetCount", 0);
+                qd.rewardGold = q.value("rewardGold", 0);
+                qd.rewardItemId = q.value("rewardItemId", -1);
+                qd.rewardItemCount = q.value("rewardItemCount", 0);
+                quests.push_back(qd);
+            }
+        }
     }
     catch (const std::exception& e) { std::cerr << "JSON Load Error: " << e.what() << std::endl; }
 
@@ -111,9 +132,7 @@ void DataManager::LoadAllData() {
         if (!name.empty() && loadedModels.count(name) == 0) {
             std::string iqmPath = FindRes(name, ".iqm", "IQM");
             std::string texPath = FindRes(name + "_Albedo", ".png", "Texture");
-
             if (!FileExists(texPath.c_str())) texPath = FindRes("Albedo", ".png", "Texture");
-
             if (FileExists(iqmPath.c_str()) && FileExists(texPath.c_str())) {
                 GameModel gm;
                 gm.model = LoadModel(iqmPath.c_str());
@@ -169,7 +188,6 @@ void DataManager::LoadAllData() {
                 gm.texture = LoadTexture(texPath.c_str());
                 SetMaterialTexture(&gm.model.materials[0], MATERIAL_MAP_DIFFUSE, gm.texture);
             }
-
             if (usePath == iqmPath) gm.anims = LoadModelAnimations(usePath.c_str(), &gm.animCount);
             else { gm.anims = nullptr; gm.animCount = 0; }
 
@@ -208,64 +226,48 @@ void DataManager::UnloadAllData() {
     }
 }
 
-// ★ ダンジョンIDに応じて出現する敵をフィルタリング
 EnemyData DataManager::GetRandomEnemyForFloor(int floor, int dungeonId) {
     std::vector<EnemyData> c;
     for (auto& e : allEnemyData) {
-        // 大ボス・中ボスは通常湧きさせない
         if (e.id == 15 || e.id == 16 || e.id == 17 || e.id == 18 || e.id == 20 || e.id == 21 || e.id == 22) continue;
 
         bool ok = false;
         if (dungeonId == 0) {
-            // 第1ダンジョン: 序盤の敵 (スライムやコウモリ等)
             if (e.minFloor <= 10) ok = true;
         }
         else if (dungeonId == 1) {
-            // 第2ダンジョン: 中盤の敵 (スケルトンやウェアウルフ等)
             if (e.minFloor >= 6 && e.minFloor <= 15) ok = true;
         }
         else {
-            // 第3ダンジョン: 終盤の敵 (スペクター以降)
             if (e.minFloor >= 10) ok = true;
         }
 
         if (ok) c.push_back(e);
     }
-
-    // もし候補が空ならフォールバック
     if (c.empty()) return allEnemyData.empty() ? EnemyData{ 0, "Slime", "", "", 0, 30, 0.05f } : allEnemyData[0];
-
     return c[GetRandomValue(0, (int)c.size() - 1)];
 }
 
-// ★ ダンジョンIDに応じて適切なボスを返す
 EnemyData DataManager::GetBossEnemy(int floor, int dungeonId) {
     if (allEnemyData.empty()) return { 0, "Boss", "", "", 0, 1000, 0.1f };
-
     std::vector<EnemyData> bosses;
 
     if (dungeonId == 0) {
-        // 第1ダンジョンのボス候補 (オーク、リザードウォリアー)
         for (auto& e : allEnemyData) if (e.id == 7 || e.id == 8) bosses.push_back(e);
-        // 最終30階のボス
         if (floor == 30) {
-            for (auto& e : allEnemyData) if (e.id == 15) return e; // ブラックナイト
+            for (auto& e : allEnemyData) if (e.id == 15) return e;
         }
     }
     else if (dungeonId == 1) {
-        // 第2ダンジョンのボス候補
         for (auto& e : allEnemyData) if (e.id == 15 || e.id == 16 || e.id == 17) bosses.push_back(e);
-        // 最終50階のボス
         if (floor == 50) {
-            for (auto& e : allEnemyData) if (e.id == 17) return e; // サイクロプス
+            for (auto& e : allEnemyData) if (e.id == 17) return e;
         }
     }
     else {
-        // 第3ダンジョンのボス候補
         for (auto& e : allEnemyData) if (e.id == 17 || e.id == 18 || e.id == 20 || e.id == 21) bosses.push_back(e);
-        // 最終100階の魔王
         if (floor == 100) {
-            for (auto& e : allEnemyData) if (e.id == 22) return e; // 魔王
+            for (auto& e : allEnemyData) if (e.id == 22) return e;
         }
     }
 
@@ -277,6 +279,13 @@ ItemData DataManager::GetItemConfigCopy(int id) {
     for (auto& cfg : itemConfigs) if (cfg.id == id) return cfg;
     ItemData empty; empty.id = -1; return empty;
 }
+
+// ★追加: クエスト取得処理
+QuestData DataManager::GetQuestData(int id) {
+    for (auto& q : quests) if (q.id == id) return q;
+    QuestData empty; empty.id = -1; return empty;
+}
+
 Modifier DataManager::GetModifier(int id) {
     for (const auto& mod : modifiers) if (mod.id == id) return mod;
     for (const auto& mod : modifiers) if (mod.id == 0) return mod;
@@ -310,6 +319,16 @@ void DataManager::SaveGame(int slot, Player* p, int currentFloor, int currentDun
     root["unlockedSkills"] = json::array(); for (const auto& node : p->skillTree) if (node.unlocked) root["unlockedSkills"].push_back(node.id);
     root["storageItems"] = json::array(); for (const auto& item : sItems) root["storageItems"].push_back(ItemToJson(item));
     root["storageEquip"] = json::array(); for (const auto& item : sEquip) root["storageEquip"].push_back(ItemToJson(item));
+
+    // ★追加: クエストのセーブ
+    root["activeQuests"] = json::array();
+    for (const auto& q : p->activeQuests) {
+        root["activeQuests"].push_back({ {"id", q.questId}, {"count", q.currentCount}, {"completed", q.isCompleted} });
+    }
+    root["clearedQuests"] = json::array();
+    for (int cid : p->clearedQuests) {
+        root["clearedQuests"].push_back(cid);
+    }
 
     std::ofstream o("save" + std::to_string(slot) + ".json");
     o << root.dump(4);
@@ -352,6 +371,25 @@ bool DataManager::LoadGame(int slot, Player* p, int& currentFloor, int& currentD
         for (int uid : unlockedIds) for (auto& node : p->skillTree) if (node.id == uid) node.unlocked = true;
         sItems.clear(); if (root.contains("storageItems")) for (const auto& jItem : root["storageItems"]) sItems.push_back(JsonToItem(jItem));
         sEquip.clear(); if (root.contains("storageEquip")) for (const auto& jItem : root["storageEquip"]) sEquip.push_back(JsonToItem(jItem));
+
+        // ★追加: クエストのロード
+        p->activeQuests.clear();
+        if (root.contains("activeQuests")) {
+            for (const auto& jq : root["activeQuests"]) {
+                PlayerQuest pq;
+                pq.questId = jq.value("id", 0);
+                pq.currentCount = jq.value("count", 0);
+                pq.isCompleted = jq.value("completed", false);
+                p->activeQuests.push_back(pq);
+            }
+        }
+        p->clearedQuests.clear();
+        if (root.contains("clearedQuests")) {
+            for (const auto& jc : root["clearedQuests"]) {
+                p->clearedQuests.push_back(jc.get<int>());
+            }
+        }
+
         return true;
     }
     catch (...) { return false; }

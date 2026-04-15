@@ -288,6 +288,8 @@ void Game::Update() {
                 player->AddExp(enemies[i].expValue, fxManager);
                 player->gold += enemies[i].data.gold;
 
+                player->UpdateHuntQuest(enemies[i].data.id);
+
                 for (int id : enemies[i].data.drops) {
                     ItemData cfg = DataManager::GetItemConfigCopy(id);
                     if (cfg.id != -1) {
@@ -460,13 +462,9 @@ void Game::Draw() {
 
         if (showCraftMenu) UI::DrawCraftingMenu(*player, font, showCraftMenu);
 
+        // ★ UI側のメソッドを呼び出してクエストメニューを描画
         if (showQuestMenu) {
-            int sw = GetScreenWidth(), sh = GetScreenHeight();
-            DrawRectangle(50, 50, sw - 100, sh - 100, Fade(BLACK, 0.95f));
-            DrawRectangleLinesEx({ 50, 50, (float)sw - 100, (float)sh - 100 }, 3, GREEN);
-            DrawTextEx(font, u8"クエストボード", { 80, 70 }, 24, 1, GREEN);
-            DrawTextEx(font, u8"（後日、JSON連動クエスト機能が実装されます）", { 80, 120 }, 20, 1, WHITE);
-            if (UI::DrawButton({ (float)sw - 160, 60, 100, 40 }, u8"閉じる", font, RED)) showQuestMenu = false;
+            UI::DrawQuestMenu(*player, font, showQuestMenu);
         }
 
         if (showPrompt) {
@@ -514,7 +512,6 @@ void Game::Draw() {
         ImGui::Text("Enemies Count: %d", (int)enemies.size());
         if (ImGui::BeginChild("EnemyList", ImVec2(0, 150), true)) {
             for (size_t i = 0; i < enemies.size(); i++) {
-                // ★ 日本語の data.name ではなく、英語の data.modelName を表示することで文字化けを回避！
                 ImGui::Text("[%d] %s  HP: %.1f/%.1f", (int)i, enemies[i].data.modelName.c_str(), enemies[i].hp, enemies[i].maxHp);
             }
             ImGui::EndChild();
@@ -523,14 +520,13 @@ void Game::Draw() {
         ImGui::SameLine();
         if (ImGui::Button("Kill All Enemies")) { for (auto& e : enemies) e.hp = 0; }
 
-        // ★ レベル+99 デバッグボタン
         ImGui::Separator();
         if (ImGui::Button("Level +99")) {
             if (player) {
                 player->level += 99;
-                player->skillPoints += 99 * 3; // レベルアップ相当のSP付与
-                player->RecalculateStats();    // 最大HPや攻撃力などを再計算
-                player->hp = player->maxHp;    // 回復
+                player->skillPoints += 99 * 3;
+                player->RecalculateStats();
+                player->hp = player->maxHp;
             }
         }
 

@@ -16,6 +16,9 @@ public:
     static void DrawReforgeMenu(class Player& p, Font font, bool& isOpen);
     static void DrawCraftingMenu(class Player& p, Font font, bool& isOpen);
 
+    // ★追加: クエストメニューの描画
+    static void DrawQuestMenu(class Player& p, Font font, bool& isOpen);
+
     static int DrawTitleScreen(Font font);
     static void DrawWarpMenu(void* gamePtr, int unlockedDungeon, const std::vector<int>& maxFloors, Font font, bool& isOpen);
 
@@ -23,11 +26,11 @@ public:
     static void DrawLogs(std::vector<GameLog>& logs, class Player& p, Camera3D& cam, Font font);
     static void DrawNearbyItems(class Player& p, std::vector<DroppedItem>& di, class Dungeon& d, Camera3D& cam, Font font);
 
-    // ★ DrawButton を public に移動し、アクセス違反エラーを解消
     static bool DrawButton(Rectangle rect, const char* label, Font font, Color baseCol);
 
     static int itemPage, equipPage, debugPage, storageInvPage, storageBoxPage, itemSubTab;
-    static int selectedDungeonTab; // ワープタブ用
+    static int selectedDungeonTab;
+    static int questScroll; // ★追加: クエストのスクロール位置
 
     static bool showDetail;
     static ItemData focusingItem;

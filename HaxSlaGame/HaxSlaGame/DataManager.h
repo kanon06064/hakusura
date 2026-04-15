@@ -21,6 +21,7 @@ public:
     static std::map<std::string, std::string> uiStrings;
     static std::vector<Modifier> modifiers;
     static std::vector<CraftRecipe> recipes;
+    static std::vector<QuestData> quests; // ★追加：クエストデータ
 
     static std::map<std::string, GameModel> loadedModels;
 
@@ -35,11 +36,11 @@ public:
     static void LoadAllData();
     static void UnloadAllData();
 
-    // ★ 引数にダンジョンIDを追加し、ダンジョンごとに出現する敵を分ける
     static EnemyData GetRandomEnemyForFloor(int floor, int dungeonId);
     static EnemyData GetBossEnemy(int floor, int dungeonId);
 
     static ItemData GetItemConfigCopy(int id);
+    static QuestData GetQuestData(int id); // ★追加：IDからクエストを取得
 
     static Modifier GetModifier(int id);
     static int GetRandomModifierId();

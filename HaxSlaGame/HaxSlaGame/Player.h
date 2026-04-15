@@ -1,5 +1,5 @@
 #pragma once
-#include "Definitions.h" // これが必要
+#include "Definitions.h" 
 #include <vector>
 #include <string>
 
@@ -28,6 +28,10 @@ public:
     std::vector<ItemData> inventoryEquip;
     std::vector<SkillNode> skillTree;
 
+    // ★追加: クエストの進行状態
+    std::vector<PlayerQuest> activeQuests;
+    std::vector<int> clearedQuests;
+
     Player(Vector3 sp);
     void Update(Camera3D& cam, Dungeon& d, std::vector<Enemy>& enemies, EffectManager& fx, bool stop);
     void Draw(bool debug);
@@ -45,6 +49,11 @@ public:
     float GetSkillMaxCooldown(SkillType type);
 
     void RecalculateStats();
+
+    // ★追加: クエスト関連メソッド
+    void UpdateHuntQuest(int enemyId);
+    bool CheckGatherQuest(int itemId, int requiredCount);
+    void CompleteQuest(int questId);
 
     static std::string GetFullItemName(const ItemData& item);
     static float GetItemTotalAtkBonus(const ItemData& item);

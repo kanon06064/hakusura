@@ -31,7 +31,7 @@
     <None Include="modifiers.json">
       <Filter>ソース ファイル</Filter>
     </None>
-    <None Include="..\..\..\..\Users\weika\Downloads\recipes.json">
+    <None Include="quests.json">
       <Filter>ソース ファイル</Filter>
     </None>
   </ItemGroup>

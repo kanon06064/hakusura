@@ -22,6 +22,9 @@ enum EffectType { FX_SLASH, FX_THRUST, FX_SMASH, FX_HIT };
 enum RoomType { RT_NORMAL, RT_SMALL, RT_LARGE, RT_TREASURE, RT_HEAL, RT_BOSS };
 enum SkillType { SKILL_PASSIVE, SKILL_ACTIVE_DASH, SKILL_ACTIVE_SMASH, SKILL_ACTIVE_STEALTH };
 
+// ★追加: クエストの種類
+enum QuestType { QUEST_HUNT, QUEST_GATHER };
+
 // サウンド
 enum SoundType {
     SE_ATTACK,
@@ -132,13 +135,33 @@ struct SkillNode {
     float maxCooldown = 0.0f;
 };
 
+// ★追加: マスターデータとしてのクエスト定義
+struct QuestData {
+    int id = 0;
+    std::string title = "";
+    std::string description = "";
+    QuestType type = QUEST_HUNT;
+    int targetId = 0;      // 敵ID または アイテムID
+    int targetCount = 0;   // 必要数
+    int rewardGold = 0;
+    int rewardItemId = -1; // -1ならアイテム報酬なし
+    int rewardItemCount = 0;
+};
+
+// ★追加: プレイヤーの進行中クエスト情報（セーブ用）
+struct PlayerQuest {
+    int questId = 0;
+    int currentCount = 0;
+    bool isCompleted = false;
+};
+
 struct SaveHeader {
     bool exists = false;
     int playerLevel = 1;
     int floor = 0;
     std::string timestamp = "";
     bool isPortfolioMode = false;
-    int unlockedDungeonId = 0; // ★追加：どこまでダンジョンが解放されているか
+    int unlockedDungeonId = 0;
 };
 
 struct CraftMaterial {

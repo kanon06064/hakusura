@@ -125,11 +125,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <None Include="..\..\..\..\Users\weika\Downloads\recipes.json" />
     <None Include="enemies.json" />
     <None Include="items.json" />
     <None Include="modifiers.json" />
     <None Include="packages.config" />
+    <None Include="quests.json" />
     <None Include="ui_text.json" />
   </ItemGroup>
   <ItemGroup>

@@ -4,7 +4,7 @@
 #include "Dungeon.h"
 #include "DataManager.h"
 #include "AudioManager.h"
-#include "Game.h" // ★ワープ関数を呼ぶために追加
+#include "Game.h"
 #include "raymath.h"
 #include <math.h>
 
@@ -13,7 +13,8 @@ int UI::storageInvPage = 0; int UI::storageBoxPage = 0; int UI::itemSubTab = 0;
 int UI::reforgeItemIdx = -1;
 int UI::warpScroll = 0;
 int UI::craftingScroll = 0;
-int UI::selectedDungeonTab = 0; // ★追加：ワープ画面のダンジョン選択タブ
+int UI::selectedDungeonTab = 0;
+int UI::questScroll = 0;
 Vector2 UI::skillOffset = { 0.0f, 0.0f };
 Vector2 UI::mapOffset = { 0.0f, 0.0f };
 
@@ -172,7 +173,7 @@ int UI::DrawTitleScreen(Font font) {
 
         if (h.exists) {
             if (h.isPortfolioMode) {
-                label = TextFormat("Slot %d: [RUSH] Lv.%d", i, h.playerLevel);
+                label = TextFormat("Slot %d:[RUSH] Lv.%d", i, h.playerLevel);
                 c = Fade(GOLD, 0.8f);
             }
             else {
@@ -524,49 +525,155 @@ void UI::DrawCraftingMenu(Player& p, Font font, bool& isOpen) {
 void UI::DrawStorage(Player& p, Font font, bool& isOpen, std::vector<ItemData>& sItems, std::vector<ItemData>& sEquip) {
     static bool wasOpen = false;
     static float openTimer = 0.0f;
-    if (isOpen && !wasOpen) openTimer = 0.0f;
+    static int transferIdx = -1;
+    static bool isDeposit = true;
+    static int transferAmount = 1;
+    static int transferMax = 1;
+
+    if (isOpen && !wasOpen) { openTimer = 0.0f; transferIdx = -1; }
     wasOpen = isOpen;
     if (isOpen) openTimer += GetFrameTime();
-    bool locked = (openTimer < 0.3f);
+
+    bool locked = (openTimer < 0.3f) || showDetail;
+    bool modalLocked = locked || (transferIdx != -1);
 
     int sw = GetScreenWidth(), sh = GetScreenHeight();
-    DrawRectangle(50, 50, sw - 100, sh - 100, Fade(BLACK, 0.95f)); DrawRectangleLinesEx({ 50, 50, (float)sw - 100, (float)sh - 100 }, 3, GOLD);
+    DrawRectangle(50, 50, sw - 100, sh - 100, Fade(BLACK, 0.95f));
+    DrawRectangleLinesEx({ 50, 50, (float)sw - 100, (float)sh - 100 }, 3, GOLD);
     DrawTextEx(font, u8"手持ちアイテム", { 80, 120 }, 20, 1, SKYBLUE);
-    const int perP = 10; int mPInv = (int)ceil((float)p.inventoryItems.size() / perP); int mPBox = (int)ceil((float)sItems.size() / perP); if (mPInv < 1)mPInv = 1; if (mPBox < 1)mPBox = 1;
+
+    const int perP = 10;
+    int mPInv = (int)ceil((float)p.inventoryItems.size() / perP);
+    int mPBox = (int)ceil((float)sItems.size() / perP);
+    if (mPInv < 1) mPInv = 1;
+    if (mPBox < 1) mPBox = 1;
+
     for (int i = 0; i < perP; i++) {
         int idx = storageInvPage * perP + i; if (idx >= (int)p.inventoryItems.size()) break;
         Rectangle r = { 80, (float)170 + i * 42, 350, 38 };
-        DrawRectangleRec(r, showDetail ? ColorBrightness(DARKGRAY, -0.4f) : DARKGRAY);
+        DrawRectangleRec(r, modalLocked ? ColorBrightness(DARKGRAY, -0.4f) : DARKGRAY);
         DrawTextEx(font, TextFormat("%s x%d", p.inventoryItems[idx].name.c_str(), p.inventoryItems[idx].count), { r.x + 10, r.y + 10 }, 18, 1, WHITE);
 
-        if (!showDetail && !locked && CheckCollisionPointRec(GetMousePosition(), r)) {
+        if (!modalLocked && CheckCollisionPointRec(GetMousePosition(), r)) {
             if (IsMouseButtonPressed(0)) OpenDetail(p.inventoryItems[idx]);
         }
 
-        if (UI::DrawButton({ 440, r.y, 110, 38 }, u8"預ける >>", font, locked ? Fade(BLUE, 0.5f) : BLUE) && !locked) {
-            bool f = false; for (auto& si : sItems) if (si.id == p.inventoryItems[idx].id) { si.count += p.inventoryItems[idx].count; f = true; break; }
-            if (!f) sItems.push_back(p.inventoryItems[idx]); p.inventoryItems.erase(p.inventoryItems.begin() + idx); break;
+        if (UI::DrawButton({ 440, r.y, 110, 38 }, u8"預ける >>", font, modalLocked ? Fade(BLUE, 0.5f) : BLUE) && !modalLocked) {
+            transferIdx = idx;
+            isDeposit = true;
+            transferAmount = 1;
+            transferMax = p.inventoryItems[idx].count;
+            AudioManager::PlaySE(SE_CLICK);
         }
     }
-    if (UI::DrawButton({ 80, 600, 100, 30 }, "<<", font, locked ? GRAY : GRAY) && !locked && storageInvPage > 0) storageInvPage--;
-    if (UI::DrawButton({ 190, 600, 100, 30 }, ">>", font, locked ? GRAY : GRAY) && !locked && storageInvPage < mPInv - 1) storageInvPage++;
+    if (UI::DrawButton({ 80, 600, 100, 30 }, "<<", font, modalLocked ? GRAY : GRAY) && !modalLocked && storageInvPage > 0) storageInvPage--;
+    if (UI::DrawButton({ 190, 600, 100, 30 }, ">>", font, modalLocked ? GRAY : GRAY) && !modalLocked && storageInvPage < mPInv - 1) storageInvPage++;
 
     DrawTextEx(font, u8"倉庫のアイテム", { 620, 120 }, 20, 1, GREEN);
     for (int i = 0; i < perP; i++) {
         int idx = storageBoxPage * perP + i; if (idx >= (int)sItems.size()) break;
         Rectangle r = { 770, (float)170 + i * 42, 350, 38 };
-        DrawRectangleRec(r, showDetail ? ColorBrightness(DARKBLUE, -0.4f) : DARKBLUE);
+        DrawRectangleRec(r, modalLocked ? ColorBrightness(DARKBLUE, -0.4f) : DARKBLUE);
         DrawTextEx(font, TextFormat("%s x%d", sItems[idx].name.c_str(), sItems[idx].count), { r.x + 10, r.y + 10 }, 18, 1, WHITE);
 
-        if (!showDetail && !locked && CheckCollisionPointRec(GetMousePosition(), r)) {
+        if (!modalLocked && CheckCollisionPointRec(GetMousePosition(), r)) {
             if (IsMouseButtonPressed(0)) OpenDetail(sItems[idx]);
         }
 
-        if (UI::DrawButton({ 620, r.y, 110, 38 }, u8"<< 取出す", font, locked ? Fade(DARKGREEN, 0.5f) : DARKGREEN) && !locked) if (p.AddToInventory(sItems[idx])) sItems.erase(sItems.begin() + idx);
+        if (UI::DrawButton({ 620, r.y, 110, 38 }, u8"<< 取出す", font, modalLocked ? Fade(DARKGREEN, 0.5f) : DARKGREEN) && !modalLocked) {
+            transferIdx = idx;
+            isDeposit = false;
+            transferAmount = 1;
+            transferMax = sItems[idx].count;
+            AudioManager::PlaySE(SE_CLICK);
+        }
     }
-    if (UI::DrawButton({ 620, 600, 100, 30 }, "<<", font, locked ? GRAY : GRAY) && !locked && storageBoxPage > 0) storageBoxPage--;
-    if (UI::DrawButton({ 730, 600, 100, 30 }, ">>", font, locked ? GRAY : GRAY) && !locked && storageBoxPage < mPBox - 1) storageBoxPage++;
-    if (UI::DrawButton({ (float)sw - 160, 70, 100, 45 }, u8"閉じる", font, locked ? Fade(RED, 0.5f) : RED) && !locked) isOpen = false;
+    if (UI::DrawButton({ 620, 600, 100, 30 }, "<<", font, modalLocked ? GRAY : GRAY) && !modalLocked && storageBoxPage > 0) storageBoxPage--;
+    if (UI::DrawButton({ 730, 600, 100, 30 }, ">>", font, modalLocked ? GRAY : GRAY) && !modalLocked && storageBoxPage < mPBox - 1) storageBoxPage++;
+
+    if (UI::DrawButton({ (float)sw - 160, 70, 100, 45 }, u8"閉じる", font, modalLocked ? Fade(RED, 0.5f) : RED) && !modalLocked) isOpen = false;
+
+    if (transferIdx != -1 && !showDetail) {
+        DrawRectangle(0, 0, sw, sh, Fade(BLACK, 0.7f));
+        int mw = 420, mh = 260;
+        int mx = sw / 2 - mw / 2, my = sh / 2 - mh / 2;
+        DrawRectangle(mx, my, mw, mh, DARKGRAY);
+        DrawRectangleLinesEx({ (float)mx, (float)my, (float)mw, (float)mh }, 3, ORANGE);
+
+        ItemData& targetItem = isDeposit ? p.inventoryItems[transferIdx] : sItems[transferIdx];
+        const char* title = isDeposit ? u8"預ける個数を指定" : u8"取り出す個数を指定";
+
+        Vector2 tSize = MeasureTextEx(font, title, 20, 1);
+        DrawTextEx(font, title, { (float)mx + mw / 2 - tSize.x / 2, (float)my + 20 }, 20, 1, WHITE);
+
+        std::string nameStr = TextFormat("%s (所持: %d)", targetItem.name.c_str(), transferMax);
+        Vector2 nSize = MeasureTextEx(font, nameStr.c_str(), 18, 1);
+        DrawTextEx(font, nameStr.c_str(), { (float)mx + mw / 2 - nSize.x / 2, (float)my + 60 }, 18, 1, YELLOW);
+
+        if (UI::DrawButton({ (float)mx + 80, (float)my + 110, 40, 40 }, "-", font, GRAY)) {
+            if (transferAmount > 1) { transferAmount--; AudioManager::PlaySE(SE_CLICK); }
+        }
+        if (UI::DrawButton({ (float)mx + 300, (float)my + 110, 40, 40 }, "+", font, GRAY)) {
+            if (transferAmount < transferMax) { transferAmount++; AudioManager::PlaySE(SE_CLICK); }
+        }
+
+        if (UI::DrawButton({ (float)mx + 30, (float)my + 110, 40, 40 }, "-10", font, DARKGRAY)) {
+            transferAmount -= 10; if (transferAmount < 1) transferAmount = 1; AudioManager::PlaySE(SE_CLICK);
+        }
+        if (UI::DrawButton({ (float)mx + 350, (float)my + 110, 40, 40 }, "+10", font, DARKGRAY)) {
+            transferAmount += 10; if (transferAmount > transferMax) transferAmount = transferMax; AudioManager::PlaySE(SE_CLICK);
+        }
+
+        std::string amtStr = std::to_string(transferAmount);
+        Vector2 aSize = MeasureTextEx(font, amtStr.c_str(), 24, 1);
+        DrawTextEx(font, amtStr.c_str(), { (float)mx + mw / 2 - aSize.x / 2, (float)my + 118 }, 24, 1, WHITE);
+
+        if (UI::DrawButton({ (float)mx + 60, (float)my + 190, 120, 40 }, u8"決定", font, GREEN)) {
+            if (isDeposit) {
+                bool found = false;
+                for (auto& si : sItems) {
+                    if (si.id == targetItem.id) {
+                        si.count += transferAmount; found = true; break;
+                    }
+                }
+                if (!found) {
+                    ItemData copy = targetItem;
+                    copy.count = transferAmount;
+                    sItems.push_back(copy);
+                }
+                p.inventoryItems[transferIdx].count -= transferAmount;
+                if (p.inventoryItems[transferIdx].count <= 0) p.inventoryItems.erase(p.inventoryItems.begin() + transferIdx);
+            }
+            else {
+                bool found = false;
+                for (auto& pi : p.inventoryItems) {
+                    if (pi.id == targetItem.id) {
+                        pi.count += transferAmount; found = true; break;
+                    }
+                }
+                if (!found) {
+                    if (p.inventoryItems.size() < MAX_ITEM_TYPES) {
+                        ItemData copy = targetItem;
+                        copy.count = transferAmount;
+                        p.inventoryItems.push_back(copy);
+                    }
+                    else {
+                        found = true;
+                    }
+                }
+                if (found || p.inventoryItems.size() <= MAX_ITEM_TYPES) {
+                    sItems[transferIdx].count -= transferAmount;
+                    if (sItems[transferIdx].count <= 0) sItems.erase(sItems.begin() + transferIdx);
+                }
+            }
+            transferIdx = -1;
+            AudioManager::PlaySE(SE_CLICK);
+        }
+        if (UI::DrawButton({ (float)mx + 240, (float)my + 190, 120, 40 }, u8"キャンセル", font, RED)) {
+            transferIdx = -1;
+            AudioManager::PlaySE(SE_CLICK);
+        }
+    }
 
     DrawDetailWindow(font);
 }
@@ -621,7 +728,6 @@ void UI::DrawReforgeMenu(Player& p, Font font, bool& isOpen) {
     DrawDetailWindow(font);
 }
 
-// ★ ワープUIを大改修。引数に Gameクラスへのポインタ、解放状況、配列を渡す
 void UI::DrawWarpMenu(void* gamePtr, int unlockedDungeon, const std::vector<int>& maxFloors, Font font, bool& isOpen) {
     Game* game = (Game*)gamePtr;
 
@@ -638,16 +744,15 @@ void UI::DrawWarpMenu(void* gamePtr, int unlockedDungeon, const std::vector<int>
     DrawTextEx(font, u8"ダンジョン転送ポータル", { 280, 70 }, 24, 1, WHITE);
     if (UI::DrawButton({ (float)sw - 370, 65, 100, 40 }, u8"閉じる", font, locked ? Fade(RED, 0.5f) : RED) && !locked) { isOpen = false; return; }
 
-    // ダンジョン選択タブ
     const char* dNames[] = { u8"第一層 (B1~B30)", u8"第二層 (B31~B50)", u8"最深部 (B51~B100)" };
     for (int i = 0; i < 3; i++) {
         Rectangle tabR = { 280.0f + i * 210, 130, 200, 40 };
         Color c = (selectedDungeonTab == i) ? DARKBLUE : DARKGRAY;
-        if (i > unlockedDungeon) c = Fade(BLACK, 0.5f); // 未解放
+        if (i > unlockedDungeon) c = Fade(BLACK, 0.5f);
 
         if (UI::DrawButton(tabR, dNames[i], font, c) && !locked && i <= unlockedDungeon) {
             selectedDungeonTab = i;
-            warpScroll = 0; // タブ切り替えでスクロールリセット
+            warpScroll = 0;
         }
 
         if (i > unlockedDungeon) {
@@ -655,7 +760,6 @@ void UI::DrawWarpMenu(void* gamePtr, int unlockedDungeon, const std::vector<int>
         }
     }
 
-    // 選択されたダンジョンのワープ先リスト
     int maxF = maxFloors[selectedDungeonTab];
     std::vector<int> warpFloors;
     for (int i = 5; i <= maxF; i += 5) warpFloors.push_back(i);
@@ -687,6 +791,108 @@ void UI::DrawWarpMenu(void* gamePtr, int unlockedDungeon, const std::vector<int>
         if (UI::DrawButton({ 300, bottomY, 100, 30 }, "<<", font, locked ? GRAY : GRAY) && !locked && warpScroll > 0) warpScroll--;
         if (UI::DrawButton({ (float)sw - 400, bottomY, 100, 30 }, ">>", font, locked ? GRAY : GRAY) && !locked && warpScroll < maxP - 1) warpScroll++;
     }
+}
+
+// ★ 追加: クエストボードのUI描画の実装
+void UI::DrawQuestMenu(Player& p, Font font, bool& isOpen) {
+    static bool wasOpen = false;
+    static float openTimer = 0.0f;
+    if (isOpen && !wasOpen) { openTimer = 0.0f; questScroll = 0; }
+    wasOpen = isOpen;
+    if (isOpen) openTimer += GetFrameTime();
+    bool locked = (openTimer < 0.3f);
+
+    int sw = GetScreenWidth(), sh = GetScreenHeight();
+    DrawRectangle(50, 50, sw - 100, sh - 100, Fade(BLACK, 0.95f));
+    DrawRectangleLinesEx({ 50, 50, (float)sw - 100, (float)sh - 100 }, 3, GREEN);
+
+    if (UI::DrawButton({ (float)sw - 160, 60, 100, 40 }, u8"閉じる", font, locked ? Fade(RED, 0.5f) : RED) && !locked) isOpen = false;
+    DrawTextEx(font, u8"クエストボード", { 80, 70 }, 24, 1, GREEN);
+
+    const int perPage = 5;
+    int totalQuests = (int)DataManager::quests.size();
+    if (totalQuests == 0) {
+        DrawTextEx(font, u8"現在受注可能なクエストはありません。", { 80, 150 }, 20, 1, GRAY);
+        return;
+    }
+
+    int maxP = (int)ceil((float)totalQuests / perPage);
+
+    for (int i = 0; i < perPage; i++) {
+        int idx = questScroll * perPage + i;
+        if (idx >= totalQuests) break;
+
+        auto& q = DataManager::quests[idx];
+
+        float y = 130.0f + (float)i * 95.0f;
+        Rectangle qRect = { 80, y, (float)sw - 200, 85 };
+        DrawRectangleRec(qRect, Fade(DARKGRAY, 0.5f));
+
+        DrawTextEx(font, q.title.c_str(), { 90, y + 10 }, 22, 1, GOLD);
+        DrawTextEx(font, q.description.c_str(), { 90, y + 35 }, 16, 1, WHITE);
+
+        bool isCleared = false;
+        for (int cid : p.clearedQuests) { if (cid == q.id) { isCleared = true; break; } }
+
+        int activeIdx = -1;
+        for (int j = 0; j < (int)p.activeQuests.size(); j++) {
+            if (p.activeQuests[j].questId == q.id) { activeIdx = j; break; }
+        }
+
+        Rectangle btnRect = { (float)sw - 220, y + 20, 100, 45 };
+
+        if (isCleared) {
+            DrawTextEx(font, u8"クリア済み", { (float)sw - 200, y + 30 }, 20, 1, GRAY);
+        }
+        else if (activeIdx != -1) {
+            auto& pq = p.activeQuests[activeIdx];
+            if (q.type == QUEST_HUNT) {
+                DrawTextEx(font, TextFormat(u8"討伐: %d / %d", pq.currentCount, q.targetCount), { 90, y + 60 }, 16, 1, SKYBLUE);
+                if (pq.isCompleted) {
+                    if (UI::DrawButton(btnRect, u8"報告する", font, locked ? Fade(ORANGE, 0.5f) : ORANGE) && !locked) {
+                        p.CompleteQuest(q.id);
+                        AudioManager::PlaySE(SE_CLICK);
+                    }
+                }
+                else {
+                    DrawTextEx(font, u8"進行中", { (float)sw - 200, y + 30 }, 20, 1, YELLOW);
+                }
+            }
+            else if (q.type == QUEST_GATHER) {
+                int currentInvCount = 0;
+                for (const auto& it : p.inventoryItems) {
+                    if (it.id == q.targetId) currentInvCount += it.count;
+                }
+                DrawTextEx(font, TextFormat(u8"収集: %d / %d", currentInvCount, q.targetCount), { 90, y + 60 }, 16, 1, GREEN);
+
+                if (currentInvCount >= q.targetCount) {
+                    if (UI::DrawButton(btnRect, u8"報告する", font, locked ? Fade(ORANGE, 0.5f) : ORANGE) && !locked) {
+                        p.CompleteQuest(q.id);
+                        AudioManager::PlaySE(SE_CLICK);
+                    }
+                }
+                else {
+                    DrawTextEx(font, u8"進行中", { (float)sw - 200, y + 30 }, 20, 1, YELLOW);
+                }
+            }
+        }
+        else {
+            std::string reqStr = (q.type == QUEST_HUNT) ? u8"討伐" : u8"収集";
+            DrawTextEx(font, TextFormat(u8"目標: %s %d", reqStr.c_str(), q.targetCount), { 90, y + 60 }, 16, 1, LIGHTGRAY);
+
+            if (UI::DrawButton(btnRect, u8"受注する", font, locked ? Fade(BLUE, 0.5f) : BLUE) && !locked) {
+                PlayerQuest newQ;
+                newQ.questId = q.id;
+                newQ.currentCount = 0;
+                newQ.isCompleted = false;
+                p.activeQuests.push_back(newQ);
+                AudioManager::PlaySE(SE_CLICK);
+            }
+        }
+    }
+
+    if (UI::DrawButton({ 80, 620, 100, 30 }, "<<", font, locked ? GRAY : GRAY) && !locked && questScroll > 0) questScroll--;
+    if (UI::DrawButton({ 200, 620, 100, 30 }, ">>", font, locked ? GRAY : GRAY) && !locked && questScroll < maxP - 1) questScroll++;
 }
 
 void UI::DrawLogs(std::vector<GameLog>& logs, Player& p, Camera3D& cam, Font font) {
