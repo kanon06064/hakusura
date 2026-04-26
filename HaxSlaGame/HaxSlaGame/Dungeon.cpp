@@ -71,7 +71,7 @@ void Dungeon::Generate(bool homeMode, int floor) {
 
         stairsDownPos = centerRoom.GetCenter();
         stairsDownPos.x += 4.0f;
-        stairsDownPos.y = 0.0f; // 床の高さを基準にする
+        stairsDownPos.y = 0.0f;
 
         craftStationPos = topRoom.GetCenter();
         healStationPos = bottomRoom.GetCenter();
@@ -106,7 +106,7 @@ void Dungeon::GenerateRestFloor() {
     DigCorridor(r1.GetCenter().x / TILE_SIZE, r1.GetCenter().z / TILE_SIZE, r2.GetCenter().x / TILE_SIZE, r2.GetCenter().z / TILE_SIZE);
     DigCorridor(r2.GetCenter().x / TILE_SIZE, r2.GetCenter().z / TILE_SIZE, r3.GetCenter().x / TILE_SIZE, r3.GetCenter().z / TILE_SIZE);
     stairsUpPos = r1.GetCenter(); stairsUpPos.y = 0.0f; portalPos = Vector3Add(stairsUpPos, { 3,0,0 });
-    healStationPos = r2.GetCenter(); stairsDownPos = r3.GetCenter(); stairsDownPos.y = 0.0f;
+    healStationPos = r2.GetCenter(); stairsDownPos = r3.GetCenter(); stairsDownPos.y = 0.0f; // ★ダンジョン内でも高さを0.0fに統一
 }
 void Dungeon::GenerateBossFloor() {
     int cx = currentWidth / 2; int cy = currentHeight / 2;
@@ -115,7 +115,7 @@ void Dungeon::GenerateBossFloor() {
     for (auto& r : rooms) for (int ry = r.y; ry < r.y + r.height; ry++) for (int rx = r.x; rx < r.x + r.width; rx++) map[rx][ry] = 0;
     DigCorridor(r1.GetCenter().x / TILE_SIZE, r1.GetCenter().z / TILE_SIZE, r2.GetCenter().x / TILE_SIZE, r2.GetCenter().z / TILE_SIZE);
     stairsUpPos = r1.GetCenter(); stairsUpPos.y = 0.0f; healStationPos = Vector3Add(stairsUpPos, { -3,0,0 }); portalPos = Vector3Add(stairsUpPos, { 3,0,0 });
-    bossSpawnPos = r2.GetCenter(); stairsDownPos = r2.GetCenter(); stairsDownPos.y = 0.0f;
+    bossSpawnPos = r2.GetCenter(); stairsDownPos = r2.GetCenter(); stairsDownPos.y = 0.0f; // ★ダンジョン内でも高さを0.0fに統一
 }
 void Dungeon::GenerateNormalFloor(int floor) {
     std::vector<RoomType> typeQueue = { RT_SMALL, RT_NORMAL, RT_LARGE, RT_TREASURE };
@@ -138,7 +138,10 @@ void Dungeon::GenerateNormalFloor(int floor) {
     }
     std::vector<int> v; for (int i = 0; i < (int)rooms.size(); i++) if (rooms[i].type != RT_TREASURE) v.push_back(i);
     if (v.size() < 2) { v.clear(); for (int i = 0; i < (int)rooms.size(); i++)v.push_back(i); }
-    if (v.size() >= 1) { stairsUpPos = rooms[v[0]].GetCenter(); stairsUpPos.y = 0.0f; stairsDownPos = rooms[v.size() > 1 ? v.back() : v[0]].GetCenter(); stairsDownPos.y = 0.0f; }
+    if (v.size() >= 1) {
+        stairsUpPos = rooms[v[0]].GetCenter(); stairsUpPos.y = 0.0f; // ★ダンジョン内でも高さを0.0fに統一
+        stairsDownPos = rooms[v.size() > 1 ? v.back() : v[0]].GetCenter(); stairsDownPos.y = 0.0f;
+    }
 }
 void Dungeon::DigCorridor(int x1, int y1, int x2, int y2) {
     x1 = (int)fmaxf(0, fminf((float)x1, (float)currentWidth - 1)); x2 = (int)fmaxf(0, fminf((float)x2, (float)currentWidth - 1));
@@ -160,13 +163,18 @@ void Dungeon::Draw() {
             DrawCube(pos, TILE_SIZE, 2.0f, TILE_SIZE, GRAY);
         }
         else {
-            // ★ 床のくり抜き判定（階段の真上には青い床を描画しない）
             bool drawFloor = true;
 
-            if (stairsDownPos.x != -999 && fabs(pos.x - stairsDownPos.x) < 0.5f && fabs(pos.z - stairsDownPos.z) < 0.5f) {
+            // ★ 床のくり抜き判定を強化（最も近いタイルを確実に計算してくり抜く）
+            float downTargetX = roundf(stairsDownPos.x / TILE_SIZE) * TILE_SIZE;
+            float downTargetZ = roundf(stairsDownPos.z / TILE_SIZE) * TILE_SIZE;
+            float upTargetX = roundf(stairsUpPos.x / TILE_SIZE) * TILE_SIZE;
+            float upTargetZ = roundf(stairsUpPos.z / TILE_SIZE) * TILE_SIZE;
+
+            if (stairsDownPos.x != -999 && fabs(pos.x - downTargetX) < 0.1f && fabs(pos.z - downTargetZ) < 0.1f) {
                 drawFloor = false;
             }
-            if (stairsUpPos.x != -999 && fabs(pos.x - stairsUpPos.x) < 0.5f && fabs(pos.z - stairsUpPos.z) < 0.5f) {
+            if (stairsUpPos.x != -999 && fabs(pos.x - upTargetX) < 0.1f && fabs(pos.z - upTargetZ) < 0.1f) {
                 drawFloor = false;
             }
 
