@@ -34,51 +34,44 @@ void Dungeon::Generate(bool homeMode, int floor) {
     if (homeMode) {
         int cx = 30, cy = 30;
 
-        // 1. 中央部屋 (ポータル, ストレージ, 階段)
         Room centerRoom = { cx - 5, cy - 5, 10, 10, RT_NORMAL };
         rooms.push_back(centerRoom);
         for (int ry = centerRoom.y; ry < centerRoom.y + centerRoom.height; ry++)
             for (int rx = centerRoom.x; rx < centerRoom.x + centerRoom.width; rx++) map[rx][ry] = 0;
 
-        // 2. 上の部屋 (クラフト)
         Room topRoom = { cx - 4, cy - 18, 8, 8, RT_NORMAL };
         rooms.push_back(topRoom);
         for (int ry = topRoom.y; ry < topRoom.y + topRoom.height; ry++)
             for (int rx = topRoom.x; rx < topRoom.x + topRoom.width; rx++) map[rx][ry] = 0;
         DigCorridor(cx, cy, cx, cy - 14);
 
-        // 3. 下の部屋 (回復)
         Room bottomRoom = { cx - 4, cy + 10, 8, 8, RT_NORMAL };
         rooms.push_back(bottomRoom);
         for (int ry = bottomRoom.y; ry < bottomRoom.y + bottomRoom.height; ry++)
             for (int rx = bottomRoom.x; rx < bottomRoom.x + bottomRoom.width; rx++) map[rx][ry] = 0;
         DigCorridor(cx, cy, cx, cy + 14);
 
-        // 4. 左の部屋 (リフォージ)
         Room leftRoom = { cx - 18, cy - 4, 8, 8, RT_NORMAL };
         rooms.push_back(leftRoom);
         for (int ry = leftRoom.y; ry < leftRoom.y + leftRoom.height; ry++)
             for (int rx = leftRoom.x; rx < leftRoom.x + leftRoom.width; rx++) map[rx][ry] = 0;
         DigCorridor(cx, cy, cx - 14, cy);
 
-        // 5. 右の部屋 (クエストボード)
         Room rightRoom = { cx + 10, cy - 4, 8, 8, RT_NORMAL };
         rooms.push_back(rightRoom);
         for (int ry = rightRoom.y; ry < rightRoom.y + rightRoom.height; ry++)
             for (int rx = rightRoom.x; rx < rightRoom.x + rightRoom.width; rx++) map[rx][ry] = 0;
         DigCorridor(cx, cy, cx + 14, cy);
 
-        // 施設の配置
         portalPos = centerRoom.GetCenter();
-        portalPos.z -= 4.0f; // 奥
+        portalPos.z -= 4.0f;
 
         storageBoxPos = centerRoom.GetCenter();
-        storageBoxPos.x -= 4.0f; // 左
+        storageBoxPos.x -= 4.0f;
 
-        // ★追加：ダンジョンの第1層へ向かう下り階段を配置
         stairsDownPos = centerRoom.GetCenter();
-        stairsDownPos.x += 4.0f; // 右
-        stairsDownPos.y = 0.1f;
+        stairsDownPos.x += 4.0f;
+        stairsDownPos.y = 0.0f; // 床の高さを基準にする
 
         craftStationPos = topRoom.GetCenter();
         healStationPos = bottomRoom.GetCenter();
@@ -112,8 +105,8 @@ void Dungeon::GenerateRestFloor() {
     for (auto& r : rooms) for (int ry = r.y; ry < r.y + r.height; ry++) for (int rx = r.x; rx < r.x + r.width; rx++) map[rx][ry] = 0;
     DigCorridor(r1.GetCenter().x / TILE_SIZE, r1.GetCenter().z / TILE_SIZE, r2.GetCenter().x / TILE_SIZE, r2.GetCenter().z / TILE_SIZE);
     DigCorridor(r2.GetCenter().x / TILE_SIZE, r2.GetCenter().z / TILE_SIZE, r3.GetCenter().x / TILE_SIZE, r3.GetCenter().z / TILE_SIZE);
-    stairsUpPos = r1.GetCenter(); stairsUpPos.y = 0.1f; portalPos = Vector3Add(stairsUpPos, { 3,0,0 });
-    healStationPos = r2.GetCenter(); stairsDownPos = r3.GetCenter(); stairsDownPos.y = 0.1f;
+    stairsUpPos = r1.GetCenter(); stairsUpPos.y = 0.0f; portalPos = Vector3Add(stairsUpPos, { 3,0,0 });
+    healStationPos = r2.GetCenter(); stairsDownPos = r3.GetCenter(); stairsDownPos.y = 0.0f;
 }
 void Dungeon::GenerateBossFloor() {
     int cx = currentWidth / 2; int cy = currentHeight / 2;
@@ -121,8 +114,8 @@ void Dungeon::GenerateBossFloor() {
     rooms.push_back(r1); rooms.push_back(r2);
     for (auto& r : rooms) for (int ry = r.y; ry < r.y + r.height; ry++) for (int rx = r.x; rx < r.x + r.width; rx++) map[rx][ry] = 0;
     DigCorridor(r1.GetCenter().x / TILE_SIZE, r1.GetCenter().z / TILE_SIZE, r2.GetCenter().x / TILE_SIZE, r2.GetCenter().z / TILE_SIZE);
-    stairsUpPos = r1.GetCenter(); stairsUpPos.y = 0.1f; healStationPos = Vector3Add(stairsUpPos, { -3,0,0 }); portalPos = Vector3Add(stairsUpPos, { 3,0,0 });
-    bossSpawnPos = r2.GetCenter(); stairsDownPos = r2.GetCenter(); stairsDownPos.y = 0.1f;
+    stairsUpPos = r1.GetCenter(); stairsUpPos.y = 0.0f; healStationPos = Vector3Add(stairsUpPos, { -3,0,0 }); portalPos = Vector3Add(stairsUpPos, { 3,0,0 });
+    bossSpawnPos = r2.GetCenter(); stairsDownPos = r2.GetCenter(); stairsDownPos.y = 0.0f;
 }
 void Dungeon::GenerateNormalFloor(int floor) {
     std::vector<RoomType> typeQueue = { RT_SMALL, RT_NORMAL, RT_LARGE, RT_TREASURE };
@@ -145,7 +138,7 @@ void Dungeon::GenerateNormalFloor(int floor) {
     }
     std::vector<int> v; for (int i = 0; i < (int)rooms.size(); i++) if (rooms[i].type != RT_TREASURE) v.push_back(i);
     if (v.size() < 2) { v.clear(); for (int i = 0; i < (int)rooms.size(); i++)v.push_back(i); }
-    if (v.size() >= 1) { stairsUpPos = rooms[v[0]].GetCenter(); stairsUpPos.y = 0.1f; stairsDownPos = rooms[v.size() > 1 ? v.back() : v[0]].GetCenter(); stairsDownPos.y = 0.1f; }
+    if (v.size() >= 1) { stairsUpPos = rooms[v[0]].GetCenter(); stairsUpPos.y = 0.0f; stairsDownPos = rooms[v.size() > 1 ? v.back() : v[0]].GetCenter(); stairsDownPos.y = 0.0f; }
 }
 void Dungeon::DigCorridor(int x1, int y1, int x2, int y2) {
     x1 = (int)fmaxf(0, fminf((float)x1, (float)currentWidth - 1)); x2 = (int)fmaxf(0, fminf((float)x2, (float)currentWidth - 1));
@@ -162,7 +155,25 @@ void Dungeon::Draw() {
     for (int y = 0; y < currentHeight; y++) for (int x = 0; x < currentWidth; x++) {
         if (!discovered[x][y]) continue; if (map[x][y] == 2) continue;
         Vector3 pos = { (float)x * TILE_SIZE, 0.0f, (float)y * TILE_SIZE };
-        if (map[x][y] == 1) DrawCube(pos, TILE_SIZE, 2.0f, TILE_SIZE, GRAY); else DrawPlane(pos, { TILE_SIZE, TILE_SIZE }, isHome ? DARKBLUE : DARKGREEN);
+
+        if (map[x][y] == 1) {
+            DrawCube(pos, TILE_SIZE, 2.0f, TILE_SIZE, GRAY);
+        }
+        else {
+            // ★ 床のくり抜き判定（階段の真上には青い床を描画しない）
+            bool drawFloor = true;
+
+            if (stairsDownPos.x != -999 && fabs(pos.x - stairsDownPos.x) < 0.5f && fabs(pos.z - stairsDownPos.z) < 0.5f) {
+                drawFloor = false;
+            }
+            if (stairsUpPos.x != -999 && fabs(pos.x - stairsUpPos.x) < 0.5f && fabs(pos.z - stairsUpPos.z) < 0.5f) {
+                drawFloor = false;
+            }
+
+            if (drawFloor) {
+                DrawPlane(pos, { TILE_SIZE, TILE_SIZE }, isHome ? DARKBLUE : DARKGREEN);
+            }
+        }
     }
 
     auto drawEnv = [](const std::string& key, Vector3 pos) -> bool {
