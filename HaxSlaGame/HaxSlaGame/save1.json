@@ -1,4 +1,5 @@
 {
+    "activeQuests": [],
     "armor": [
         {
             "atkBonus": 0.0,
@@ -71,6 +72,8 @@
             "weaponSubtype": 4
         }
     ],
+    "clearedQuests": [],
+    "currentDungeonId": 0,
     "equipped0": {
         "atkBonus": 140.0,
         "count": 1,
@@ -328,7 +331,12 @@
             "weaponSubtype": -1
         }
     ],
-    "maxReachedFloor": 100,
+    "isPortfolioMode": false,
+    "maxFloors": [
+        100,
+        0,
+        0
+    ],
     "player": {
         "attackPower": 104.0,
         "defense": 114.0,
@@ -342,6 +350,7 @@
     },
     "storageEquip": [],
     "storageItems": [],
+    "unlockedDungeonId": 0,
     "unlockedSkills": [
         0,
         1,

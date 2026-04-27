@@ -23,7 +23,12 @@ Game::Game()
     DataManager::LoadAllData();
     maxFloors = { 0, 0, 0 };
 
-    std::vector<int> cps; for (int i = 32; i < 127; i++) cps.push_back(i); for (int i = 0x3000; i <= 0x30FF; i++) cps.push_back(i); for (int i = 0x4E00; i <= 0x9FAF; i++) cps.push_back(i);
+    std::vector<int> cps;
+    for (int i = 32; i < 127; i++) cps.push_back(i);
+    for (int i = 0x3000; i <= 0x30FF; i++) cps.push_back(i);
+    for (int i = 0x4E00; i <= 0x9FAF; i++) cps.push_back(i);
+    for (int i = 0xFF00; i <= 0xFFEF; i++) cps.push_back(i);
+
     font = LoadFontEx("jp_font.ttf", 32, cps.data(), (int)cps.size());
     if (font.texture.id == 0) font = LoadFontEx("C:/Windows/Fonts/msgothic.ttc", 32, cps.data(), (int)cps.size());
     if (font.texture.id == 0) font = GetFontDefault(); else SetTextureFilter(font.texture, TEXTURE_FILTER_BILINEAR);
@@ -269,8 +274,41 @@ void Game::Update() {
     bool stopPlayer = showMenu || showPrompt || showStorage || showReforgeMenu || showWarpMenu || showCraftMenu || showQuestMenu;
     if (UI::showDetail) stopPlayer = true;
 
-    Vector3 offset = Vector3Subtract(camera.position, camera.target); camera.target = player->position; camera.position = Vector3Add(player->position, offset);
-    if (!stopPlayer) { if (IsMouseButtonDown(1) || GetMouseWheelMove() != 0) UpdateCamera(&camera, CAMERA_THIRD_PERSON); }
+    Vector3 offset = Vector3Subtract(camera.position, camera.target);
+    camera.target = player->position;
+    camera.position = Vector3Add(player->position, offset);
+
+    if (!stopPlayer) {
+        if (IsMouseButtonDown(1) || GetMouseWheelMove() != 0) {
+            UpdateCamera(&camera, CAMERA_THIRD_PERSON);
+
+            Vector3 camOffset = Vector3Subtract(camera.position, camera.target);
+            float dist = Vector3Length(camOffset);
+            float horizontalDist = sqrtf(camOffset.x * camOffset.x + camOffset.z * camOffset.z);
+            float pitch = atan2f(camOffset.y, horizontalDist);
+
+            float minPitch = 20.0f * DEG2RAD;
+            float maxPitch = 75.0f * DEG2RAD;
+
+            bool camChanged = false;
+            if (pitch < minPitch) { pitch = minPitch; camChanged = true; }
+            if (pitch > maxPitch) { pitch = maxPitch; camChanged = true; }
+
+            float minDist = 5.0f;
+            float maxDist = 30.0f;
+            if (dist < minDist) { dist = minDist; camChanged = true; }
+            if (dist > maxDist) { dist = maxDist; camChanged = true; }
+
+            if (camChanged) {
+                float yaw = atan2f(camOffset.x, camOffset.z);
+                float newHorizontal = dist * cosf(pitch);
+                camOffset.y = dist * sinf(pitch);
+                camOffset.x = newHorizontal * sinf(yaw);
+                camOffset.z = newHorizontal * cosf(yaw);
+                camera.position = Vector3Add(camera.target, camOffset);
+            }
+        }
+    }
 
     player->Update(camera, dungeon, enemies, fxManager, stopPlayer);
     fxManager.Update(dt, dungeon); fxManager.CheckProjectileCollisions(enemies, *player, dungeon); dungeon.UpdateVisibility(player->position);
@@ -296,13 +334,38 @@ void Game::Update() {
                         float chance = cfg.dropChance;
                         if ((float)GetRandomValue(0, 10000) / 10000.0f <= chance) {
                             if (cfg.type == "EQUIP" || cfg.type == "ARMOR") cfg.modifierId = DataManager::GetRandomModifierId();
-                            droppedItems.push_back({ enemies[i].position, cfg });
+
+                            // ★修正: ドロップアイテムの物理初期パラメータを設定
+                            DroppedItem di;
+                            di.pos = enemies[i].position;
+                            di.pos.y += 0.5f; // 敵の腰の高さから出現
+                            di.data = cfg;
+                            // 上方向 + ランダムなXY方向へ飛び出す
+                            di.vel = { (float)GetRandomValue(-20, 20) * 0.01f, 0.4f, (float)GetRandomValue(-20, 20) * 0.01f };
+                            di.rotation = (float)GetRandomValue(0, 360);
+
+                            droppedItems.push_back(di);
                         }
                     }
                 }
                 enemies[i].StartDeath();
             }
             if (enemies[i].isDead) { enemies.erase(enemies.begin() + i); }
+        }
+
+        // ★追加: ドロップアイテムの物理挙動を更新（放物線とバウンド）
+        for (auto& item : droppedItems) {
+            item.pos = Vector3Add(item.pos, item.vel);
+            item.vel.y -= 2.0f * dt; // 重力
+            if (item.pos.y <= 0.2f) { // 地面に接触
+                item.pos.y = 0.2f;
+                item.vel.y *= -0.5f; // バウンド
+                item.vel.x *= 0.8f;  // 摩擦
+                item.vel.z *= 0.8f;
+                if (fabsf(item.vel.y) < 0.05f) item.vel.y = 0;
+            }
+            // 空中や移動中は回転させる
+            item.rotation += 100.0f * dt * (fabsf(item.vel.x) + fabsf(item.vel.z));
         }
 
         if (isPortfolioMode) {
@@ -343,7 +406,7 @@ void Game::Update() {
         for (int i = (int)droppedItems.size() - 1; i >= 0; i--) {
             if (Vector3Distance(player->position, droppedItems[i].pos) < 1.0f) {
                 if (player->AddToInventory(droppedItems[i].data)) {
-                    logs.insert(logs.begin(), { "Picked up: " + Player::GetFullItemName(droppedItems[i].data), 4.0f, WHITE });
+                    UI::AddSystemLog(Player::GetFullItemName(droppedItems[i].data) + u8" を入手した", Player::GetItemRarityColor(droppedItems[i].data)); // ★レアリティ色でログ
                     droppedItems.erase(droppedItems.begin() + i);
                     AudioManager::PlaySE(SE_CLICK);
                 }
@@ -425,10 +488,31 @@ void Game::Draw() {
 
         fxManager.Draw();
 
+        // ★修正: アイテムのドロップ描画（回転とレアリティの光の柱）
         for (auto& item : droppedItems) {
             if (!debugMode && !dungeon.IsDiscovered(item.pos.x, item.pos.z)) continue;
-            DrawCube(item.pos, 0.5f, 0.4f, 0.5f, YELLOW); DrawCubeWires(item.pos, 0.5f, 0.4f, 0.5f, ORANGE);
+
+            Color rarityCol = Player::GetItemRarityColor(item.data);
+
+            rlPushMatrix();
+            rlTranslatef(item.pos.x, item.pos.y, item.pos.z);
+            rlRotatef(item.rotation, 0, 1, 0); // 回転
+
+            // アイテム本体を描画
+            DrawCube({ 0,0,0 }, 0.5f, 0.4f, 0.5f, rarityCol);
+            DrawCubeWires({ 0,0,0 }, 0.5f, 0.4f, 0.5f, WHITE);
+            rlPopMatrix();
+
+            // レアリティに応じた光の柱を描画（装備品のみ）
+            if (item.data.type == "EQUIP" || item.data.type == "ARMOR") {
+                Color pillarCol = rarityCol;
+                // 時間でふわふわ明滅させる
+                float alpha = (sinf(GetTime() * 5.0f) * 0.5f + 0.5f) * 0.5f + 0.1f;
+                pillarCol.a = (unsigned char)(255 * alpha);
+                DrawCylinder(item.pos, 0.15f, 0.15f, 5.0f, 8, pillarCol);
+            }
         }
+
         for (auto& e : enemies) if (debugMode || dungeon.IsDiscovered(e.position.x, e.position.z)) e.Draw(debugMode, camera, font, player->position);
 
         player->Draw(debugMode);
@@ -441,18 +525,24 @@ void Game::Draw() {
         UI::DrawLogs(logs, *player, camera, font);
         UI::DrawNearbyItems(*player, droppedItems, dungeon, camera, font);
 
+        UI::UpdateSystemLogs(GetFrameTime());
+        UI::DrawSystemLogs(font);
+
         if (showMenu) {
-            UI::DrawMenu(*player, dungeon, currentTab, font);
-            if (currentTab == SYSTEM_TAB) {
-                Rectangle saveBtn = { 120, 200, 200, 60 };
-                if (!UI::showDetail && CheckCollisionPointRec(GetMousePosition(), saveBtn) && IsMouseButtonPressed(0) && dungeon.isHome) { SaveCurrentSlot(); logs.insert(logs.begin(), { "GAME SAVED!", 3.0f, GREEN }); }
-                Rectangle titleBtn = { 120, 300, 200, 60 };
-                if (!UI::showDetail && CheckCollisionPointRec(GetMousePosition(), titleBtn) && IsMouseButtonPressed(0)) {
-                    state = STATE_TITLE;
-                    isPortfolioMode = false;
-                }
+            int menuEvent = UI::DrawMenu(*player, dungeon, currentTab, font);
+
+            if (menuEvent == 1) {
+                SaveCurrentSlot();
+                UI::AddSystemLog("GAME SAVED!", GREEN);
+            }
+            else if (menuEvent == 2) {
+                state = STATE_TITLE;
+                isPortfolioMode = false;
+                showMenu = false;
+                AudioManager::PlayBGM(BGM_TITLE);
             }
         }
+
         if (showStorage) UI::DrawStorage(*player, font, showStorage, storageItems, storageEquip);
         if (showReforgeMenu) UI::DrawReforgeMenu(*player, font, showReforgeMenu);
 
@@ -462,7 +552,6 @@ void Game::Draw() {
 
         if (showCraftMenu) UI::DrawCraftingMenu(*player, font, showCraftMenu);
 
-        // ★ UI側のメソッドを呼び出してクエストメニューを描画
         if (showQuestMenu) {
             UI::DrawQuestMenu(*player, font, showQuestMenu);
         }
@@ -607,7 +696,18 @@ void Game::NextFloor() {
             ItemData item;
             if (!candidateItemIds.empty()) { int rndIdx = GetRandomValue(0, (int)candidateItemIds.size() - 1); item = DataManager::GetItemConfigCopy(candidateItemIds[rndIdx]); }
             if (item.id == -1 && !DataManager::itemConfigs.empty()) { int rndId = GetRandomValue(0, (int)DataManager::itemConfigs.size() - 1); item = DataManager::itemConfigs[rndId]; }
-            if (item.id != -1) { if (item.type == "EQUIP" || item.type == "ARMOR") item.modifierId = DataManager::GetRandomModifierId(); droppedItems.push_back({ pos, item }); }
+
+            if (item.id != -1) {
+                if (item.type == "EQUIP" || item.type == "ARMOR") item.modifierId = DataManager::GetRandomModifierId();
+                // 初期配置アイテムも物理パラメーターを持たせる
+                DroppedItem di;
+                di.pos = pos;
+                di.pos.y = 0.2f;
+                di.vel = { 0,0,0 };
+                di.rotation = (float)GetRandomValue(0, 360);
+                di.data = item;
+                droppedItems.push_back(di);
+            }
         }
     }
 }

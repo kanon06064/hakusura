@@ -35,5 +35,17 @@
   "DASH": "ダッシュ",
   "SMASH": "強撃",
   "HIDE": "隠密",
-  "STEALTH": "ステルス"
+  "STEALTH": "ステルス",
+  "LOG_LEVELUP": "レベルアップ！ ステータスが上昇した",
+  "LOG_ITEM_USE": "%s を使用した",
+  "LOG_QUEST_OBJECTIVE": "クエストの目標を達成した！",
+  "LOG_QUEST_REPORT": "%s を報告した！",
+  "LOG_REWARD_GOLD": "報酬: %d G",
+  "LOG_REWARD_ITEM": "報酬: %s x%d",
+  "LOG_DMG_DEALT": "%s に %d のダメージ！",
+  "LOG_CRIT_DEALT": "%s に %d のクリティカルダメージ！",
+  "LOG_BOSS_COMBO": "ボスの連続攻撃！ %d のダメージを受けた！",
+  "LOG_BOSS_DASH": "ボスの突進攻撃！ %d のダメージを受けた！",
+  "LOG_BOSS_AOE": "ボスの範囲攻撃！ %d の大ダメージを受けた！",
+  "LOG_DMG_TAKEN": "%s の攻撃！ %d のダメージを受けた！"
 }

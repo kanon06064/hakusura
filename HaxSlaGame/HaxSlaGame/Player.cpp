@@ -4,6 +4,7 @@
 #include "DataManager.h"
 #include "EffectManager.h"
 #include "AudioManager.h"
+#include "UI.h" 
 #include "raymath.h"
 #include <math.h>
 
@@ -38,6 +39,39 @@ std::string Player::GetFullItemName(const ItemData& item) {
 float Player::GetItemTotalAtkBonus(const ItemData& item) {
 	if (item.id == -1) return 0.0f;
 	return item.atkBonus + DataManager::GetModifier(item.modifierId).atk;
+}
+
+// ★追加：アイテムのレアリティ判定ロジック
+Color Player::GetItemRarityColor(const ItemData& item) {
+	if (item.id == -1) return DARKGRAY;
+	if (item.type == "MATERIAL") return LIGHTGRAY;
+	if (item.type == "CONSUMABLE") return LIME;
+
+	int tier = 0;
+
+	// 武器のID帯判定
+	if (item.id >= 100 && item.id < 200) tier = 1;
+	else if (item.id >= 200 && item.id < 300) tier = 2;
+	else if (item.id >= 300 && item.id < 400) tier = 3;
+	else if (item.id >= 400 && item.id < 500) tier = 4;
+	// 防具のID帯判定
+	else if (item.id >= 500 && item.id < 510) tier = 1;
+	else if (item.id >= 510 && item.id < 520) tier = 2;
+	else if (item.id >= 520 && item.id < 530) tier = 3;
+	else if (item.id >= 530 && item.id < 540) tier = 4;
+	else if (item.id >= 540 && item.id < 550) tier = 5;
+
+	// エンチャント（付与効果）が付いている場合はレアリティが1段階格上げされる
+	if (item.modifierId != 0 && tier < 5) tier++;
+
+	switch (tier) {
+	case 1: return WHITE;      // Common
+	case 2: return GREEN;      // Magic
+	case 3: return SKYBLUE;    // Rare
+	case 4: return PURPLE;     // Epic
+	case 5: return GOLD;       // Legendary
+	default: return WHITE;
+	}
 }
 
 void Player::RecalculateStats() {
@@ -114,6 +148,7 @@ void Player::LevelUp(EffectManager& fx) {
 	skillPoints += 3; fx.SpawnDamageText(position, 999);
 	AudioManager::PlaySE(SE_LEVELUP);
 	RecalculateStats(); hp = maxHp;
+	UI::AddSystemLog(DataManager::uiStrings["LOG_LEVELUP"], YELLOW);
 }
 
 bool Player::AddToInventory(ItemData item) {
@@ -131,6 +166,7 @@ void Player::UseItem(int idx) {
 	if (idx < 0 || idx >= (int)inventoryItems.size()) return;
 	if (inventoryItems[idx].type == "CONSUMABLE") {
 		hp = fminf(maxHp, hp + inventoryItems[idx].heal);
+		UI::AddSystemLog(TextFormat(DataManager::uiStrings["LOG_ITEM_USE"].c_str(), inventoryItems[idx].name.c_str()), SKYBLUE);
 		inventoryItems[idx].count--;
 		if (inventoryItems[idx].count <= 0) inventoryItems.erase(inventoryItems.begin() + idx);
 		AudioManager::PlaySE(SE_HEAL);
@@ -177,7 +213,6 @@ void Player::UnequipArmor(int slot) {
 	RecalculateStats();
 }
 
-// ★追加: 敵討伐時のクエスト進行
 void Player::UpdateHuntQuest(int enemyId) {
 	for (auto& q : activeQuests) {
 		if (!q.isCompleted) {
@@ -187,14 +222,14 @@ void Player::UpdateHuntQuest(int enemyId) {
 				if (q.currentCount >= data.targetCount) {
 					q.currentCount = data.targetCount;
 					q.isCompleted = true;
-					AudioManager::PlaySE(SE_LEVELUP); // クエスト達成音の代用
+					AudioManager::PlaySE(SE_LEVELUP);
+					UI::AddSystemLog(DataManager::uiStrings["LOG_QUEST_OBJECTIVE"], GREEN);
 				}
 			}
 		}
 	}
 }
 
-// ★追加: 納品クエストの条件チェック
 bool Player::CheckGatherQuest(int itemId, int requiredCount) {
 	int count = 0;
 	for (const auto& item : inventoryItems) {
@@ -203,17 +238,22 @@ bool Player::CheckGatherQuest(int itemId, int requiredCount) {
 	return count >= requiredCount;
 }
 
-// ★追加: クエスト完了＆報酬受け取り処理
 void Player::CompleteQuest(int questId) {
 	for (auto it = activeQuests.begin(); it != activeQuests.end(); ++it) {
 		if (it->questId == questId) {
 			QuestData data = DataManager::GetQuestData(questId);
 
 			gold += data.rewardGold;
+			UI::AddSystemLog(TextFormat(DataManager::uiStrings["LOG_QUEST_REPORT"].c_str(), data.title.c_str()), YELLOW);
+			if (data.rewardGold > 0) {
+				UI::AddSystemLog(TextFormat(DataManager::uiStrings["LOG_REWARD_GOLD"].c_str(), data.rewardGold), GOLD);
+			}
+
 			if (data.rewardItemId != -1 && data.rewardItemCount > 0) {
 				ItemData rewardItem = DataManager::GetItemConfigCopy(data.rewardItemId);
 				rewardItem.count = data.rewardItemCount;
 				AddToInventory(rewardItem);
+				UI::AddSystemLog(TextFormat(DataManager::uiStrings["LOG_REWARD_ITEM"].c_str(), rewardItem.name.c_str(), data.rewardItemCount), LIME);
 			}
 
 			if (data.type == QUEST_GATHER) {
@@ -239,7 +279,7 @@ void Player::CompleteQuest(int questId) {
 
 			clearedQuests.push_back(questId);
 			activeQuests.erase(it);
-			AudioManager::PlaySE(SE_REFORGE); // 報酬獲得音
+			AudioManager::PlaySE(SE_REFORGE);
 			break;
 		}
 	}
@@ -286,7 +326,18 @@ void Player::PerformAttack(Vector3 ad, std::vector<Enemy>& enemies, Dungeon& d, 
 		for (auto& e : enemies) {
 			if (!d.HasLineOfSight(position, e.position)) continue; Vector3 v = Vector3Subtract(e.position, position); float dist = Vector3Length(v); bool hit = false; float knk = 0;
  switch (currentWeapon) { case SWORD: if (dist < 4.5f && Vector3DotProduct(ad, Vector3Normalize(v)) > cosf(60 * DEG2RAD)) { hit = true; knk = 0.8f; } break; case SPEAR: { float f = Vector3DotProduct(v, ad); Vector3 side = { -ad.z, 0, ad.x }; float s = fabsf(Vector3DotProduct(v, side)); if (f > 0 && f < 8.2f && s < 1.5f) { hit = true; knk = 2.2f; } } break; case AXE: if (Vector3Distance(e.position, Vector3Add(position, Vector3Scale(ad, 3.5f))) < 3.5f) { hit = true; knk = 1.3f; } break; default: break; }
-									if (hit) { float totalBonus = GetItemTotalAtkBonus(equippedData[activeSlot]); int dmg = (int)((attackPower + totalBonus)) + GetRandomValue(-2, 3); e.hp -= (float)dmg; e.hudTimer = 5; e.ApplyKnockback(ad, knk, d); fx.SpawnDamageText(e.position, dmg); fx.SpawnEffect(e.position, { 0,0,0 }, FX_HIT, ORANGE); isStealth = false; stealthTimer = 0; }
+									if (hit) {
+										float totalBonus = GetItemTotalAtkBonus(equippedData[activeSlot]);
+										int dmg = (int)((attackPower + totalBonus)) + GetRandomValue(-2, 3);
+										e.hp -= (float)dmg;
+										e.hudTimer = 5;
+										e.ApplyKnockback(ad, knk, d);
+										fx.SpawnDamageText(e.position, dmg);
+										fx.SpawnEffect(e.position, { 0,0,0 }, FX_HIT, ORANGE);
+										isStealth = false;
+										stealthTimer = 0;
+										UI::AddSystemLog(TextFormat(DataManager::uiStrings["LOG_DMG_DEALT"].c_str(), e.data.name.c_str(), dmg), WHITE);
+									}
 		}
 	}
 }
@@ -297,7 +348,16 @@ void Player::PerformSmash(Vector3 ad, std::vector<Enemy>& enemies, Dungeon& d, E
 	for (auto& e : enemies) {
 		if (!d.HasLineOfSight(position, e.position)) continue;
 		if (Vector3Distance(e.position, Vector3Add(position, Vector3Scale(ad, 3.5f))) < 4.5f) {
-			float totalBonus = GetItemTotalAtkBonus(equippedData[activeSlot]); int dmg = (int)((attackPower + totalBonus) * 2.5f) + GetRandomValue(5, 10); e.hp -= (float)dmg; e.hudTimer = 5; e.ApplyKnockback(ad, 3.0f, d); fx.SpawnDamageText(e.position, dmg); fx.SpawnEffect(e.position, { 0,0,0 }, FX_HIT, PURPLE); isStealth = false; stealthTimer = 0;
+			float totalBonus = GetItemTotalAtkBonus(equippedData[activeSlot]);
+			int dmg = (int)((attackPower + totalBonus) * 2.5f) + GetRandomValue(5, 10);
+			e.hp -= (float)dmg;
+			e.hudTimer = 5;
+			e.ApplyKnockback(ad, 3.0f, d);
+			fx.SpawnDamageText(e.position, dmg);
+			fx.SpawnEffect(e.position, { 0,0,0 }, FX_HIT, PURPLE);
+			isStealth = false;
+			stealthTimer = 0;
+			UI::AddSystemLog(TextFormat(DataManager::uiStrings["LOG_CRIT_DEALT"].c_str(), e.data.name.c_str(), dmg), ORANGE);
 		}
 	}
 }

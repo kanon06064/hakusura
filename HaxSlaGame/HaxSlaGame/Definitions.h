@@ -22,10 +22,8 @@ enum EffectType { FX_SLASH, FX_THRUST, FX_SMASH, FX_HIT };
 enum RoomType { RT_NORMAL, RT_SMALL, RT_LARGE, RT_TREASURE, RT_HEAL, RT_BOSS };
 enum SkillType { SKILL_PASSIVE, SKILL_ACTIVE_DASH, SKILL_ACTIVE_SMASH, SKILL_ACTIVE_STEALTH };
 
-// ★追加: クエストの種類
 enum QuestType { QUEST_HUNT, QUEST_GATHER };
 
-// サウンド
 enum SoundType {
     SE_ATTACK,
     SE_ENEMY_ATTACK,
@@ -100,8 +98,11 @@ struct ItemData {
     int modifierId = 0;
 };
 
+// ★修正: 物理挙動（バウンドや回転）のための変数を追加
 struct DroppedItem {
     Vector3 pos = { 0.0f, 0.0f, 0.0f };
+    Vector3 vel = { 0.0f, 0.0f, 0.0f };
+    float rotation = 0.0f;
     ItemData data;
 };
 
@@ -135,20 +136,18 @@ struct SkillNode {
     float maxCooldown = 0.0f;
 };
 
-// ★追加: マスターデータとしてのクエスト定義
 struct QuestData {
     int id = 0;
     std::string title = "";
     std::string description = "";
     QuestType type = QUEST_HUNT;
-    int targetId = 0;      // 敵ID または アイテムID
-    int targetCount = 0;   // 必要数
+    int targetId = 0;
+    int targetCount = 0;
     int rewardGold = 0;
-    int rewardItemId = -1; // -1ならアイテム報酬なし
+    int rewardItemId = -1;
     int rewardItemCount = 0;
 };
 
-// ★追加: プレイヤーの進行中クエスト情報（セーブ用）
 struct PlayerQuest {
     int questId = 0;
     int currentCount = 0;

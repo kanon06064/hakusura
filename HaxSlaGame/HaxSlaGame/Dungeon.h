@@ -13,7 +13,7 @@ public:
     Vector3 reforgeStationPos;
     Vector3 craftStationPos;
     Vector3 bossSpawnPos;
-    Vector3 questBoardPos; // ★追加：クエストボードの位置
+    Vector3 questBoardPos;
 
     std::vector<Vector3> treasureSpots;
 
@@ -41,4 +41,5 @@ private:
     void GenerateNormalFloor(int floor);
     void OptimizeMap();
     void DigCorridor(int x1, int y1, int x2, int y2);
+    void SnapToTile(Vector3& pos); // ★ 追加: 座標をタイル中央にスナップさせる関数
 };

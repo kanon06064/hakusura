@@ -14,6 +14,14 @@ Dungeon::Dungeon() {
     Generate(true, 0);
 }
 
+// ★ 追加: 座標を一番近いタイルの中心に補正する
+void Dungeon::SnapToTile(Vector3& pos) {
+    if (pos.x != -999) {
+        pos.x = roundf(pos.x / TILE_SIZE) * TILE_SIZE;
+        pos.z = roundf(pos.z / TILE_SIZE) * TILE_SIZE;
+    }
+}
+
 void Dungeon::Generate(bool homeMode, int floor) {
     isHome = homeMode; rooms.clear(); treasureSpots.clear();
     stairsDownPos = { -999,-999,-999 }; stairsUpPos = { -999,-999,-999 };
@@ -86,6 +94,17 @@ void Dungeon::Generate(bool homeMode, int floor) {
         else GenerateNormalFloor(floor);
         OptimizeMap();
     }
+
+    // ★ 追加: 全ての環境モデルの座標をタイルの中心にスナップさせる（ズレ防止）
+    SnapToTile(stairsDownPos);
+    SnapToTile(stairsUpPos);
+    SnapToTile(storageBoxPos);
+    SnapToTile(portalPos);
+    SnapToTile(healStationPos);
+    SnapToTile(reforgeStationPos);
+    SnapToTile(craftStationPos);
+    SnapToTile(bossSpawnPos);
+    SnapToTile(questBoardPos);
 }
 
 void Dungeon::OptimizeMap() {
@@ -106,7 +125,7 @@ void Dungeon::GenerateRestFloor() {
     DigCorridor(r1.GetCenter().x / TILE_SIZE, r1.GetCenter().z / TILE_SIZE, r2.GetCenter().x / TILE_SIZE, r2.GetCenter().z / TILE_SIZE);
     DigCorridor(r2.GetCenter().x / TILE_SIZE, r2.GetCenter().z / TILE_SIZE, r3.GetCenter().x / TILE_SIZE, r3.GetCenter().z / TILE_SIZE);
     stairsUpPos = r1.GetCenter(); stairsUpPos.y = 0.0f; portalPos = Vector3Add(stairsUpPos, { 3,0,0 });
-    healStationPos = r2.GetCenter(); stairsDownPos = r3.GetCenter(); stairsDownPos.y = 0.0f; // ★ダンジョン内でも高さを0.0fに統一
+    healStationPos = r2.GetCenter(); stairsDownPos = r3.GetCenter(); stairsDownPos.y = 0.0f;
 }
 void Dungeon::GenerateBossFloor() {
     int cx = currentWidth / 2; int cy = currentHeight / 2;
@@ -115,7 +134,7 @@ void Dungeon::GenerateBossFloor() {
     for (auto& r : rooms) for (int ry = r.y; ry < r.y + r.height; ry++) for (int rx = r.x; rx < r.x + r.width; rx++) map[rx][ry] = 0;
     DigCorridor(r1.GetCenter().x / TILE_SIZE, r1.GetCenter().z / TILE_SIZE, r2.GetCenter().x / TILE_SIZE, r2.GetCenter().z / TILE_SIZE);
     stairsUpPos = r1.GetCenter(); stairsUpPos.y = 0.0f; healStationPos = Vector3Add(stairsUpPos, { -3,0,0 }); portalPos = Vector3Add(stairsUpPos, { 3,0,0 });
-    bossSpawnPos = r2.GetCenter(); stairsDownPos = r2.GetCenter(); stairsDownPos.y = 0.0f; // ★ダンジョン内でも高さを0.0fに統一
+    bossSpawnPos = r2.GetCenter(); stairsDownPos = r2.GetCenter(); stairsDownPos.y = 0.0f;
 }
 void Dungeon::GenerateNormalFloor(int floor) {
     std::vector<RoomType> typeQueue = { RT_SMALL, RT_NORMAL, RT_LARGE, RT_TREASURE };
@@ -139,7 +158,7 @@ void Dungeon::GenerateNormalFloor(int floor) {
     std::vector<int> v; for (int i = 0; i < (int)rooms.size(); i++) if (rooms[i].type != RT_TREASURE) v.push_back(i);
     if (v.size() < 2) { v.clear(); for (int i = 0; i < (int)rooms.size(); i++)v.push_back(i); }
     if (v.size() >= 1) {
-        stairsUpPos = rooms[v[0]].GetCenter(); stairsUpPos.y = 0.0f; // ★ダンジョン内でも高さを0.0fに統一
+        stairsUpPos = rooms[v[0]].GetCenter(); stairsUpPos.y = 0.0f;
         stairsDownPos = rooms[v.size() > 1 ? v.back() : v[0]].GetCenter(); stairsDownPos.y = 0.0f;
     }
 }
@@ -165,16 +184,11 @@ void Dungeon::Draw() {
         else {
             bool drawFloor = true;
 
-            // ★ 床のくり抜き判定を強化（最も近いタイルを確実に計算してくり抜く）
-            float downTargetX = roundf(stairsDownPos.x / TILE_SIZE) * TILE_SIZE;
-            float downTargetZ = roundf(stairsDownPos.z / TILE_SIZE) * TILE_SIZE;
-            float upTargetX = roundf(stairsUpPos.x / TILE_SIZE) * TILE_SIZE;
-            float upTargetZ = roundf(stairsUpPos.z / TILE_SIZE) * TILE_SIZE;
-
-            if (stairsDownPos.x != -999 && fabs(pos.x - downTargetX) < 0.1f && fabs(pos.z - downTargetZ) < 0.1f) {
+            // ★ 修正: SnapToTile で補正済みのため、単純な座標比較だけで完璧に穴が開く
+            if (stairsDownPos.x != -999 && fabs(pos.x - stairsDownPos.x) < 0.1f && fabs(pos.z - stairsDownPos.z) < 0.1f) {
                 drawFloor = false;
             }
-            if (stairsUpPos.x != -999 && fabs(pos.x - upTargetX) < 0.1f && fabs(pos.z - upTargetZ) < 0.1f) {
+            if (stairsUpPos.x != -999 && fabs(pos.x - stairsUpPos.x) < 0.1f && fabs(pos.z - stairsUpPos.z) < 0.1f) {
                 drawFloor = false;
             }
 
@@ -222,9 +236,24 @@ void Dungeon::Draw() {
     }
 
     if (portalPos.x != -999 && IsDiscovered(portalPos.x, portalPos.z)) {
-        if (!drawEnv("Obj_Portal", portalPos)) {
-            DrawCylinder(portalPos, 1.0f, 1.0f, 2.5f, 8, Fade(PURPLE, 0.8f));
-            DrawCylinderWires(portalPos, 1.0f, 1.0f, 2.5f, 8, VIOLET);
+        double time = GetTime();
+        float hoverSpeed = 2.0f;
+        float hoverAmplitude = 0.5f;
+        float yOffset = sin(time * hoverSpeed) * hoverAmplitude;
+
+        Vector3 drawPosition = portalPos;
+        drawPosition.y += yOffset;
+
+        float rotationSpeed = 90.0f;
+        float rotationAngle = time * rotationSpeed;
+        Vector3 rotationAxis = { 0.0f, 1.0f, 0.0f };
+
+        if (DataManager::loadedModels.count("Obj_Portal") > 0) {
+            DrawModelEx(DataManager::loadedModels["Obj_Portal"].model, drawPosition, rotationAxis, rotationAngle, { 1.0f, 1.0f, 1.0f }, WHITE);
+        }
+        else {
+            DrawCylinder(drawPosition, 1.0f, 1.0f, 2.5f, 8, Fade(PURPLE, 0.8f));
+            DrawCylinderWires(drawPosition, 1.0f, 1.0f, 2.5f, 8, VIOLET);
         }
     }
 
@@ -245,8 +274,41 @@ void Dungeon::Draw() {
     }
 }
 
-bool Dungeon::IsWall(float x, float z) { int gx = (int)floorf((x + TILE_SIZE / 2) / TILE_SIZE); int gz = (int)floorf((z + TILE_SIZE / 2) / TILE_SIZE); if (gx < 0 || gx >= currentWidth || gz < 0 || gz >= currentHeight)return true; return map[gx][gz] != 0; }
-bool Dungeon::CheckCollisionRadius(Vector3 p, float r) { return IsWall(p.x - r, p.z) || IsWall(p.x + r, p.z) || IsWall(p.x, p.z - r) || IsWall(p.x, p.z + r); }
+bool Dungeon::IsWall(float x, float z) {
+    int gx = (int)floorf((x + TILE_SIZE / 2) / TILE_SIZE);
+    int gz = (int)floorf((z + TILE_SIZE / 2) / TILE_SIZE);
+    if (gx < 0 || gx >= currentWidth || gz < 0 || gz >= currentHeight) return true;
+    return map[gx][gz] != 0;
+}
+
+bool Dungeon::CheckCollisionRadius(Vector3 p, float r) {
+    int minX = (int)floorf((p.x - r + TILE_SIZE / 2) / TILE_SIZE);
+    int maxX = (int)floorf((p.x + r + TILE_SIZE / 2) / TILE_SIZE);
+    int minZ = (int)floorf((p.z - r + TILE_SIZE / 2) / TILE_SIZE);
+    int maxZ = (int)floorf((p.z + r + TILE_SIZE / 2) / TILE_SIZE);
+
+    for (int z = minZ; z <= maxZ; z++) {
+        for (int x = minX; x <= maxX; x++) {
+            if (x < 0 || x >= currentWidth || z < 0 || z >= currentHeight || map[x][z] != 0) {
+                float cx = x * TILE_SIZE;
+                float cz = z * TILE_SIZE;
+                float halfT = TILE_SIZE / 2.0f;
+
+                float closestX = fmaxf(cx - halfT, fminf(p.x, cx + halfT));
+                float closestZ = fmaxf(cz - halfT, fminf(p.z, cz + halfT));
+
+                float dx = p.x - closestX;
+                float dz = p.z - closestZ;
+
+                if (dx * dx + dz * dz < r * r) {
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
+}
+
 bool Dungeon::HasLineOfSight(Vector3 s, Vector3 e) { float d = Vector3Distance(s, e); Vector3 dir = Vector3Normalize(Vector3Subtract(e, s)); for (float t = 0.5f; t < d; t += 0.5f) { Vector3 p = Vector3Add(s, Vector3Scale(dir, t)); if (IsWall(p.x, p.z))return false; }return true; }
 bool Dungeon::IsDiscovered(float x, float z) { int gx = (int)floorf((x + TILE_SIZE / 2) / TILE_SIZE); int gz = (int)floorf((z + TILE_SIZE / 2) / TILE_SIZE); return (gx >= 0 && gx < currentWidth && gz >= 0 && gz < currentHeight) ? discovered[gx][gz] : false; }
 Vector3 Dungeon::GetStartPosition() { if (stairsUpPos.x != -999)return stairsUpPos; return rooms.empty() ? Vector3{ 0,0,0 } : rooms[0].GetCenter(); }

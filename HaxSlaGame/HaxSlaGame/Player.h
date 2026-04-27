@@ -28,7 +28,6 @@ public:
     std::vector<ItemData> inventoryEquip;
     std::vector<SkillNode> skillTree;
 
-    // ★追加: クエストの進行状態
     std::vector<PlayerQuest> activeQuests;
     std::vector<int> clearedQuests;
 
@@ -50,13 +49,15 @@ public:
 
     void RecalculateStats();
 
-    // ★追加: クエスト関連メソッド
     void UpdateHuntQuest(int enemyId);
     bool CheckGatherQuest(int itemId, int requiredCount);
     void CompleteQuest(int questId);
 
     static std::string GetFullItemName(const ItemData& item);
     static float GetItemTotalAtkBonus(const ItemData& item);
+
+    // ★追加：アイテムのレアリティカラーを取得
+    static Color GetItemRarityColor(const ItemData& item);
 
 private:
     void PerformAttack(Vector3 ad, std::vector<Enemy>& enemies, Dungeon& d, EffectManager& fx);
