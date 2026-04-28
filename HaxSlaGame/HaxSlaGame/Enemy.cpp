@@ -5,7 +5,6 @@
 #include "DataManager.h"
 #include "AudioManager.h"
 #include "UI.h"
-#include "rlgl.h"
 #include "raymath.h"
 #include <math.h>
 #include <string>
@@ -528,6 +527,9 @@ void Enemy::Draw(bool debug, Camera3D cam, Font font, Vector3 playerPos) {
         if (hasModel) DrawCubeWires(position, 2.0f, 2.0f, 2.0f, RED);
     }
 
+    // =========================================================================
+    // Åö èCê≥: rlgl API Ç…àÀë∂ÇπÇ∏ÅAíºê⁄êîäwåvéZÇ∆ Raylib ÇÃ 3DÉ|ÉäÉSÉìä÷êîÇ≈ó\ë™ê¸Çï`âÊ
+    // =========================================================================
     if (!isDying && isBoss && bossAttackType != 0) {
         float maxTime = 1.0f;
         if (bossAttackType == 1) maxTime = 0.5f;
@@ -563,25 +565,46 @@ void Enemy::Draw(bool debug, Camera3D cam, Font font, Vector3 playerPos) {
 
                     float len = 20.0f;
                     float w = 1.5f;
-                    float rot = atan2f(dir.x, dir.z) * RAD2DEG;
-                    rlPushMatrix();
-                    rlTranslatef(position.x, 0.05f, position.z);
-                    rlRotatef(rot, 0.0f, 1.0f, 0.0f);
-                    DrawCube({ 0.0f, 0.0f, len / 2.0f }, w, 0.05f, len, warnColor);
-                    DrawCubeWires({ 0.0f, 0.0f, len / 2.0f }, w, 0.05f, len, warnLineColor);
-                    rlPopMatrix();
+
+                    Vector3 side = { -dir.z, 0.0f, dir.x };
+                    Vector3 p1 = Vector3Add(position, Vector3Scale(side, w / 2.0f));
+                    Vector3 p2 = Vector3Add(position, Vector3Add(Vector3Scale(dir, len), Vector3Scale(side, w / 2.0f)));
+                    Vector3 p3 = Vector3Add(position, Vector3Add(Vector3Scale(dir, len), Vector3Scale(side, -w / 2.0f)));
+                    Vector3 p4 = Vector3Add(position, Vector3Scale(side, -w / 2.0f));
+                    p1.y = p2.y = p3.y = p4.y = 0.05f;
+
+                    DrawTriangle3D(p1, p4, p3, warnColor);
+                    DrawTriangle3D(p1, p3, p2, warnColor);
+                    DrawTriangle3D(p3, p4, p1, warnColor);
+                    DrawTriangle3D(p2, p3, p1, warnColor);
+
+                    DrawLine3D(p1, p2, warnLineColor);
+                    DrawLine3D(p2, p3, warnLineColor);
+                    DrawLine3D(p3, p4, warnLineColor);
+                    DrawLine3D(p4, p1, warnLineColor);
                 }
             }
             else if (bossAttackType == 3) {
                 float len = 10.0f + 2.75f;
                 float w = 5.5f;
-                float rot = atan2f(bossTargetDir.x, bossTargetDir.z) * RAD2DEG;
-                rlPushMatrix();
-                rlTranslatef(position.x, 0.05f, position.z);
-                rlRotatef(rot, 0.0f, 1.0f, 0.0f);
-                DrawCube({ 0.0f, 0.0f, len / 2.0f }, w, 0.05f, len, warnColor);
-                DrawCubeWires({ 0.0f, 0.0f, len / 2.0f }, w, 0.05f, len, warnLineColor);
-                rlPopMatrix();
+
+                Vector3 dir = Vector3Normalize(bossTargetDir);
+                Vector3 side = { -dir.z, 0.0f, dir.x };
+                Vector3 p1 = Vector3Add(position, Vector3Scale(side, w / 2.0f));
+                Vector3 p2 = Vector3Add(position, Vector3Add(Vector3Scale(dir, len), Vector3Scale(side, w / 2.0f)));
+                Vector3 p3 = Vector3Add(position, Vector3Add(Vector3Scale(dir, len), Vector3Scale(side, -w / 2.0f)));
+                Vector3 p4 = Vector3Add(position, Vector3Scale(side, -w / 2.0f));
+                p1.y = p2.y = p3.y = p4.y = 0.05f;
+
+                DrawTriangle3D(p1, p4, p3, warnColor);
+                DrawTriangle3D(p1, p3, p2, warnColor);
+                DrawTriangle3D(p3, p4, p1, warnColor);
+                DrawTriangle3D(p2, p3, p1, warnColor);
+
+                DrawLine3D(p1, p2, warnLineColor);
+                DrawLine3D(p2, p3, warnLineColor);
+                DrawLine3D(p3, p4, warnLineColor);
+                DrawLine3D(p4, p1, warnLineColor);
             }
             else if (bossAttackType == 4) {
                 DrawCylinder({ position.x, 0.05f, position.z }, 7.0f, 7.0f, 0.05f, 32, warnColor);

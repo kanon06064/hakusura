@@ -2,6 +2,7 @@
 #include "DataManager.h"
 #include "AudioManager.h"
 #include "raymath.h"
+#include "rlgl.h"
 #include <iostream>
 #include <time.h>
 #include <algorithm>
@@ -335,13 +336,12 @@ void Game::Update() {
                         if ((float)GetRandomValue(0, 10000) / 10000.0f <= chance) {
                             if (cfg.type == "EQUIP" || cfg.type == "ARMOR") cfg.modifierId = DataManager::GetRandomModifierId();
 
-                            // ★修正: ドロップアイテムの物理初期パラメータを設定
                             DroppedItem di;
                             di.pos = enemies[i].position;
-                            di.pos.y += 0.5f; // 敵の腰の高さから出現
+                            di.pos.y += 0.5f;
                             di.data = cfg;
-                            // 上方向 + ランダムなXY方向へ飛び出す
-                            di.vel = { (float)GetRandomValue(-20, 20) * 0.01f, 0.4f, (float)GetRandomValue(-20, 20) * 0.01f };
+                            // ★ 修正: 初速をマイルドにし、遠くに飛びすぎないようにする
+                            di.vel = { (float)GetRandomValue(-15, 15) * 0.01f, (float)GetRandomValue(30, 40) * 0.01f, (float)GetRandomValue(-15, 15) * 0.01f };
                             di.rotation = (float)GetRandomValue(0, 360);
 
                             droppedItems.push_back(di);
@@ -353,18 +353,38 @@ void Game::Update() {
             if (enemies[i].isDead) { enemies.erase(enemies.begin() + i); }
         }
 
-        // ★追加: ドロップアイテムの物理挙動を更新（放物線とバウンド）
+        // ★ 修正: ドロップアイテムの壁抜け防止判定を追加
         for (auto& item : droppedItems) {
-            item.pos = Vector3Add(item.pos, item.vel);
-            item.vel.y -= 2.0f * dt; // 重力
-            if (item.pos.y <= 0.2f) { // 地面に接触
+            // X方向の移動と壁判定
+            Vector3 nextX = item.pos;
+            nextX.x += item.vel.x;
+            if (!dungeon.CheckCollisionRadius(nextX, 0.2f)) {
+                item.pos.x = nextX.x;
+            }
+            else {
+                item.vel.x *= -0.8f; // 壁にぶつかったら跳ね返る
+            }
+
+            // Z方向の移動と壁判定
+            Vector3 nextZ = item.pos;
+            nextZ.z += item.vel.z;
+            if (!dungeon.CheckCollisionRadius(nextZ, 0.2f)) {
+                item.pos.z = nextZ.z;
+            }
+            else {
+                item.vel.z *= -0.8f; // 壁にぶつかったら跳ね返る
+            }
+
+            // Y方向（上下）の移動と床判定
+            item.pos.y += item.vel.y;
+            item.vel.y -= 2.0f * dt;
+            if (item.pos.y <= 0.2f) {
                 item.pos.y = 0.2f;
-                item.vel.y *= -0.5f; // バウンド
-                item.vel.x *= 0.8f;  // 摩擦
+                item.vel.y *= -0.5f;
+                item.vel.x *= 0.8f;
                 item.vel.z *= 0.8f;
                 if (fabsf(item.vel.y) < 0.05f) item.vel.y = 0;
             }
-            // 空中や移動中は回転させる
             item.rotation += 100.0f * dt * (fabsf(item.vel.x) + fabsf(item.vel.z));
         }
 
@@ -406,7 +426,7 @@ void Game::Update() {
         for (int i = (int)droppedItems.size() - 1; i >= 0; i--) {
             if (Vector3Distance(player->position, droppedItems[i].pos) < 1.0f) {
                 if (player->AddToInventory(droppedItems[i].data)) {
-                    UI::AddSystemLog(Player::GetFullItemName(droppedItems[i].data) + u8" を入手した", Player::GetItemRarityColor(droppedItems[i].data)); // ★レアリティ色でログ
+                    UI::AddSystemLog(Player::GetFullItemName(droppedItems[i].data) + u8" を入手した", Player::GetItemRarityColor(droppedItems[i].data));
                     droppedItems.erase(droppedItems.begin() + i);
                     AudioManager::PlaySE(SE_CLICK);
                 }
@@ -488,7 +508,6 @@ void Game::Draw() {
 
         fxManager.Draw();
 
-        // ★修正: アイテムのドロップ描画（回転とレアリティの光の柱）
         for (auto& item : droppedItems) {
             if (!debugMode && !dungeon.IsDiscovered(item.pos.x, item.pos.z)) continue;
 
@@ -496,17 +515,14 @@ void Game::Draw() {
 
             rlPushMatrix();
             rlTranslatef(item.pos.x, item.pos.y, item.pos.z);
-            rlRotatef(item.rotation, 0, 1, 0); // 回転
+            rlRotatef(item.rotation, 0, 1, 0);
 
-            // アイテム本体を描画
             DrawCube({ 0,0,0 }, 0.5f, 0.4f, 0.5f, rarityCol);
             DrawCubeWires({ 0,0,0 }, 0.5f, 0.4f, 0.5f, WHITE);
             rlPopMatrix();
 
-            // レアリティに応じた光の柱を描画（装備品のみ）
             if (item.data.type == "EQUIP" || item.data.type == "ARMOR") {
                 Color pillarCol = rarityCol;
-                // 時間でふわふわ明滅させる
                 float alpha = (sinf(GetTime() * 5.0f) * 0.5f + 0.5f) * 0.5f + 0.1f;
                 pillarCol.a = (unsigned char)(255 * alpha);
                 DrawCylinder(item.pos, 0.15f, 0.15f, 5.0f, 8, pillarCol);
@@ -699,7 +715,6 @@ void Game::NextFloor() {
 
             if (item.id != -1) {
                 if (item.type == "EQUIP" || item.type == "ARMOR") item.modifierId = DataManager::GetRandomModifierId();
-                // 初期配置アイテムも物理パラメーターを持たせる
                 DroppedItem di;
                 di.pos = pos;
                 di.pos.y = 0.2f;
