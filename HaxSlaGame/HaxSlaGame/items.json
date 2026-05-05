@@ -167,15 +167,6 @@
     "heal": 200,
     "dropChance": 0.1
   },
-
-  {
-    "id": 100,
-    "name": "木の弓",
-    "type": "EQUIP",
-    "atkBonus": 3,
-    "weaponSubtype": 3,
-    "dropChance": 0
-  },
   {
     "id": 101,
     "name": "略奪者の剣",
@@ -201,19 +192,11 @@
     "dropChance": 0.05
   },
   {
-    "id": 104,
-    "name": "略奪者の弓",
-    "type": "EQUIP",
-    "atkBonus": 4,
-    "weaponSubtype": 3,
-    "dropChance": 0.05
-  },
-  {
     "id": 105,
     "name": "略奪者の杖",
     "type": "EQUIP",
     "atkBonus": 6,
-    "weaponSubtype": 4,
+    "weaponSubtype": 3,
     "dropChance": 0.05
   },
 
@@ -242,19 +225,11 @@
     "dropChance": 0.03
   },
   {
-    "id": 204,
-    "name": "魂のロングボウ",
-    "type": "EQUIP",
-    "atkBonus": 12,
-    "weaponSubtype": 3,
-    "dropChance": 0.03
-  },
-  {
     "id": 205,
     "name": "魂のウィッチスタッフ",
     "type": "EQUIP",
     "atkBonus": 18,
-    "weaponSubtype": 4,
+    "weaponSubtype": 3,
     "dropChance": 0.03
   },
 
@@ -283,19 +258,11 @@
     "dropChance": 0.015
   },
   {
-    "id": 304,
-    "name": "魔鋼鉄の強弓",
-    "type": "EQUIP",
-    "atkBonus": 35,
-    "weaponSubtype": 3,
-    "dropChance": 0.015
-  },
-  {
     "id": 305,
     "name": "魔鋼鉄の魔杖",
     "type": "EQUIP",
     "atkBonus": 50,
-    "weaponSubtype": 4,
+    "weaponSubtype": 3,
     "dropChance": 0.015
   },
 
@@ -324,19 +291,11 @@
     "dropChance": 0.005
   },
   {
-    "id": 404,
-    "name": "機神の轟弓",
-    "type": "EQUIP",
-    "atkBonus": 90,
-    "weaponSubtype": 3,
-    "dropChance": 0.005
-  },
-  {
     "id": 405,
     "name": "機神の零杖",
     "type": "EQUIP",
     "atkBonus": 120,
-    "weaponSubtype": 4,
+    "weaponSubtype": 3,
     "dropChance": 0.005
   },
 

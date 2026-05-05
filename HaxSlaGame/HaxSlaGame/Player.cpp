@@ -7,6 +7,20 @@
 #include "UI.h" 
 #include "raymath.h"
 #include <math.h>
+#include <algorithm>
+
+static Matrix GetPlayerBoneMatrix(Model model, ModelAnimation anim, int frame, int boneIndex) {
+	if (boneIndex < 0 || boneIndex >= model.boneCount) return MatrixIdentity();
+	Transform boneTransform = anim.framePoses[frame][boneIndex];
+	Matrix mat = MatrixMultiply(
+		MatrixMultiply(
+			MatrixScale(boneTransform.scale.x, boneTransform.scale.y, boneTransform.scale.z),
+			QuaternionToMatrix(boneTransform.rotation)
+		),
+		MatrixTranslate(boneTransform.translation.x, boneTransform.translation.y, boneTransform.translation.z)
+	);
+	return mat;
+}
 
 Player::Player(Vector3 sp) : position(sp), baseSpeed(0.15f), radius(0.45f), attackTimer(0), isAttacking(false), lastAimDir({ 1,0,0 }), hp(100), maxHp(100), attackPower(12), defense(5), level(1), exp(0), expToNext(100), skillPoints(0), gold(0) {
 	speed = baseSpeed;
@@ -19,6 +33,11 @@ Player::Player(Vector3 sp) : position(sp), baseSpeed(0.15f), radius(0.45f), atta
 	smashCooldownTimer = 0;
 	stealthTimer = 0; stealthCooldownTimer = 0;
 	isStealth = false;
+
+	animFrameCounter = 0;
+	currentAnimIndex = 4; // Idle
+	modelRotation = 0.0f;
+	isDead = false;
 
 	ItemData s1 = DataManager::GetItemConfigCopy(0);
 	ItemData s2 = DataManager::GetItemConfigCopy(100);
@@ -41,35 +60,30 @@ float Player::GetItemTotalAtkBonus(const ItemData& item) {
 	return item.atkBonus + DataManager::GetModifier(item.modifierId).atk;
 }
 
-// ★追加：アイテムのレアリティ判定ロジック
 Color Player::GetItemRarityColor(const ItemData& item) {
 	if (item.id == -1) return DARKGRAY;
 	if (item.type == "MATERIAL") return LIGHTGRAY;
 	if (item.type == "CONSUMABLE") return LIME;
 
 	int tier = 0;
-
-	// 武器のID帯判定
 	if (item.id >= 100 && item.id < 200) tier = 1;
 	else if (item.id >= 200 && item.id < 300) tier = 2;
 	else if (item.id >= 300 && item.id < 400) tier = 3;
 	else if (item.id >= 400 && item.id < 500) tier = 4;
-	// 防具のID帯判定
 	else if (item.id >= 500 && item.id < 510) tier = 1;
 	else if (item.id >= 510 && item.id < 520) tier = 2;
 	else if (item.id >= 520 && item.id < 530) tier = 3;
 	else if (item.id >= 530 && item.id < 540) tier = 4;
 	else if (item.id >= 540 && item.id < 550) tier = 5;
 
-	// エンチャント（付与効果）が付いている場合はレアリティが1段階格上げされる
 	if (item.modifierId != 0 && tier < 5) tier++;
 
 	switch (tier) {
-	case 1: return WHITE;      // Common
-	case 2: return GREEN;      // Magic
-	case 3: return SKYBLUE;    // Rare
-	case 4: return PURPLE;     // Epic
-	case 5: return GOLD;       // Legendary
+	case 1: return WHITE;
+	case 2: return GREEN;
+	case 3: return SKYBLUE;
+	case 4: return PURPLE;
+	case 5: return GOLD;
 	default: return WHITE;
 	}
 }
@@ -102,21 +116,17 @@ void Player::RecalculateStats() {
 }
 
 void Player::InitSkillTree() {
-	auto GetStr = [](const char* key) -> std::string {
-		if (DataManager::uiStrings.count(key)) return DataManager::uiStrings[key];
-		return key;
-		};
 	skillTree.push_back({ 0, "START", {640, 650}, {}, true, 0 });
 	skillTree.push_back({ 1, "HP I",  {500, 550}, {0}, false, 1, 0, 0, 30, SKILL_PASSIVE });
 	skillTree.push_back({ 2, "DEF I", {400, 480}, {1}, false, 1, 0, 3, 0, SKILL_PASSIVE });
-	skillTree.push_back({ 3, GetStr("STEALTH"), {300, 400}, {2}, false, 3, 0, 0, 0, SKILL_ACTIVE_STEALTH, 15.0f });
+	skillTree.push_back({ 3, "STEALTH", {300, 400}, {2}, false, 3, 0, 0, 0, SKILL_ACTIVE_STEALTH, 15.0f });
 	skillTree.push_back({ 4, "HP II", {300, 300}, {3}, false, 2, 0, 0, 50, SKILL_PASSIVE });
 	skillTree.push_back({ 5, "ATK I", {640, 500}, {0}, false, 1, 5, 0, 0, SKILL_PASSIVE });
-	skillTree.push_back({ 6, GetStr("SMASH"),   {640, 400}, {5}, false, 2, 0, 0, 0, SKILL_ACTIVE_SMASH, 5.0f });
+	skillTree.push_back({ 6, "SMASH",   {640, 400}, {5}, false, 2, 0, 0, 0, SKILL_ACTIVE_SMASH, 5.0f });
 	skillTree.push_back({ 7, "ATK II", {640, 300}, {6}, false, 3, 10, 0, 0, SKILL_PASSIVE });
 	skillTree.push_back({ 8, "ATK III",{640, 200}, {7}, false, 5, 20, 0, 0, SKILL_PASSIVE });
 	skillTree.push_back({ 9,  "SPD I", {780, 550}, {0}, false, 1, 0, 0, 0, SKILL_PASSIVE });
-	skillTree.push_back({ 10, GetStr("DASH"), {880, 480}, {9}, false, 2, 0, 0, 0, SKILL_ACTIVE_DASH, 3.0f });
+	skillTree.push_back({ 10, "DASH", {880, 480}, {9}, false, 2, 0, 0, 0, SKILL_ACTIVE_DASH, 3.0f });
 	skillTree.push_back({ 11, "DEF II", {980, 400}, {10}, false, 2, 0, 5, 0, SKILL_PASSIVE });
 }
 
@@ -148,7 +158,7 @@ void Player::LevelUp(EffectManager& fx) {
 	skillPoints += 3; fx.SpawnDamageText(position, 999);
 	AudioManager::PlaySE(SE_LEVELUP);
 	RecalculateStats(); hp = maxHp;
-	UI::AddSystemLog(DataManager::uiStrings["LOG_LEVELUP"], YELLOW);
+	if (DataManager::uiStrings.count("LOG_LEVELUP")) UI::AddSystemLog(DataManager::uiStrings["LOG_LEVELUP"], YELLOW);
 }
 
 bool Player::AddToInventory(ItemData item) {
@@ -166,7 +176,7 @@ void Player::UseItem(int idx) {
 	if (idx < 0 || idx >= (int)inventoryItems.size()) return;
 	if (inventoryItems[idx].type == "CONSUMABLE") {
 		hp = fminf(maxHp, hp + inventoryItems[idx].heal);
-		UI::AddSystemLog(TextFormat(DataManager::uiStrings["LOG_ITEM_USE"].c_str(), inventoryItems[idx].name.c_str()), SKYBLUE);
+		if (DataManager::uiStrings.count("LOG_ITEM_USE")) UI::AddSystemLog(TextFormat(DataManager::uiStrings["LOG_ITEM_USE"].c_str(), inventoryItems[idx].name.c_str()), SKYBLUE);
 		inventoryItems[idx].count--;
 		if (inventoryItems[idx].count <= 0) inventoryItems.erase(inventoryItems.begin() + idx);
 		AudioManager::PlaySE(SE_HEAL);
@@ -223,7 +233,7 @@ void Player::UpdateHuntQuest(int enemyId) {
 					q.currentCount = data.targetCount;
 					q.isCompleted = true;
 					AudioManager::PlaySE(SE_LEVELUP);
-					UI::AddSystemLog(DataManager::uiStrings["LOG_QUEST_OBJECTIVE"], GREEN);
+					if (DataManager::uiStrings.count("LOG_QUEST_OBJECTIVE")) UI::AddSystemLog(DataManager::uiStrings["LOG_QUEST_OBJECTIVE"], GREEN);
 				}
 			}
 		}
@@ -244,16 +254,16 @@ void Player::CompleteQuest(int questId) {
 			QuestData data = DataManager::GetQuestData(questId);
 
 			gold += data.rewardGold;
-			UI::AddSystemLog(TextFormat(DataManager::uiStrings["LOG_QUEST_REPORT"].c_str(), data.title.c_str()), YELLOW);
+			if (DataManager::uiStrings.count("LOG_QUEST_REPORT")) UI::AddSystemLog(TextFormat(DataManager::uiStrings["LOG_QUEST_REPORT"].c_str(), data.title.c_str()), YELLOW);
 			if (data.rewardGold > 0) {
-				UI::AddSystemLog(TextFormat(DataManager::uiStrings["LOG_REWARD_GOLD"].c_str(), data.rewardGold), GOLD);
+				if (DataManager::uiStrings.count("LOG_REWARD_GOLD")) UI::AddSystemLog(TextFormat(DataManager::uiStrings["LOG_REWARD_GOLD"].c_str(), data.rewardGold), GOLD);
 			}
 
 			if (data.rewardItemId != -1 && data.rewardItemCount > 0) {
 				ItemData rewardItem = DataManager::GetItemConfigCopy(data.rewardItemId);
 				rewardItem.count = data.rewardItemCount;
 				AddToInventory(rewardItem);
-				UI::AddSystemLog(TextFormat(DataManager::uiStrings["LOG_REWARD_ITEM"].c_str(), rewardItem.name.c_str(), data.rewardItemCount), LIME);
+				if (DataManager::uiStrings.count("LOG_REWARD_ITEM")) UI::AddSystemLog(TextFormat(DataManager::uiStrings["LOG_REWARD_ITEM"].c_str(), rewardItem.name.c_str(), data.rewardItemCount), LIME);
 			}
 
 			if (data.type == QUEST_GATHER) {
@@ -299,6 +309,7 @@ void Player::Update(Camera3D& cam, Dungeon& d, std::vector<Enemy>& enemies, Effe
 	if (IsKeyPressed(KEY_TWO) && IsSkillUnlocked(SKILL_ACTIVE_SMASH) && smashCooldownTimer <= 0 && currentWeapon != NONE && attackTimer <= 0) {
 		Ray ray = GetMouseRay(GetMousePosition(), cam); if (ray.direction.y != 0) { float t = (position.y - ray.position.y) / ray.direction.y; Vector3 tp = Vector3Add(ray.position, Vector3Scale(ray.direction, t)); lastAimDir = Vector3Normalize(Vector3Subtract(tp, position)); lastAimDir.y = 0; lastAimDir = Vector3Normalize(lastAimDir); }
 		PerformSmash(lastAimDir, enemies, d, fx); smashCooldownTimer = GetSkillMaxCooldown(SKILL_ACTIVE_SMASH); attackTimer = 0.8f;
+		animFrameCounter = 0;
 	}
 	if (IsKeyPressed(KEY_THREE) && IsSkillUnlocked(SKILL_ACTIVE_STEALTH) && stealthCooldownTimer <= 0) {
 		isStealth = true; stealthTimer = 10.0f; stealthCooldownTimer = GetSkillMaxCooldown(SKILL_ACTIVE_STEALTH);
@@ -314,13 +325,56 @@ void Player::Update(Camera3D& cam, Dungeon& d, std::vector<Enemy>& enemies, Effe
 
 	Ray ray = GetMouseRay(GetMousePosition(), cam); if (ray.direction.y != 0) { float t = (position.y - ray.position.y) / ray.direction.y; Vector3 tp = Vector3Add(ray.position, Vector3Scale(ray.direction, t)); lastAimDir = Vector3Normalize(Vector3Subtract(tp, position)); lastAimDir.y = 0; lastAimDir = Vector3Normalize(lastAimDir); }
 	if (attackTimer > 0) attackTimer -= GetFrameTime();
-	if (IsMouseButtonPressed(0) && attackTimer <= 0 && currentWeapon != NONE) { PerformAttack(lastAimDir, enemies, d, fx); attackTimer = (currentWeapon >= BOW) ? 0.35f : 0.5f; isAttacking = true; }
+
+	if (IsMouseButtonPressed(0) && attackTimer <= 0 && currentWeapon != NONE) {
+		PerformAttack(lastAimDir, enemies, d, fx);
+		attackTimer = 0.5f;
+		isAttacking = true;
+		animFrameCounter = 0;
+	}
+
+	if (attackTimer > 0) {
+		if (Vector3Length(lastAimDir) > 0.01f) {
+			modelRotation = atan2f(lastAimDir.x, lastAimDir.z) * RAD2DEG;
+		}
+	}
+	else if (Vector3Length(md) > 0.01f) {
+		modelRotation = atan2f(md.x, md.z) * RAD2DEG;
+	}
+
+	if (hp <= 0) {
+		if (currentAnimIndex != 3) { currentAnimIndex = 3; animFrameCounter = 0; isDead = true; }
+	}
+	else if (attackTimer > 0) {
+		int targetAnim = 0;
+		if (currentWeapon == SWORD) targetAnim = 0;
+		else if (currentWeapon == AXE) targetAnim = 1;
+		else if (currentWeapon == SPEAR || currentWeapon == WAND) targetAnim = 2;
+
+		if (currentAnimIndex != targetAnim) {
+			currentAnimIndex = targetAnim;
+		}
+	}
+	else if (dashTimer > 0) {
+		if (currentAnimIndex != 6) { currentAnimIndex = 6; animFrameCounter = 0; }
+	}
+	else if (Vector3Length(md) > 0) {
+		if (currentAnimIndex != 5) { currentAnimIndex = 5; animFrameCounter = 0; }
+	}
+	else {
+		if (currentAnimIndex != 4) { currentAnimIndex = 4; animFrameCounter = 0; }
+	}
+
+	if (hp > 0) animFrameCounter++;
 }
 
 void Player::PerformAttack(Vector3 ad, std::vector<Enemy>& enemies, Dungeon& d, EffectManager& fx) {
 	AudioManager::PlaySE(SE_ATTACK);
 	Vector3 attackOrigin = Vector3Add(position, { 0.0f, 0.8f, 0.0f });
-	if (currentWeapon == BOW || currentWeapon == WAND) { float speed = (currentWeapon == BOW) ? 25.0f : 15.0f; int type = (currentWeapon == BOW) ? 0 : 1; fx.SpawnProjectile(attackOrigin, ad, speed, type, true); }
+
+	if (currentWeapon == WAND) {
+		float speed = 15.0f; int type = 1; fx.SpawnProjectile(attackOrigin, ad, speed, type, true);
+	}
 	else {
 		EffectType type = FX_SLASH; if (currentWeapon == SPEAR) type = FX_THRUST; else if (currentWeapon == AXE) type = FX_SMASH; fx.SpawnEffect(attackOrigin, ad, type, SKYBLUE);
 		for (auto& e : enemies) {
@@ -336,7 +390,7 @@ void Player::PerformAttack(Vector3 ad, std::vector<Enemy>& enemies, Dungeon& d, 
 										fx.SpawnEffect(e.position, { 0,0,0 }, FX_HIT, ORANGE);
 										isStealth = false;
 										stealthTimer = 0;
-										UI::AddSystemLog(TextFormat(DataManager::uiStrings["LOG_DMG_DEALT"].c_str(), e.data.name.c_str(), dmg), WHITE);
+										if (DataManager::uiStrings.count("LOG_DMG_DEALT")) UI::AddSystemLog(TextFormat(DataManager::uiStrings["LOG_DMG_DEALT"].c_str(), e.data.name.c_str(), dmg), WHITE);
 									}
 		}
 	}
@@ -357,13 +411,121 @@ void Player::PerformSmash(Vector3 ad, std::vector<Enemy>& enemies, Dungeon& d, E
 			fx.SpawnEffect(e.position, { 0,0,0 }, FX_HIT, PURPLE);
 			isStealth = false;
 			stealthTimer = 0;
-			UI::AddSystemLog(TextFormat(DataManager::uiStrings["LOG_CRIT_DEALT"].c_str(), e.data.name.c_str(), dmg), ORANGE);
+			if (DataManager::uiStrings.count("LOG_CRIT_DEALT")) UI::AddSystemLog(TextFormat(DataManager::uiStrings["LOG_CRIT_DEALT"].c_str(), e.data.name.c_str(), dmg), ORANGE);
 		}
 	}
 }
 
 void Player::Draw(bool debug) {
-	Color bodyColor = RED; if (isStealth) bodyColor = Fade(BLUE, 0.3f);
-	DrawCube(position, 1, 1, 1, bodyColor); DrawCubeWires(position, 1, 1, 1, MAROON);
-	if (currentWeapon != NONE) { DrawLine3D(position, Vector3Add(position, Vector3Scale(lastAimDir, 3.0f)), Fade(YELLOW, 0.3f)); }
+	bool hasModel = false;
+	std::string key = "Player";
+
+	if (DataManager::loadedModels.count(key) > 0) {
+		hasModel = true;
+		GameModel& gm = DataManager::loadedModels[key];
+
+		gm.model.transform = MatrixIdentity();
+
+		if (currentAnimIndex >= gm.animCount) currentAnimIndex = 0;
+		ModelAnimation anim = gm.anims[currentAnimIndex];
+		int frameCount = anim.frameCount;
+
+		if (isDead) {
+			animFrameCounter = frameCount - 1;
+		}
+		else {
+			if (currentAnimIndex == 0 || currentAnimIndex == 1 || currentAnimIndex == 2) {
+				if (animFrameCounter >= frameCount) {
+					animFrameCounter = frameCount - 1;
+				}
+			}
+			else {
+				animFrameCounter = animFrameCounter % frameCount;
+			}
+		}
+
+		if (gm.animCount > 0) {
+			UpdateModelAnimation(gm.model, anim, animFrameCounter);
+		}
+
+		float scale = 0.01f;
+		Matrix matRotX = MatrixRotateX(-90.0f * DEG2RAD);
+		Matrix matRotY = MatrixRotateY(modelRotation * DEG2RAD);
+		gm.model.transform = MatrixMultiply(gm.model.transform, matRotX);
+		gm.model.transform = MatrixMultiply(gm.model.transform, matRotY);
+
+		DrawModel(gm.model, position, scale, WHITE);
+
+		if (currentWeapon != NONE && !isDead && !isStealth) {
+			int handBoneIndex = -1;
+
+			for (int i = 0; i < gm.model.boneCount; i++) {
+				std::string bName(gm.model.bones[i].name);
+				std::transform(bName.begin(), bName.end(), bName.begin(), ::tolower);
+				if (bName == "weapon_r") {
+					handBoneIndex = i;
+					break;
+				}
+			}
+			if (handBoneIndex == -1) {
+				for (int i = 0; i < gm.model.boneCount; i++) {
+					std::string bName(gm.model.bones[i].name);
+					std::transform(bName.begin(), bName.end(), bName.begin(), ::tolower);
+					if (bName.find("weapon") != std::string::npos || bName.find("hand_r") != std::string::npos || bName.find("handright") != std::string::npos) {
+						handBoneIndex = i;
+						break;
+					}
+				}
+			}
+
+			if (handBoneIndex != -1) {
+				Matrix matScale = MatrixScale(scale, scale, scale);
+				Matrix matTrans = MatrixTranslate(position.x, position.y, position.z);
+				Matrix modelBaseTransform = MatrixMultiply(MatrixMultiply(gm.model.transform, matScale), matTrans);
+
+				Matrix boneMatrix = GetPlayerBoneMatrix(gm.model, anim, animFrameCounter, handBoneIndex);
+				Matrix boneWorldTransform = MatrixMultiply(boneMatrix, modelBaseTransform);
+
+				int equipId = equippedData[activeSlot].id;
+				std::string wpnKey = "Wpn_" + std::to_string(equipId);
+
+				// ★修正: 最高レアリティ（機神シリーズ: ID400番台）の判定
+				bool isLegendary = (equipId >= 400 && equipId < 500);
+
+				std::string baseKey = "";
+				if (currentWeapon == SWORD) baseKey = "Wpn_Sword";
+				else if (currentWeapon == AXE) baseKey = "Wpn_Axe";
+				else if (currentWeapon == SPEAR) baseKey = "Wpn_Spear";
+				else if (currentWeapon == WAND) baseKey = "Wpn_Wand";
+
+				std::string legendKey = baseKey + "_Legend";
+
+				std::string finalWpnKey = "";
+				// 1. 個別IDのモデル（Wpn_401.objなど）があれば最優先
+				if (DataManager::loadedModels.count(wpnKey) > 0) finalWpnKey = wpnKey;
+				// 2. ID別が無く、最高レアなら Wpn_Sword_Legend.obj などを探す
+				else if (isLegendary && DataManager::loadedModels.count(legendKey) > 0) finalWpnKey = legendKey;
+				// 3. それも無ければ汎用の Wpn_Sword.obj などにフォールバック
+				else if (DataManager::loadedModels.count(baseKey) > 0) finalWpnKey = baseKey;
+
+				if (!finalWpnKey.empty()) {
+					GameModel& wGm = DataManager::loadedModels[finalWpnKey];
+					wGm.model.transform = boneWorldTransform;
+					DrawModel(wGm.model, { 0,0,0 }, 1.0f, WHITE);
+					wGm.model.transform = MatrixIdentity();
+				}
+				else if (debug) {
+					Vector3 boneWorldPos = { boneWorldTransform.m12, boneWorldTransform.m13, boneWorldTransform.m14 };
+					DrawCube(boneWorldPos, 0.1f, 0.5f, 0.1f, GRAY);
+				}
+			}
+		}
+		gm.model.transform = MatrixIdentity();
+
+	}
+	else {
+		Color bodyColor = RED; if (isStealth) bodyColor = Fade(BLUE, 0.3f);
+		DrawCube(position, 1, 1, 1, bodyColor); DrawCubeWires(position, 1, 1, 1, MAROON);
+		if (currentWeapon != NONE) { DrawLine3D(position, Vector3Add(position, Vector3Scale(lastAimDir, 3.0f)), Fade(YELLOW, 0.3f)); }
+	}
 }

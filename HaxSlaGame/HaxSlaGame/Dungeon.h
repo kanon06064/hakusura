@@ -15,6 +15,10 @@ public:
     Vector3 bossSpawnPos;
     Vector3 questBoardPos;
 
+    // ★ここがエラーの解消に必要な変数です
+    Vector3 dungeonEntrances[3];
+    int currentDungeonId;
+
     std::vector<Vector3> treasureSpots;
 
     bool isHome;
@@ -22,7 +26,8 @@ public:
     int currentHeight;
 
     Dungeon();
-    void Generate(bool homeMode, int floor);
+    // ★ここがエラーの解消に必要な関数の引数です
+    void Generate(bool homeMode, int floor, int dungeonId = 0, int unlockedDungeonId = 0);
     void Draw();
     bool IsWall(float x, float z);
     bool CheckCollisionRadius(Vector3 pos, float radius);
@@ -41,5 +46,5 @@ private:
     void GenerateNormalFloor(int floor);
     void OptimizeMap();
     void DigCorridor(int x1, int y1, int x2, int y2);
-    void SnapToTile(Vector3& pos); // ★ 追加: 座標をタイル中央にスナップさせる関数
+    void SnapToTile(Vector3& pos);
 };

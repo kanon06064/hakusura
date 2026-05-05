@@ -138,7 +138,8 @@
     <ClCompile Include="Dungeon.cpp" />
     <ClCompile Include="EffectManager.cpp" />
     <ClCompile Include="Enemy.cpp" />
-    <ClCompile Include="Game.cpp" />
+    <ClCompile Include="Game_Draw.cpp" />
+    <ClCompile Include="Game_Main.cpp" />
     <ClCompile Include="imgui\imgui.cpp" />
     <ClCompile Include="imgui\imgui_demo.cpp" />
     <ClCompile Include="imgui\imgui_draw.cpp" />
@@ -147,7 +148,9 @@
     <ClCompile Include="imgui\rlImGui.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Player.cpp" />
-    <ClCompile Include="UI.cpp" />
+    <ClCompile Include="UI_Facilities.cpp" />
+    <ClCompile Include="UI_Main.cpp" />
+    <ClCompile Include="UI_Menu.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AudioManager.h" />

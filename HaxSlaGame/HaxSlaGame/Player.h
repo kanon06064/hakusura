@@ -15,6 +15,12 @@ public:
     int gold;
     bool isAttacking;
 
+    // ★追加: アニメーション管理変数
+    int animFrameCounter;
+    int currentAnimIndex;
+    float modelRotation;
+    bool isDead;
+
     float dashTimer, dashCooldownTimer;
     float smashCooldownTimer;
     float stealthTimer, stealthCooldownTimer;
@@ -55,8 +61,6 @@ public:
 
     static std::string GetFullItemName(const ItemData& item);
     static float GetItemTotalAtkBonus(const ItemData& item);
-
-    // ★追加：アイテムのレアリティカラーを取得
     static Color GetItemRarityColor(const ItemData& item);
 
 private:

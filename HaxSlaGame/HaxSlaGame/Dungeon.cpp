@@ -11,10 +11,9 @@ Vector3 Room::GetCenter() const { return { (float)x * TILE_SIZE + (float)width *
 Dungeon::Dungeon() {
     map.resize(MAX_MAP_WIDTH, std::vector<int>(MAX_MAP_HEIGHT, 2));
     discovered.resize(MAX_MAP_WIDTH, std::vector<bool>(MAX_MAP_HEIGHT, false));
-    Generate(true, 0);
+    Generate(true, 0, 0, 0);
 }
 
-// ★ 追加: 座標を一番近いタイルの中心に補正する
 void Dungeon::SnapToTile(Vector3& pos) {
     if (pos.x != -999) {
         pos.x = roundf(pos.x / TILE_SIZE) * TILE_SIZE;
@@ -22,13 +21,16 @@ void Dungeon::SnapToTile(Vector3& pos) {
     }
 }
 
-void Dungeon::Generate(bool homeMode, int floor) {
+void Dungeon::Generate(bool homeMode, int floor, int dungeonId, int unlockedDungeonId) {
+    currentDungeonId = dungeonId;
     isHome = homeMode; rooms.clear(); treasureSpots.clear();
     stairsDownPos = { -999,-999,-999 }; stairsUpPos = { -999,-999,-999 };
     storageBoxPos = { -999,-999,-999 }; portalPos = { -999,-999,-999 };
     healStationPos = { -999,-999,-999 }; reforgeStationPos = { -999,-999,-999 };
     craftStationPos = { -999,-999,-999 }; bossSpawnPos = { -999,-999,-999 };
     questBoardPos = { -999,-999,-999 };
+
+    for (int i = 0; i < 3; i++) dungeonEntrances[i] = { -999,-999,-999 };
 
     if (homeMode) { currentWidth = 60; currentHeight = 60; }
     else {
@@ -77,14 +79,29 @@ void Dungeon::Generate(bool homeMode, int floor) {
         storageBoxPos = centerRoom.GetCenter();
         storageBoxPos.x -= 4.0f;
 
-        stairsDownPos = centerRoom.GetCenter();
-        stairsDownPos.x += 4.0f;
-        stairsDownPos.y = 0.0f;
-
         craftStationPos = topRoom.GetCenter();
         healStationPos = bottomRoom.GetCenter();
         reforgeStationPos = leftRoom.GetCenter();
         questBoardPos = rightRoom.GetCenter();
+
+        if (unlockedDungeonId >= 0) {
+            dungeonEntrances[0] = centerRoom.GetCenter();
+            dungeonEntrances[0].x += 4.0f;
+            dungeonEntrances[0].z -= 4.0f;
+            dungeonEntrances[0].y = 0.0f;
+        }
+        if (unlockedDungeonId >= 1) {
+            dungeonEntrances[1] = centerRoom.GetCenter();
+            dungeonEntrances[1].x += 4.0f;
+            dungeonEntrances[1].z += 0.0f;
+            dungeonEntrances[1].y = 0.0f;
+        }
+        if (unlockedDungeonId >= 2) {
+            dungeonEntrances[2] = centerRoom.GetCenter();
+            dungeonEntrances[2].x += 4.0f;
+            dungeonEntrances[2].z += 4.0f;
+            dungeonEntrances[2].y = 0.0f;
+        }
 
         OptimizeMap();
     }
@@ -95,7 +112,6 @@ void Dungeon::Generate(bool homeMode, int floor) {
         OptimizeMap();
     }
 
-    // ★ 追加: 全ての環境モデルの座標をタイルの中心にスナップさせる（ズレ防止）
     SnapToTile(stairsDownPos);
     SnapToTile(stairsUpPos);
     SnapToTile(storageBoxPos);
@@ -105,6 +121,7 @@ void Dungeon::Generate(bool homeMode, int floor) {
     SnapToTile(craftStationPos);
     SnapToTile(bossSpawnPos);
     SnapToTile(questBoardPos);
+    for (int i = 0; i < 3; i++) SnapToTile(dungeonEntrances[i]);
 }
 
 void Dungeon::OptimizeMap() {
@@ -184,52 +201,73 @@ void Dungeon::Draw() {
         else {
             bool drawFloor = true;
 
-            // ★ 修正: SnapToTile で補正済みのため、単純な座標比較だけで完璧に穴が開く
             if (stairsDownPos.x != -999 && fabs(pos.x - stairsDownPos.x) < 0.1f && fabs(pos.z - stairsDownPos.z) < 0.1f) {
                 drawFloor = false;
             }
             if (stairsUpPos.x != -999 && fabs(pos.x - stairsUpPos.x) < 0.1f && fabs(pos.z - stairsUpPos.z) < 0.1f) {
                 drawFloor = false;
             }
+            for (int i = 0; i < 3; i++) {
+                if (dungeonEntrances[i].x != -999 && fabs(pos.x - dungeonEntrances[i].x) < 0.1f && fabs(pos.z - dungeonEntrances[i].z) < 0.1f) {
+                    drawFloor = false;
+                }
+            }
 
             if (drawFloor) {
-                DrawPlane(pos, { TILE_SIZE, TILE_SIZE }, isHome ? DARKBLUE : DARKGREEN);
+                Color floorCol = DARKGREEN;
+                if (isHome) floorCol = DARKBLUE;
+                else if (currentDungeonId == 1) floorCol = MAROON;
+                else if (currentDungeonId == 2) floorCol = DARKPURPLE;
+
+                DrawPlane(pos, { TILE_SIZE, TILE_SIZE }, floorCol);
             }
         }
     }
 
-    auto drawEnv = [](const std::string& key, Vector3 pos) -> bool {
+    auto drawEnvTint = [](const std::string& key, Vector3 pos, Color tint) -> bool {
         if (DataManager::loadedModels.count(key) > 0) {
-            DrawModel(DataManager::loadedModels[key].model, pos, 1.0f, WHITE);
+            DrawModel(DataManager::loadedModels[key].model, pos, 1.0f, tint);
             return true;
         }
         return false;
         };
 
     if (stairsDownPos.x != -999 && IsDiscovered(stairsDownPos.x, stairsDownPos.z)) {
-        if (!drawEnv("Obj_StairsDown", stairsDownPos)) DrawCube(stairsDownPos, 1.2f, 0.1f, 1.2f, GOLD);
+        if (!drawEnvTint("Obj_StairsDown", stairsDownPos, WHITE)) DrawCube(stairsDownPos, 1.2f, 0.1f, 1.2f, GOLD);
     }
 
     if (stairsUpPos.x != -999 && IsDiscovered(stairsUpPos.x, stairsUpPos.z)) {
-        if (!drawEnv("Obj_StairsUp", stairsUpPos)) DrawCube(stairsUpPos, 1.2f, 0.1f, 1.2f, SKYBLUE);
+        if (!drawEnvTint("Obj_StairsUp", stairsUpPos, WHITE)) DrawCube(stairsUpPos, 1.2f, 0.1f, 1.2f, SKYBLUE);
+    }
+
+    if (isHome) {
+        for (int i = 0; i < 3; i++) {
+            if (dungeonEntrances[i].x != -999 && IsDiscovered(dungeonEntrances[i].x, dungeonEntrances[i].z)) {
+                Color tint = WHITE;
+                if (i == 1) tint = RED;
+                if (i == 2) tint = PURPLE;
+
+                if (!drawEnvTint("Obj_StairsDown", dungeonEntrances[i], tint)) DrawCube(dungeonEntrances[i], 1.2f, 0.1f, 1.2f, tint);
+            }
+        }
     }
 
     if (isHome && storageBoxPos.x != -999) {
-        if (!drawEnv("Obj_Storage", storageBoxPos)) {
+        if (!drawEnvTint("Obj_Storage", storageBoxPos, WHITE)) {
             DrawCube(storageBoxPos, 1.2f, 1.2f, 1.2f, BROWN);
             DrawCubeWires(storageBoxPos, 1.2f, 1.2f, 1.2f, BLACK);
         }
     }
 
     if (isHome && reforgeStationPos.x != -999) {
-        if (!drawEnv("Obj_Reforge", reforgeStationPos)) {
+        if (!drawEnvTint("Obj_Reforge", reforgeStationPos, WHITE)) {
             DrawCube(reforgeStationPos, 1.2f, 1.2f, 1.2f, PURPLE);
             DrawCubeWires(reforgeStationPos, 1.2f, 1.2f, 1.2f, VIOLET);
         }
     }
 
     if (isHome && craftStationPos.x != -999) {
-        if (!drawEnv("Obj_Craft", craftStationPos)) {
+        if (!drawEnvTint("Obj_Craft", craftStationPos, WHITE)) {
             DrawCube(craftStationPos, 1.2f, 1.2f, 1.2f, ORANGE);
             DrawCubeWires(craftStationPos, 1.2f, 1.2f, 1.2f, YELLOW);
         }
@@ -258,7 +296,7 @@ void Dungeon::Draw() {
     }
 
     if (healStationPos.x != -999 && IsDiscovered(healStationPos.x, healStationPos.z)) {
-        if (!drawEnv("Obj_Heal", healStationPos)) {
+        if (!drawEnvTint("Obj_Heal", healStationPos, WHITE)) {
             DrawCube(healStationPos, 1.5f, 0.5f, 1.5f, PINK);
             Vector3 crossV = Vector3Add(healStationPos, { 0, 0.5f, 0 });
             DrawCube(crossV, 0.3f, 1.0f, 0.3f, RED);
@@ -267,7 +305,7 @@ void Dungeon::Draw() {
     }
 
     if (isHome && questBoardPos.x != -999) {
-        if (!drawEnv("Obj_QuestBoard", questBoardPos)) {
+        if (!drawEnvTint("Obj_QuestBoard", questBoardPos, WHITE)) {
             DrawCube(questBoardPos, 2.0f, 2.0f, 0.2f, BEIGE);
             DrawCubeWires(questBoardPos, 2.0f, 2.0f, 0.2f, DARKBROWN);
         }

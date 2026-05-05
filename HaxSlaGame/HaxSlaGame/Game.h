@@ -8,7 +8,6 @@
 #include "UI.h"
 #include <vector>
 
-// ★ ImGui インクルード
 #include "imgui.h"
 #include "rlImGui.h"
 
@@ -18,7 +17,6 @@ public:
     ~Game();
     void Run();
 
-    // ★ワープ関数にダンジョンIDの引数を追加
     void WarpToFloor(int targetDungeon, int targetFloor);
     void StartDebugRoom();
 
@@ -59,12 +57,13 @@ private:
 
     int floor;
 
-    // ★ダンジョン進行度管理
-    int currentDungeonId;   // 今いるダンジョン (0:最初の30階, 1:次の50階, 2:最後の100階)
-    int unlockedDungeonId;  // どこまで解放されたか
-    std::vector<int> maxFloors; // 各ダンジョンごとの最高到達階層
+    int currentDungeonId;
+    int unlockedDungeonId;
+    std::vector<int> maxFloors;
 
     int currentSlot;
+    // ★ここがエラーの解消に必要な変数です
+    int hoveredEntranceIndex;
 
     bool debugMode;
     bool showMenu;
@@ -72,7 +71,7 @@ private:
     bool showReforgeMenu;
     bool showWarpMenu;
     bool showCraftMenu;
-    bool showQuestMenu; // ★追加：クエストボード表示フラグ
+    bool showQuestMenu;
     bool showPrompt;
     MenuTab currentTab;
     float sceneTimer;

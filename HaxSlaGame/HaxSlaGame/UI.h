@@ -18,9 +18,7 @@ class Game;
 
 class UI {
 public:
-    static void DrawHUD(class Player& p, std::vector<class Enemy>& enemies, class Dungeon& d, Camera3D& cam, int floor, bool debug, Font font);
-
-    // ★ 修正: 戻り値を int に変更 (0:何もしない, 1:セーブ, 2:タイトルへ戻る)
+    static void DrawHUD(class Player& p, std::vector<class Enemy>& enemies, class Dungeon& d, Camera3D& cam, int floor, int dungeonId, bool debug, Font font);
     static int DrawMenu(class Player& p, class Dungeon& d, MenuTab& tab, Font font);
 
     static void DrawStorage(class Player& p, Font font, bool& isOpen, std::vector<ItemData>& sItems, std::vector<ItemData>& sEquip);
