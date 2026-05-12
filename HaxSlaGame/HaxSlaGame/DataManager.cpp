@@ -48,16 +48,27 @@ void DataManager::LoadAllData() {
         std::string name = enemy.modelName;
         if (!name.empty() && loadedModels.count(name) == 0) {
             std::string iqmPath = FindRes(name, ".iqm", "IQM"); std::string texPath = FindRes(name + "_Albedo", ".png", "Texture"); if (!FileExists(texPath.c_str())) texPath = FindRes("Albedo", ".png", "Texture");
-            if (FileExists(iqmPath.c_str()) && FileExists(texPath.c_str())) { GameModel gm; gm.model = LoadModel(iqmPath.c_str()); gm.texture = LoadTexture(texPath.c_str()); SetMaterialTexture(&gm.model.materials[0], MATERIAL_MAP_DIFFUSE, gm.texture); gm.anims = LoadModelAnimations(iqmPath.c_str(), &gm.animCount); gm.loaded = true; loadedModels[name] = gm; }
+            if (FileExists(iqmPath.c_str()) && FileExists(texPath.c_str())) {
+                GameModel gm; gm.model = LoadModel(iqmPath.c_str()); gm.texture = LoadTexture(texPath.c_str());
+                // ★修正: すべてのマテリアルにテクスチャを適用
+                for (int m = 0; m < gm.model.materialCount; m++) { SetMaterialTexture(&gm.model.materials[m], MATERIAL_MAP_DIFFUSE, gm.texture); }
+                gm.anims = LoadModelAnimations(iqmPath.c_str(), &gm.animCount); gm.loaded = true; loadedModels[name] = gm;
+            }
         }
         std::string wName = enemy.weaponModelName;
         if (!wName.empty() && loadedModels.count(wName) == 0) {
             std::string wIqmPath = FindRes(wName, ".iqm", "IQM"); if (!FileExists(wIqmPath.c_str())) wIqmPath = FindRes(wName, ".obj", "OBJ"); std::string wTexPath = FindRes(wName + "_Albedo", ".png", "Texture"); if (!FileExists(wTexPath.c_str())) wTexPath = FindRes("Albedo", ".png", "Texture");
-            if (FileExists(wIqmPath.c_str())) { GameModel wGm; wGm.model = LoadModel(wIqmPath.c_str()); if (FileExists(wTexPath.c_str())) { wGm.texture = LoadTexture(wTexPath.c_str()); SetMaterialTexture(&wGm.model.materials[0], MATERIAL_MAP_DIFFUSE, wGm.texture); } wGm.anims = LoadModelAnimations(wIqmPath.c_str(), &wGm.animCount); wGm.loaded = true; loadedModels[wName] = wGm; }
+            if (FileExists(wIqmPath.c_str())) {
+                GameModel wGm; wGm.model = LoadModel(wIqmPath.c_str());
+                if (FileExists(wTexPath.c_str())) {
+                    wGm.texture = LoadTexture(wTexPath.c_str());
+                    for (int m = 0; m < wGm.model.materialCount; m++) { SetMaterialTexture(&wGm.model.materials[m], MATERIAL_MAP_DIFFUSE, wGm.texture); }
+                }
+                wGm.anims = LoadModelAnimations(wIqmPath.c_str(), &wGm.animCount); wGm.loaded = true; loadedModels[wName] = wGm;
+            }
         }
     }
 
-    // ★追加: プレイヤー用の武器モデル（最高レアの_Legend含む）を自動ロード
     std::vector<std::string> envModels = {
         "Obj_Storage", "Obj_Reforge", "Obj_Craft", "Obj_Portal", "Obj_StairsDown", "Obj_StairsUp", "Obj_Heal", "Obj_QuestBoard", "Player",
         "Wpn_Sword", "Wpn_Spear", "Wpn_Axe", "Wpn_Wand",
@@ -66,17 +77,29 @@ void DataManager::LoadAllData() {
     for (const auto& mName : envModels) {
         std::string objPath = FindRes(mName, ".obj", "OBJ"); std::string iqmPath = FindRes(mName, ".iqm", "IQM"); std::string texPath = FindRes(mName + "_Albedo", ".png", "Texture");
         std::string usePath = ""; if (FileExists(iqmPath.c_str())) usePath = iqmPath; else if (FileExists(objPath.c_str())) usePath = objPath;
-        if (!usePath.empty()) { GameModel gm; gm.model = LoadModel(usePath.c_str()); if (!FileExists(texPath.c_str())) texPath = FindRes("Albedo", ".png", "Texture"); if (FileExists(texPath.c_str())) { gm.texture = LoadTexture(texPath.c_str()); SetMaterialTexture(&gm.model.materials[0], MATERIAL_MAP_DIFFUSE, gm.texture); } if (usePath == iqmPath) gm.anims = LoadModelAnimations(usePath.c_str(), &gm.animCount); else { gm.anims = nullptr; gm.animCount = 0; } gm.loaded = true; loadedModels[mName] = gm; }
+        if (!usePath.empty()) {
+            GameModel gm; gm.model = LoadModel(usePath.c_str());
+            if (!FileExists(texPath.c_str())) texPath = FindRes("Albedo", ".png", "Texture");
+            if (FileExists(texPath.c_str())) {
+                gm.texture = LoadTexture(texPath.c_str());
+                // ★修正: すべてのマテリアルにテクスチャを適用
+                for (int m = 0; m < gm.model.materialCount; m++) { SetMaterialTexture(&gm.model.materials[m], MATERIAL_MAP_DIFFUSE, gm.texture); }
+            }
+            if (usePath == iqmPath) gm.anims = LoadModelAnimations(usePath.c_str(), &gm.animCount); else { gm.anims = nullptr; gm.animCount = 0; }
+            gm.loaded = true; loadedModels[mName] = gm;
+        }
     }
 
-    // アイテム（個別IDでの指定）のロード
     for (auto& cfg : itemConfigs) {
         if (cfg.type == "EQUIP") {
             std::string wKey = "Wpn_" + std::to_string(cfg.id);
             std::string wObj = FindRes(wKey, ".obj", "OBJ"); if (!FileExists(wObj.c_str())) wObj = FindRes(wKey, ".iqm", "IQM");
             if (FileExists(wObj.c_str())) {
                 GameModel gm; gm.model = LoadModel(wObj.c_str()); std::string wTex = FindRes(wKey + "_Albedo", ".png", "Texture"); if (!FileExists(wTex.c_str())) wTex = FindRes("Albedo", ".png", "Texture");
-                if (FileExists(wTex.c_str())) { gm.texture = LoadTexture(wTex.c_str()); SetMaterialTexture(&gm.model.materials[0], MATERIAL_MAP_DIFFUSE, gm.texture); }
+                if (FileExists(wTex.c_str())) {
+                    gm.texture = LoadTexture(wTex.c_str());
+                    for (int m = 0; m < gm.model.materialCount; m++) { SetMaterialTexture(&gm.model.materials[m], MATERIAL_MAP_DIFFUSE, gm.texture); }
+                }
                 gm.anims = nullptr; gm.animCount = 0; gm.loaded = true; loadedModels[wKey] = gm;
             }
         }

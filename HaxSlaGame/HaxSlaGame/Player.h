@@ -15,11 +15,15 @@ public:
     int gold;
     bool isAttacking;
 
-    // ★追加: アニメーション管理変数
-    int animFrameCounter;
-    int currentAnimIndex;
-    float modelRotation;
-    bool isDead;
+    // --- アニメーション管理変数 (クロスフェード対応版) ---
+    float animTime;           // int から float に変更（時間ベースの滑らかな更新用）
+    int currentAnimIndex;     // 現在再生中のアニメーション番号
+    int prevAnimIndex;        // 遷移前の直前のアニメーション番号
+    float blendWeight;        // 0.0(前) ～ 1.0(今) のブレンド率
+    bool isTransitioning;     // 現在アニメーションを補間中かどうか
+    float modelRotation;      // モデルの回転（度数法）
+    bool isDead;              // 死亡フラグ
+    // --------------------------------------------------
 
     float dashTimer, dashCooldownTimer;
     float smashCooldownTimer;

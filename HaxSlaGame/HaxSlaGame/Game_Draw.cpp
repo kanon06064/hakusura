@@ -4,7 +4,6 @@
 #include "raymath.h"
 #include "rlgl.h"
 
-// ★追加: 日本語テキストをJSONから安全に取得するヘルパー関数
 static std::string T(const std::string& key, const std::string& def) {
     if (DataManager::uiStrings.count(key)) return DataManager::uiStrings[key];
     return def;
@@ -171,6 +170,17 @@ void Game::Draw() {
         ImGui::Begin("Developer Tools (F1 to toggle)");
         ImGui::Text("FPS: %d", GetFPS());
         ImGui::Separator();
+
+        // ★追加: デバッグ画面で現在読み込まれているモデルの状態を詳細表示
+        if (DataManager::loadedModels.count("Player") > 0) {
+            GameModel& pm = DataManager::loadedModels["Player"];
+            ImGui::TextColored(ImVec4(1, 1, 0, 1), "Player Model Status:");
+            ImGui::Text("Format: %s", pm.animCount > 0 ? "IQM (Animated)" : "OBJ (Static Mesh)");
+            ImGui::Text("Bones: %d", pm.model.boneCount);
+            ImGui::Text("Animations: %d", pm.animCount);
+            ImGui::Separator();
+        }
+
         if (player) {
             ImGui::Text("Player POS: (%.1f, %.1f, %.1f)", player->position.x, player->position.y, player->position.z);
             ImGui::Text("Dungeon: %d  Floor: %d", currentDungeonId, floor);
