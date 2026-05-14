@@ -40,7 +40,7 @@ int UI::DrawMenu(Player& p, Dungeon& d, MenuTab& tab, Font font) {
                 DrawTextEx(font, TextFormat("%s +%.1f", T("ATK", "ATK").c_str(), totalBonus), { 130, (float)y + 50 }, 14, 1, YELLOW);
                 if (UI::DrawButton(btnRect, T("OFF", "OFF").c_str(), font, RED)) p.UnequipWeapon(i);
             }
-            else DrawTextEx(font, "EMPTY", { 130, (float)y + 35 }, 20, 1, DARKGRAY);
+            else DrawTextEx(font, T("EMPTY", "EMPTY").c_str(), { 130, (float)y + 35 }, 20, 1, DARKGRAY);
         }
 
         const char* armorKeys[] = { "HEAD", "CHEST", "HANDS", "LEGS", "FEET" };
@@ -56,10 +56,10 @@ int UI::DrawMenu(Player& p, Dungeon& d, MenuTab& tab, Font font) {
             if (!isEmpty) {
                 DrawTextEx(font, Player::GetFullItemName(p.equippedArmor[i]).c_str(), { 490, (float)y + 10 }, 14, 1, Player::GetItemRarityColor(p.equippedArmor[i]));
                 float def = p.equippedArmor[i].defBonus + DataManager::GetModifier(p.equippedArmor[i].modifierId).def;
-                DrawTextEx(font, TextFormat("DEF +%.1f", def), { 490, (float)y + 35 }, 12, 1, BLUE);
+                DrawTextEx(font, TextFormat("%s +%.1f", T("DEF", "DEF").c_str(), def), { 490, (float)y + 35 }, 12, 1, BLUE);
                 if (UI::DrawButton(btnRect, T("OFF", "OUT").c_str(), font, RED)) p.UnequipArmor(i);
             }
-            else { DrawTextEx(font, "EMPTY", { 490, (float)y + 20 }, 14, 1, DARKGRAY); }
+            else { DrawTextEx(font, T("EMPTY", "EMPTY").c_str(), { 490, (float)y + 20 }, 14, 1, DARKGRAY); }
         }
 
         DrawTextEx(font, T("OWNED_EQUIP", "Owned Equipment").c_str(), { 720, 130 }, 18, 1, GOLD);
@@ -72,12 +72,15 @@ int UI::DrawMenu(Player& p, Dungeon& d, MenuTab& tab, Font font) {
             DrawTextEx(font, Player::GetFullItemName(p.inventoryEquip[idx]).c_str(), { 730, (float)y + 10 }, 14, 1, Player::GetItemRarityColor(p.inventoryEquip[idx]));
 
             if (p.inventoryEquip[idx].type == "EQUIP") {
-                if (UI::DrawButton({ 940, (float)y, 40, 40 }, T("W1", "W1").c_str(), font, DARKGRAY)) p.EquipWeapon(idx, 0);
-                if (UI::DrawButton({ 985, (float)y, 40, 40 }, T("W2", "W2").c_str(), font, DARKGRAY)) p.EquipWeapon(idx, 1);
+                // ★修正: 装備時に配列が変動するためbreak
+                if (UI::DrawButton({ 940, (float)y, 40, 40 }, T("W1", "W1").c_str(), font, DARKGRAY)) { p.EquipWeapon(idx, 0); break; }
+                if (UI::DrawButton({ 985, (float)y, 40, 40 }, T("W2", "W2").c_str(), font, DARKGRAY)) { p.EquipWeapon(idx, 1); break; }
             }
             else if (p.inventoryEquip[idx].type == "ARMOR") {
                 int subtype = p.inventoryEquip[idx].weaponSubtype;
-                if (subtype >= 0 && subtype < 5) { if (UI::DrawButton({ 940, (float)y, 85, 40 }, T("EQUIP", "EQUIP").c_str(), font, DARKGREEN)) p.EquipArmor(idx, subtype); }
+                if (subtype >= 0 && subtype < 5) {
+                    if (UI::DrawButton({ 940, (float)y, 85, 40 }, T("EQUIP", "EQUIP").c_str(), font, DARKGREEN)) { p.EquipArmor(idx, subtype); break; }
+                }
             }
         }
         if (UI::DrawButton({ 720, 530, 80, 30 }, "<<", font, GRAY) && equipPage > 0) equipPage--;
@@ -88,9 +91,69 @@ int UI::DrawMenu(Player& p, Dungeon& d, MenuTab& tab, Font font) {
         DrawTextEx(font, T("CAM_CONTROL", "Right Click & Drag to Move").c_str(), { 120, 620 }, 16, 1, LIGHTGRAY);
         if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT) && !showDetail) { Vector2 delta = GetMouseDelta(); skillOffset = Vector2Add(skillOffset, delta); }
         BeginScissorMode((int)viewArea.x, (int)viewArea.y, (int)viewArea.width, (int)viewArea.height);
-        for (auto& node : p.skillTree) { Vector2 startPos = Vector2Add(node.uiPos, skillOffset); for (int reqId : node.reqIds) { Vector2 endPos = Vector2Add(p.skillTree[reqId].uiPos, skillOffset); DrawLineEx(startPos, endPos, 3, node.unlocked ? GOLD : DARKGRAY); } }
-        for (int i = 0; i < (int)p.skillTree.size(); i++) { auto& node = p.skillTree[i]; bool available = p.IsSkillAvailable(i); Vector2 drawPos = Vector2Add(node.uiPos, skillOffset); Color nodeColor = node.unlocked ? YELLOW : (available ? GREEN : DARKGRAY); if (node.type != SKILL_PASSIVE) { nodeColor = node.unlocked ? ORANGE : (available ? PURPLE : DARKGRAY); } DrawPoly(drawPos, 6, 35, 0, nodeColor); DrawPolyLines(drawPos, 6, 35, 0, RAYWHITE); DrawTextEx(font, node.name.c_str(), { drawPos.x - 28, drawPos.y - 8 }, 12, 1, node.unlocked ? BLACK : WHITE); if (!node.unlocked) { DrawTextEx(font, TextFormat("SP:%d", node.cost), { drawPos.x - 15, drawPos.y + 15 }, 10, 1, WHITE); } if (!showDetail && CheckCollisionPointRec(GetMousePosition(), viewArea)) { if (available && CheckCollisionPointCircle(GetMousePosition(), drawPos, 35) && IsMouseButtonPressed(0)) { p.UnlockSkill(i); } } }
+
+        for (auto& node : p.skillTree) {
+            Vector2 startPos = Vector2Add(node.uiPos, skillOffset);
+            for (int reqId : node.reqIds) {
+                int targetIdx = -1;
+                for (int j = 0; j < (int)p.skillTree.size(); j++) {
+                    if (p.skillTree[j].id == reqId) { targetIdx = j; break; }
+                }
+                if (targetIdx != -1) {
+                    Vector2 endPos = Vector2Add(p.skillTree[targetIdx].uiPos, skillOffset);
+                    DrawLineEx(startPos, endPos, 3, node.unlocked ? GOLD : DARKGRAY);
+                }
+            }
+        }
+
+        int hoveredSkillId = -1;
+
+        for (int i = 0; i < (int)p.skillTree.size(); i++) {
+            auto& node = p.skillTree[i];
+            bool available = p.IsSkillAvailable(node.id);
+            Vector2 drawPos = Vector2Add(node.uiPos, skillOffset);
+            Color nodeColor = node.unlocked ? YELLOW : (available ? GREEN : DARKGRAY);
+
+            if (node.type != SKILL_PASSIVE) {
+                nodeColor = node.unlocked ? ORANGE : (available ? PURPLE : DARKGRAY);
+            }
+
+            DrawPoly(drawPos, 6, 35, 0, nodeColor);
+            DrawPolyLines(drawPos, 6, 35, 0, RAYWHITE);
+            DrawTextEx(font, node.name.c_str(), { drawPos.x - 28, drawPos.y - 8 }, 12, 1, node.unlocked ? BLACK : WHITE);
+
+            if (!node.unlocked) {
+                DrawTextEx(font, TextFormat("SP:%d", node.cost), { drawPos.x - 15, drawPos.y + 15 }, 10, 1, WHITE);
+            }
+
+            if (!showDetail && CheckCollisionPointRec(GetMousePosition(), viewArea)) {
+                if (CheckCollisionPointCircle(GetMousePosition(), drawPos, 35)) {
+                    hoveredSkillId = i;
+                    if (available && IsMouseButtonPressed(0)) p.UnlockSkill(node.id);
+                }
+            }
+        }
         EndScissorMode();
+
+        if (hoveredSkillId != -1) {
+            auto& node = p.skillTree[hoveredSkillId];
+            Vector2 mPos = GetMousePosition();
+            DrawRectangle(mPos.x + 15, mPos.y + 15, 250, 100, Fade(BLACK, 0.9f));
+            DrawRectangleLines(mPos.x + 15, mPos.y + 15, 250, 100, GOLD);
+            DrawTextEx(font, node.name.c_str(), { mPos.x + 25, mPos.y + 25 }, 18, 1, WHITE);
+            DrawTextEx(font, TextFormat(T("SKILL_COST", "Cost: %d SP").c_str(), node.cost), { mPos.x + 25, mPos.y + 45 }, 14, 1, YELLOW);
+            DrawTextEx(font, node.desc.c_str(), { mPos.x + 25, mPos.y + 65 }, 12, 1, LIGHTGRAY);
+
+            if (node.unlocked) {
+                DrawTextEx(font, T("SKILL_UNLOCKED", "UNLOCKED").c_str(), { mPos.x + 160, mPos.y + 25 }, 14, 1, GREEN);
+            }
+            else if (p.IsSkillAvailable(node.id)) {
+                DrawTextEx(font, T("SKILL_AVAILABLE", "AVAILABLE").c_str(), { mPos.x + 150, mPos.y + 25 }, 14, 1, SKYBLUE);
+            }
+            else {
+                DrawTextEx(font, T("SKILL_LOCKED", "LOCKED").c_str(), { mPos.x + 170, mPos.y + 25 }, 14, 1, RED);
+            }
+        }
     }
     else if (tab == INVENTORY) {
         const char* subK[] = { "CONSUMABLE", "MATERIAL" };
@@ -109,7 +172,12 @@ int UI::DrawMenu(Player& p, Dungeon& d, MenuTab& tab, Font font) {
             DrawRectangleRec(itemRect, Fade(BLACK, showDetail ? 0.2f : 0.4f));
             DrawTextEx(font, TextFormat("%s x%d", item.name.c_str(), item.count), { 135, (float)y + 10 }, 18, 1.0f, Player::GetItemRarityColor(item));
             if (!showDetail && CheckCollisionPointRec(GetMousePosition(), itemRect)) { if (IsMouseButtonPressed(0)) OpenDetail(item); }
-            if (itemSubTab == 0 && UI::DrawButton({ 530, (float)y, 80, 38 }, T("USE", "Use").c_str(), font, GREEN)) p.UseItem(invIdx);
+
+            // ★修正: 消費アイテム使用時に配列が変動するためbreak
+            if (itemSubTab == 0 && UI::DrawButton({ 530, (float)y, 80, 38 }, T("USE", "Use").c_str(), font, GREEN)) {
+                p.UseItem(invIdx);
+                break;
+            }
         }
         if (UI::DrawButton({ 120, 600, 100, 30 }, "<<", font, GRAY) && itemPage > 0) itemPage--;
         if (UI::DrawButton({ 230, 600, 100, 30 }, ">>", font, GRAY) && itemPage < maxP - 1) itemPage++;

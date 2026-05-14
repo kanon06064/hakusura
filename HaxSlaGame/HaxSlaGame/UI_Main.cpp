@@ -75,17 +75,17 @@ void UI::DrawDetailWindow(Font font) {
     DrawTextEx(font, Player::GetFullItemName(focusingItem).c_str(), { (float)x + 25, (float)y + 25 }, 28, 1, rarityColor);
 
     std::string typeStr = focusingItem.type;
-    if (typeStr == "EQUIP") typeStr = "Weapon";
-    else if (typeStr == "ARMOR") typeStr = "Armor";
-    else if (typeStr == "CONSUMABLE") typeStr = "Consumable";
-    else if (typeStr == "MATERIAL") typeStr = "Material";
+    if (typeStr == "EQUIP") typeStr = T("WEAPON", "Weapon");
+    else if (typeStr == "ARMOR") typeStr = T("ARMOR_TYPE", "Armor");
+    else if (typeStr == "CONSUMABLE") typeStr = T("CONSUMABLE", "Consumable");
+    else if (typeStr == "MATERIAL") typeStr = T("MATERIAL", "Material");
 
     if (focusingItem.type == "EQUIP") {
-        const char* wTypes[] = { "Sword", "Spear", "Axe", "Wand", "None" };
+        std::string wTypes[] = { T("SWORD", "Sword"), T("SPEAR", "Spear"), T("AXE", "Axe"), T("WAND", "Wand"), T("NONE", "None") };
         if (focusingItem.weaponSubtype >= 0 && focusingItem.weaponSubtype <= 3) typeStr += std::string(" (") + wTypes[focusingItem.weaponSubtype] + ")";
     }
     else if (focusingItem.type == "ARMOR") {
-        const char* aTypes[] = { "Head", "Chest", "Hands", "Legs", "Feet" };
+        std::string aTypes[] = { T("HEAD", "Head"), T("CHEST", "Chest"), T("HANDS", "Hands"), T("LEGS", "Legs"), T("FEET", "Feet") };
         if (focusingItem.weaponSubtype >= 0 && focusingItem.weaponSubtype <= 4) typeStr += std::string(" (") + aTypes[focusingItem.weaponSubtype] + ")";
     }
     DrawTextEx(font, typeStr.c_str(), { (float)x + 25, (float)y + 60 }, 20, 1, LIGHTGRAY);
@@ -95,15 +95,15 @@ void UI::DrawDetailWindow(Font font) {
     float totalHp = focusingItem.hpBonus + mod.hp; float totalSpd = focusingItem.speedBonus + mod.spd;
 
     int statsY = y + 110; int lineH = 35;
-    if (totalAtk != 0) { DrawTextEx(font, TextFormat("ATK : %+.1f", totalAtk), { (float)x + 40, (float)statsY }, 22, 1, RED); if (mod.atk != 0) DrawTextEx(font, TextFormat("(Mod %+.1f)", mod.atk), { (float)x + 250, (float)statsY }, 18, 1, ORANGE); statsY += lineH; }
-    if (totalDef != 0) { DrawTextEx(font, TextFormat("DEF : %+.1f", totalDef), { (float)x + 40, (float)statsY }, 22, 1, BLUE); if (mod.def != 0) DrawTextEx(font, TextFormat("(Mod %+.1f)", mod.def), { (float)x + 250, (float)statsY }, 18, 1, ORANGE); statsY += lineH; }
-    if (totalHp != 0) { DrawTextEx(font, TextFormat("HP : %+.0f", totalHp), { (float)x + 40, (float)statsY }, 22, 1, GREEN); if (mod.hp != 0) DrawTextEx(font, TextFormat("(Mod %+.0f)", mod.hp), { (float)x + 250, (float)statsY }, 18, 1, ORANGE); statsY += lineH; }
-    if (totalSpd != 0) { DrawTextEx(font, TextFormat("SPD : %+.2f", totalSpd), { (float)x + 40, (float)statsY }, 22, 1, SKYBLUE); if (mod.spd != 0) DrawTextEx(font, TextFormat("(Mod %+.2f)", mod.spd), { (float)x + 250, (float)statsY }, 18, 1, ORANGE); statsY += lineH; }
-    if (focusingItem.heal > 0) { DrawTextEx(font, TextFormat("Heal : %.0f", focusingItem.heal), { (float)x + 40, (float)statsY }, 22, 1, PINK); statsY += lineH; }
+    if (totalAtk != 0) { DrawTextEx(font, TextFormat(T("STAT_ATK", "ATK : %+.1f").c_str(), totalAtk), { (float)x + 40, (float)statsY }, 22, 1, RED); if (mod.atk != 0) DrawTextEx(font, TextFormat(T("STAT_MOD", "(Mod %+.1f)").c_str(), mod.atk), { (float)x + 250, (float)statsY }, 18, 1, ORANGE); statsY += lineH; }
+    if (totalDef != 0) { DrawTextEx(font, TextFormat(T("STAT_DEF", "DEF : %+.1f").c_str(), totalDef), { (float)x + 40, (float)statsY }, 22, 1, BLUE); if (mod.def != 0) DrawTextEx(font, TextFormat(T("STAT_MOD", "(Mod %+.1f)").c_str(), mod.def), { (float)x + 250, (float)statsY }, 18, 1, ORANGE); statsY += lineH; }
+    if (totalHp != 0) { DrawTextEx(font, TextFormat(T("STAT_HP", "HP : %+.0f").c_str(), totalHp), { (float)x + 40, (float)statsY }, 22, 1, GREEN); if (mod.hp != 0) DrawTextEx(font, TextFormat(T("STAT_MOD_HP", "(Mod %+.0f)").c_str(), mod.hp), { (float)x + 250, (float)statsY }, 18, 1, ORANGE); statsY += lineH; }
+    if (totalSpd != 0) { DrawTextEx(font, TextFormat(T("STAT_SPD", "SPD : %+.2f").c_str(), totalSpd), { (float)x + 40, (float)statsY }, 22, 1, SKYBLUE); if (mod.spd != 0) DrawTextEx(font, TextFormat(T("STAT_MOD_SPD", "(Mod %+.2f)").c_str(), mod.spd), { (float)x + 250, (float)statsY }, 18, 1, ORANGE); statsY += lineH; }
+    if (focusingItem.heal > 0) { DrawTextEx(font, TextFormat(T("STAT_HEAL", "Heal : %.0f").c_str(), focusingItem.heal), { (float)x + 40, (float)statsY }, 22, 1, PINK); statsY += lineH; }
 
     if (mod.id != 0) {
         statsY += 20; DrawRectangleLines(x + 20, statsY - 5, w - 40, 70, ORANGE);
-        DrawTextEx(font, "Enchantment:", { (float)x + 30, (float)statsY }, 18, 1, ORANGE);
+        DrawTextEx(font, T("ENCHANTMENT", "Enchantment:").c_str(), { (float)x + 30, (float)statsY }, 18, 1, ORANGE);
         DrawTextEx(font, mod.name.c_str(), { (float)x + 50, (float)statsY + 30 }, 22, 1, YELLOW);
     }
 
@@ -145,10 +145,10 @@ int UI::DrawTitleScreen(Font font) {
         DrawRectangle(0, 0, sw, sh, Fade(BLACK, 0.8f));
         int w = 500, h = 250; int x = (sw - w) / 2, y = (sh - h) / 2;
         DrawRectangle(x, y, w, h, DARKGRAY); DrawRectangleLinesEx({ (float)x, (float)y, (float)w, (float)h }, 3, RED);
-        DrawTextEx(font, TextFormat("Delete Slot %d ?", deleteConfirmSlot), { (float)x + 40, (float)y + 60 }, 24, 1, WHITE);
-        DrawTextEx(font, "Cannot be undone.", { (float)x + 80, (float)y + 100 }, 20, 1, RED);
-        if (DrawButton({ (float)x + 50, (float)y + 160, 150, 50 }, "Delete", font, RED)) { DataManager::DeleteSave(deleteConfirmSlot); deleteConfirmSlot = 0; }
-        if (DrawButton({ (float)x + 300, (float)y + 160, 150, 50 }, "Cancel", font, GRAY)) { deleteConfirmSlot = 0; }
+        DrawTextEx(font, TextFormat(T("DELETE_CONFIRM", "Delete Slot %d ?").c_str(), deleteConfirmSlot), { (float)x + 40, (float)y + 60 }, 24, 1, WHITE);
+        DrawTextEx(font, T("CANNOT_UNDONE", "Cannot be undone.").c_str(), { (float)x + 80, (float)y + 100 }, 20, 1, RED);
+        if (DrawButton({ (float)x + 50, (float)y + 160, 150, 50 }, T("DELETE", "Delete").c_str(), font, RED)) { DataManager::DeleteSave(deleteConfirmSlot); deleteConfirmSlot = 0; }
+        if (DrawButton({ (float)x + 300, (float)y + 160, 150, 50 }, T("CANCEL", "Cancel").c_str(), font, GRAY)) { deleteConfirmSlot = 0; }
         return 0;
     }
 
@@ -160,16 +160,16 @@ int UI::DrawTitleScreen(Font font) {
         std::string label; Color c;
 
         if (h.exists) {
-            if (h.isPortfolioMode) { label = TextFormat("Slot %d:[RUSH] Lv.%d", i, h.playerLevel); c = Fade(GOLD, 0.8f); }
-            else { label = TextFormat("Slot %d: Lv.%d  Floor %d", i, h.playerLevel, h.floor); c = Fade(DARKGREEN, 0.8f); }
+            if (h.isPortfolioMode) { label = TextFormat(T("SLOT_RUSH", "Slot %d:[RUSH] Lv.%d").c_str(), i, h.playerLevel); c = Fade(GOLD, 0.8f); }
+            else { label = TextFormat(T("SLOT_DATA", "Slot %d: Lv.%d  Floor %d").c_str(), i, h.playerLevel, h.floor); c = Fade(DARKGREEN, 0.8f); }
         }
-        else { label = TextFormat("Slot %d: (NO DATA)", i); c = Fade(DARKGRAY, 0.8f); }
+        else { label = TextFormat(T("SLOT_EMPTY", "Slot %d: (NO DATA)").c_str(), i); c = Fade(DARKGRAY, 0.8f); }
 
         if (DrawButton(r, label.c_str(), font, c)) { selectedSlot = i; }
         if (h.exists) { Rectangle delBtn = { r.x + r.width + 20, r.y + 20, 60, 40 }; if (DrawButton(delBtn, "X", font, Fade(MAROON, 0.8f))) { deleteConfirmSlot = i; } }
     }
-    if (DrawButton({ 20, (float)sh - 110, 340, 40 }, "Portfolio: 3-Floor Rush", font, Fade(ORANGE, 0.8f))) return 888;
-    if (DrawButton({ 20, (float)sh - 60, 200, 40 }, "Debug Room", font, Fade(PURPLE, 0.8f))) return 999;
+    if (DrawButton({ 20, (float)sh - 110, 340, 40 }, T("PORTFOLIO_MODE", "Portfolio: 3-Floor Rush").c_str(), font, Fade(ORANGE, 0.8f))) return 888;
+    if (DrawButton({ 20, (float)sh - 60, 200, 40 }, T("DEBUG_ROOM", "Debug Room").c_str(), font, Fade(PURPLE, 0.8f))) return 999;
     return selectedSlot;
 }
 
@@ -177,8 +177,8 @@ void UI::DrawHUD(Player& p, std::vector<Enemy>& enemies, Dungeon& d, Camera3D& c
     int sw = GetScreenWidth(), sh = GetScreenHeight();
 
     std::string floorText;
-    if (floor > 1000) { floorText = TextFormat("STAGE %d", floor - 1000); }
-    else if (floor == 0) { floorText = "HOME"; }
+    if (floor > 1000) { floorText = TextFormat(T("STAGE", "STAGE %d").c_str(), floor - 1000); }
+    else if (floor == 0) { floorText = T("HOME", "HOME"); }
     else {
         std::string label = T("FLOOR", "Floor");
         std::string dName = T("DUNGEON_1", "Dungeon 1"); if (dungeonId == 1) dName = T("DUNGEON_2", "Dungeon 2"); else if (dungeonId == 2) dName = T("DUNGEON_3", "Abyss");
@@ -250,16 +250,24 @@ void UI::DrawHUD(Player& p, std::vector<Enemy>& enemies, Dungeon& d, Camera3D& c
     }
 
     DrawRectangle(10, sh - 120, 320, 110, Fade(BLACK, 0.6f));
-    DrawTextEx(font, TextFormat("Lv: %d   EXP: %d/%d", p.level, p.exp, p.expToNext), { 20, (float)sh - 110 }, 18, 1, SKYBLUE);
+    DrawTextEx(font, TextFormat(T("HUD_LV_EXP", "Lv: %d   EXP: %d/%d").c_str(), p.level, p.exp, p.expToNext), { 20, (float)sh - 110 }, 18, 1, SKYBLUE);
     DrawRectangle(20, sh - 85, 280, 18, DARKGRAY); DrawRectangle(20, sh - 85, (int)(280 * (fmaxf(0.0f, p.hp) / p.maxHp)), 18, GREEN);
-    DrawTextEx(font, TextFormat("HP: %.0f/%.0f", p.hp, p.maxHp), { 30, (float)sh - 84 }, 14, 1, WHITE);
-    DrawTextEx(font, TextFormat("ATK: %.1f  DEF: %.1f", p.attackPower, p.defense), { 20, (float)sh - 60 }, 18, 1, WHITE);
-    DrawTextEx(font, TextFormat("Gold: %d  SP: %d", p.gold, p.skillPoints), { 20, (float)sh - 35 }, 18, 1, WHITE);
+    DrawTextEx(font, TextFormat(T("HUD_HP", "HP: %.0f/%.0f").c_str(), p.hp, p.maxHp), { 30, (float)sh - 84 }, 14, 1, WHITE);
+    DrawTextEx(font, TextFormat(T("HUD_STATS", "ATK: %.1f  DEF: %.1f").c_str(), p.attackPower, p.defense), { 20, (float)sh - 60 }, 18, 1, WHITE);
+    DrawTextEx(font, TextFormat(T("HUD_GOLD_SP", "Gold: %d  SP: %d").c_str(), p.gold, p.skillPoints), { 20, (float)sh - 35 }, 18, 1, WHITE);
 
-    int iconSize = 40; int startX = sw - 150; int startY = sh - 60;
+    int iconSize = 40; int startX = sw - 320; int startY = sh - 60;
     struct SkillIcon { SkillType type; const char* labelKey; const char* key; };
-    SkillIcon icons[] = { { SKILL_ACTIVE_DASH, "DASH", "1" }, { SKILL_ACTIVE_SMASH, "SMASH", "2" }, { SKILL_ACTIVE_STEALTH, "HIDE", "3" } };
-    for (int i = 0; i < 3; i++) {
+    SkillIcon icons[] = {
+        { SKILL_ACTIVE_SMASH, "SMASH", "1" },
+        { SKILL_ACTIVE_KONGO, "KONGO", "2" },
+        { SKILL_ACTIVE_ZOUKYOU, "ATKUP", "3" },
+        { SKILL_ACTIVE_STEALTH, "HIDE", "4" },
+        { SKILL_ACTIVE_HEAL, "HEAL", "5" },
+        { SKILL_ACTIVE_DASH, "DASH", "Shift" }
+    };
+
+    for (int i = 0; i < 6; i++) {
         int x = startX + i * (iconSize + 10); bool unlocked = p.IsSkillUnlocked(icons[i].type); Color baseCol = unlocked ? DARKBLUE : DARKGRAY;
         DrawRectangle(x, startY, iconSize, iconSize, baseCol); DrawRectangleLines(x, startY, iconSize, iconSize, RAYWHITE); DrawTextEx(font, icons[i].key, { (float)x + 2, (float)startY + 2 }, 10, 1, WHITE);
         if (unlocked) {
@@ -267,7 +275,7 @@ void UI::DrawHUD(Player& p, std::vector<Enemy>& enemies, Dungeon& d, Camera3D& c
             if (cd > 0) { float ratio = cd / maxCd; DrawRectangle(x, startY + (int)((float)iconSize * (1.0f - ratio)), iconSize, (int)((float)iconSize * ratio), Fade(RED, 0.7f)); DrawTextEx(font, TextFormat("%.1f", cd), { (float)x + 5, (float)startY + 15 }, 14, 1, YELLOW); }
             else { std::string label = T(icons[i].labelKey, icons[i].labelKey); DrawTextEx(font, label.c_str(), { (float)x + 2, (float)startY + 25 }, 10, 1, GREEN); }
         }
-        else { DrawTextEx(font, "LOCK", { (float)x + 5, (float)startY + 15 }, 10, 1, GRAY); }
+        else { DrawTextEx(font, T("SKILL_LOCKED", "LOCK").c_str(), { (float)x + 5, (float)startY + 15 }, 10, 1, GRAY); }
     }
 }
 

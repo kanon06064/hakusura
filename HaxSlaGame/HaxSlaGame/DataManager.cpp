@@ -25,12 +25,14 @@ static std::string FindRes(const std::string& name, const std::string& ext, cons
     return "resources/" + name + ext;
 }
 
+// ★追加: ItemToJsonにmodelName追加
 static json ItemToJson(const ItemData& item) {
-    return { {"id", item.id}, {"name", item.name}, {"type", item.type}, {"heal", item.heal}, {"atkBonus", item.atkBonus}, {"defBonus", item.defBonus}, {"hpBonus", item.hpBonus}, {"speedBonus", item.speedBonus}, {"weaponSubtype", item.weaponSubtype}, {"count", item.count}, {"modifierId", item.modifierId}, {"dropChance", item.dropChance} };
+    return { {"id", item.id}, {"name", item.name}, {"type", item.type}, {"model", item.modelName}, {"heal", item.heal}, {"atkBonus", item.atkBonus}, {"defBonus", item.defBonus}, {"hpBonus", item.hpBonus}, {"speedBonus", item.speedBonus}, {"weaponSubtype", item.weaponSubtype}, {"count", item.count}, {"modifierId", item.modifierId}, {"dropChance", item.dropChance} };
 }
 
+// ★追加: JsonToItemにmodelName追加
 static ItemData JsonToItem(const json& j) {
-    ItemData d; d.id = j.value("id", -1); d.name = j.value("name", ""); d.type = j.value("type", ""); d.heal = j.value("heal", 0.0f); d.atkBonus = j.value("atkBonus", 0.0f); d.defBonus = j.value("defBonus", 0.0f); d.hpBonus = j.value("hpBonus", 0.0f); d.speedBonus = j.value("speedBonus", 0.0f); d.weaponSubtype = j.value("weaponSubtype", -1); d.count = j.value("count", 1); d.modifierId = j.value("modifierId", 0); d.dropChance = j.value("dropChance", 0.0f); return d;
+    ItemData d; d.id = j.value("id", -1); d.name = j.value("name", ""); d.type = j.value("type", ""); d.modelName = j.value("model", ""); d.heal = j.value("heal", 0.0f); d.atkBonus = j.value("atkBonus", 0.0f); d.defBonus = j.value("defBonus", 0.0f); d.hpBonus = j.value("hpBonus", 0.0f); d.speedBonus = j.value("speedBonus", 0.0f); d.weaponSubtype = j.value("weaponSubtype", -1); d.count = j.value("count", 1); d.modifierId = j.value("modifierId", 0); d.dropChance = j.value("dropChance", 0.0f); return d;
 }
 
 void DataManager::LoadAllData() {
@@ -50,7 +52,6 @@ void DataManager::LoadAllData() {
             std::string iqmPath = FindRes(name, ".iqm", "IQM"); std::string texPath = FindRes(name + "_Albedo", ".png", "Texture"); if (!FileExists(texPath.c_str())) texPath = FindRes("Albedo", ".png", "Texture");
             if (FileExists(iqmPath.c_str()) && FileExists(texPath.c_str())) {
                 GameModel gm; gm.model = LoadModel(iqmPath.c_str()); gm.texture = LoadTexture(texPath.c_str());
-                // ★修正: すべてのマテリアルにテクスチャを適用
                 for (int m = 0; m < gm.model.materialCount; m++) { SetMaterialTexture(&gm.model.materials[m], MATERIAL_MAP_DIFFUSE, gm.texture); }
                 gm.anims = LoadModelAnimations(iqmPath.c_str(), &gm.animCount); gm.loaded = true; loadedModels[name] = gm;
             }
@@ -82,7 +83,6 @@ void DataManager::LoadAllData() {
             if (!FileExists(texPath.c_str())) texPath = FindRes("Albedo", ".png", "Texture");
             if (FileExists(texPath.c_str())) {
                 gm.texture = LoadTexture(texPath.c_str());
-                // ★修正: すべてのマテリアルにテクスチャを適用
                 for (int m = 0; m < gm.model.materialCount; m++) { SetMaterialTexture(&gm.model.materials[m], MATERIAL_MAP_DIFFUSE, gm.texture); }
             }
             if (usePath == iqmPath) gm.anims = LoadModelAnimations(usePath.c_str(), &gm.animCount); else { gm.anims = nullptr; gm.animCount = 0; }
@@ -90,17 +90,21 @@ void DataManager::LoadAllData() {
         }
     }
 
+    // ★修正: JSONでmodel名が指定されている場合はそちらを優先で読み込む
     for (auto& cfg : itemConfigs) {
         if (cfg.type == "EQUIP") {
-            std::string wKey = "Wpn_" + std::to_string(cfg.id);
-            std::string wObj = FindRes(wKey, ".obj", "OBJ"); if (!FileExists(wObj.c_str())) wObj = FindRes(wKey, ".iqm", "IQM");
-            if (FileExists(wObj.c_str())) {
-                GameModel gm; gm.model = LoadModel(wObj.c_str()); std::string wTex = FindRes(wKey + "_Albedo", ".png", "Texture"); if (!FileExists(wTex.c_str())) wTex = FindRes("Albedo", ".png", "Texture");
-                if (FileExists(wTex.c_str())) {
-                    gm.texture = LoadTexture(wTex.c_str());
-                    for (int m = 0; m < gm.model.materialCount; m++) { SetMaterialTexture(&gm.model.materials[m], MATERIAL_MAP_DIFFUSE, gm.texture); }
+            std::string wKey = cfg.modelName.empty() ? ("Wpn_" + std::to_string(cfg.id)) : cfg.modelName;
+
+            if (loadedModels.count(wKey) == 0) {
+                std::string wObj = FindRes(wKey, ".obj", "OBJ"); if (!FileExists(wObj.c_str())) wObj = FindRes(wKey, ".iqm", "IQM");
+                if (FileExists(wObj.c_str())) {
+                    GameModel gm; gm.model = LoadModel(wObj.c_str()); std::string wTex = FindRes(wKey + "_Albedo", ".png", "Texture"); if (!FileExists(wTex.c_str())) wTex = FindRes("Albedo", ".png", "Texture");
+                    if (FileExists(wTex.c_str())) {
+                        gm.texture = LoadTexture(wTex.c_str());
+                        for (int m = 0; m < gm.model.materialCount; m++) { SetMaterialTexture(&gm.model.materials[m], MATERIAL_MAP_DIFFUSE, gm.texture); }
+                    }
+                    gm.anims = nullptr; gm.animCount = 0; gm.loaded = true; loadedModels[wKey] = gm;
                 }
-                gm.anims = nullptr; gm.animCount = 0; gm.loaded = true; loadedModels[wKey] = gm;
             }
         }
     }

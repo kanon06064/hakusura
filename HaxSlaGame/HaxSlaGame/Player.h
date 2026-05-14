@@ -28,6 +28,11 @@ public:
     float dashTimer, dashCooldownTimer;
     float smashCooldownTimer;
     float stealthTimer, stealthCooldownTimer;
+    float kongoTimer, kongoCooldownTimer;
+    float zoukyouTimer, zoukyouCooldownTimer;
+    float healCooldownTimer;
+    float cooldownReduction;
+    float healBonus;
     bool isStealth;
 
     WeaponType equippedWeapons[2], currentWeapon;

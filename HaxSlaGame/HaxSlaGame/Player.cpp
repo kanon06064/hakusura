@@ -11,7 +11,11 @@
 #include <string>
 #include <cctype>
 
-// --- コンストラクタ ---
+static std::string T(const std::string& key, const std::string& def) {
+    if (DataManager::uiStrings.count(key)) return DataManager::uiStrings[key];
+    return def;
+}
+
 Player::Player(Vector3 sp) : position(sp), baseSpeed(0.18f), radius(0.45f), attackTimer(0), isAttacking(false),
 lastAimDir({ 1,0,0 }), hp(100), maxHp(100), attackPower(12), defense(5), level(1), exp(0),
 expToNext(100), skillPoints(0), gold(0)
@@ -25,16 +29,18 @@ expToNext(100), skillPoints(0), gold(0)
     dashTimer = 0; dashCooldownTimer = 0;
     smashCooldownTimer = 0;
     stealthTimer = 0; stealthCooldownTimer = 0;
+    kongoTimer = 0; kongoCooldownTimer = 0;
+    zoukyouTimer = 0; zoukyouCooldownTimer = 0;
+    healCooldownTimer = 0;
+    cooldownReduction = 0; healBonus = 0;
     isStealth = false;
 
-    // アニメーション初期化
     animTime = 0.0f;
-    currentAnimIndex = 4; // 4: Idle
+    currentAnimIndex = 4;
     prevAnimIndex = 4;
     modelRotation = 0.0f;
     isDead = false;
 
-    // 初期装備の解決（DataManager経由）
     ItemData s1 = DataManager::GetItemConfigCopy(0);
     ItemData s2 = DataManager::GetItemConfigCopy(100);
     if (s1.id != -1) { equippedData[0] = s1; equippedWeapons[0] = (WeaponType)s1.weaponSubtype; }
@@ -45,7 +51,6 @@ expToNext(100), skillPoints(0), gold(0)
     RecalculateStats();
 }
 
-// --- スタティックメソッド (アイテム情報の表示・計算) ---
 std::string Player::GetFullItemName(const ItemData& item) {
     if (item.id == -1) return "EMPTY";
     Modifier mod = DataManager::GetModifier(item.modifierId);
@@ -74,13 +79,25 @@ Color Player::GetItemRarityColor(const ItemData& item) {
     }
 }
 
-// --- ステータス・スキル管理 ---
 void Player::RecalculateStats() {
     float bHp = 100.0f + (level - 1) * 20.0f;
     float bAtk = 12.0f + (level - 1) * 2.0f;
     float bDef = 5.0f + (level - 1) * 1.5f;
     float bSpd = 0.18f;
-    for (const auto& node : skillTree) if (node.unlocked) { bAtk += node.atkAdd; bDef += node.defAdd; bHp += node.hpAdd; }
+    cooldownReduction = 0.0f;
+    healBonus = 0.0f;
+
+    for (const auto& node : skillTree) if (node.unlocked) {
+        bAtk += node.atkAdd;
+        bDef += node.defAdd;
+        bHp += node.hpAdd;
+        cooldownReduction += node.cdRedAdd;
+        healBonus += node.healAdd;
+    }
+
+    if (zoukyouTimer > 0) bAtk *= 1.5f;
+    if (kongoTimer > 0) bDef += 20.0f;
+
     for (int i = 0; i < 5; i++) if (equippedArmor[i].id != -1) {
         Modifier m = DataManager::GetModifier(equippedArmor[i].modifierId);
         bHp += equippedArmor[i].hpBonus + m.hp; bDef += equippedArmor[i].defBonus + m.def;
@@ -91,13 +108,30 @@ void Player::RecalculateStats() {
 }
 
 void Player::InitSkillTree() {
-    auto T = [](const char* k) { return DataManager::uiStrings.count(k) ? DataManager::uiStrings[k] : k; };
     skillTree.clear();
-    skillTree.push_back({ 0, "START", {640, 650}, {}, true, 0 });
-    skillTree.push_back({ 1, "HP I",  {500, 550}, {0}, false, 1, 0, 0, 30, SKILL_PASSIVE });
-    skillTree.push_back({ 3, T("STEALTH"), {300, 400}, {1}, false, 3, 0, 0, 0, SKILL_ACTIVE_STEALTH, 15.0f });
-    skillTree.push_back({ 6, T("SMASH"),   {640, 400}, {5}, false, 2, 0, 0, 0, SKILL_ACTIVE_SMASH, 5.0f });
-    skillTree.push_back({ 10, T("DASH"), {880, 480}, {9}, false, 2, 0, 0, 0, SKILL_ACTIVE_DASH, 3.0f });
+
+    skillTree.push_back({ 0, T("SKILL_NAME_START", "START"), {600, 400}, {}, true, 0, 0,0,0,0,0, T("SKILL_DESC_START", "Skill Tree Start"), SKILL_PASSIVE });
+    skillTree.push_back({ 1, T("SKILL_NAME_ATK1", "ATK I"),  {600, 300}, {0}, false, 1, 3.0f, 0, 0, 0, 0, T("SKILL_DESC_ATK1", "ATK +3"), SKILL_PASSIVE });
+    skillTree.push_back({ 2, T("SKILL_NAME_ATK2", "ATK II"), {600, 200}, {1}, false, 2, 5.0f, 0, 0, 0, 0, T("SKILL_DESC_ATK2", "ATK +5"), SKILL_PASSIVE });
+    skillTree.push_back({ 3, T("SMASH", "SMASH"), {600, 100}, {2}, false, 3, 0, 0, 0, 0, 0, T("SKILL_DESC_SMASH", "Active: Deal heavy damage & knockback"), SKILL_ACTIVE_SMASH, 8.0f });
+
+    skillTree.push_back({ 4, T("SKILL_NAME_DEF1", "DEF I"),  {695, 331}, {0}, false, 1, 0, 2.0f, 0, 0, 0, T("SKILL_DESC_DEF1", "DEF +2"), SKILL_PASSIVE });
+    skillTree.push_back({ 5, T("SKILL_NAME_DEF2", "DEF II"), {790, 262}, {4}, false, 2, 0, 3.0f, 0, 0, 0, T("SKILL_DESC_DEF2", "DEF +3"), SKILL_PASSIVE });
+    skillTree.push_back({ 6, T("KONGO", "KONGO"), {885, 193}, {5}, false, 3, 0, 0, 0, 0, 0, T("SKILL_DESC_KONGO", "Active: Boost DEF temporarily"), SKILL_ACTIVE_KONGO, 15.0f });
+
+    skillTree.push_back({ 7, T("SKILL_NAME_HP1", "HP I"),   {659, 481}, {0}, false, 1, 0, 0, 20.0f, 0, 0, T("SKILL_DESC_HP1", "HP +20"), SKILL_PASSIVE });
+    skillTree.push_back({ 8, T("SKILL_NAME_HP2", "HP II"),  {718, 562}, {7}, false, 2, 0, 0, 30.0f, 0, 0, T("SKILL_DESC_HP2", "HP +30"), SKILL_PASSIVE });
+    skillTree.push_back({ 9, T("ZOUKYOU", "ZOUKYOU"), {777, 643},{8}, false, 3, 0, 0, 0, 0, 0, T("SKILL_DESC_ZOUKYOU", "Active: Boost ATK temporarily"), SKILL_ACTIVE_ZOUKYOU, 20.0f });
+
+    skillTree.push_back({ 10, T("SKILL_NAME_CD1", "CD I"),  {541, 481}, {0}, false, 1, 0, 0, 0, 0.05f, 0, T("SKILL_DESC_CD1", "Cooldown -5%"), SKILL_PASSIVE });
+    skillTree.push_back({ 11, T("SKILL_NAME_CD2", "CD II"), {482, 562}, {10}, false, 2, 0, 0, 0, 0.10f, 0, T("SKILL_DESC_CD2", "Cooldown -10%"), SKILL_PASSIVE });
+    skillTree.push_back({ 12, T("STEALTH", "STEALTH"), {423, 643},{11}, false, 3, 0, 0, 0, 0, 0, T("SKILL_DESC_STEALTH", "Active: Become undetectable"), SKILL_ACTIVE_STEALTH, 15.0f });
+
+    skillTree.push_back({ 13, T("SKILL_NAME_HEAL1", "HEAL I"), {505, 331}, {0}, false, 1, 0, 0, 0, 0, 10.0f, T("SKILL_DESC_HEAL1", "Healing +10"), SKILL_PASSIVE });
+    skillTree.push_back({ 14, T("SKILL_NAME_HEAL2", "HEAL II"),{410, 262},{13}, false, 2, 0, 0, 0, 0, 20.0f, T("SKILL_DESC_HEAL2", "Healing +20"), SKILL_PASSIVE });
+    skillTree.push_back({ 15, T("HEAL", "HEAL"), {315, 193},{14}, false, 3, 0, 0, 0, 0, 0, T("SKILL_DESC_HEAL", "Active: Restore HP instantly"), SKILL_ACTIVE_HEAL, 25.0f });
+
+    skillTree.push_back({ 16, T("DASH", "DASH"), {700, 400}, {0}, false, 1, 0, 0, 0, 0, 0, T("SKILL_DESC_DASH", "Active: Quick dodge"), SKILL_ACTIVE_DASH, 3.0f });
 }
 
 bool Player::IsSkillAvailable(int id) {
@@ -110,16 +144,25 @@ void Player::UnlockSkill(int id) {
 }
 
 bool Player::IsSkillUnlocked(SkillType t) { for (auto& n : skillTree) if (n.type == t && n.unlocked) return true; return false; }
-float Player::GetSkillCooldown(SkillType t) { return (t == SKILL_ACTIVE_DASH) ? dashCooldownTimer : (t == SKILL_ACTIVE_SMASH ? smashCooldownTimer : stealthCooldownTimer); }
+
+float Player::GetSkillCooldown(SkillType t) {
+    if (t == SKILL_ACTIVE_DASH) return dashCooldownTimer;
+    if (t == SKILL_ACTIVE_SMASH) return smashCooldownTimer;
+    if (t == SKILL_ACTIVE_STEALTH) return stealthCooldownTimer;
+    if (t == SKILL_ACTIVE_KONGO) return kongoCooldownTimer;
+    if (t == SKILL_ACTIVE_ZOUKYOU) return zoukyouCooldownTimer;
+    if (t == SKILL_ACTIVE_HEAL) return healCooldownTimer;
+    return 0.0f;
+}
+
 float Player::GetSkillMaxCooldown(SkillType t) { for (auto& n : skillTree) if (n.type == t) return n.maxCooldown; return 1.0f; }
 
-// --- 経験値・インベントリ ---
 void Player::AddExp(int a, EffectManager& fx) { exp += a; while (exp >= expToNext) LevelUp(fx); }
 void Player::LevelUp(EffectManager& fx) {
     level++; exp -= expToNext; expToNext = (int)(expToNext * 1.5f); skillPoints += 3;
     fx.SpawnDamageText(position, 999); AudioManager::PlaySE(SE_LEVELUP);
     RecalculateStats(); hp = maxHp;
-    UI::AddSystemLog("LEVEL UP!", YELLOW);
+    UI::AddSystemLog(T("LOG_LEVEL_UP", "LEVEL UP!"), YELLOW);
 }
 
 bool Player::AddToInventory(ItemData item) {
@@ -130,7 +173,6 @@ bool Player::AddToInventory(ItemData item) {
 
 void Player::UseItem(int idx) { if (idx >= 0 && idx < (int)inventoryItems.size() && inventoryItems[idx].type == "CONSUMABLE") { hp = fminf(maxHp, hp + inventoryItems[idx].heal); if (--inventoryItems[idx].count <= 0) inventoryItems.erase(inventoryItems.begin() + idx); AudioManager::PlaySE(SE_HEAL); } }
 
-// --- 装備操作 ---
 void Player::EquipWeapon(int invIdx, int slot) {
     if (invIdx < 0 || invIdx >= (int)inventoryEquip.size()) return;
     if (equippedData[slot].id != -1) inventoryEquip.push_back(equippedData[slot]);
@@ -143,12 +185,10 @@ void Player::UnequipWeapon(int slot) { if (equippedData[slot].id == -1) return; 
 void Player::EquipArmor(int invIdx, int slot) { if (invIdx < 0 || invIdx >= (int)inventoryEquip.size()) return; if (equippedArmor[slot].id != -1) inventoryEquip.push_back(equippedArmor[slot]); equippedArmor[slot] = inventoryEquip[invIdx]; inventoryEquip.erase(inventoryEquip.begin() + invIdx); AudioManager::PlaySE(SE_CLICK); RecalculateStats(); }
 void Player::UnequipArmor(int slot) { if (equippedArmor[slot].id == -1) return; inventoryEquip.push_back(equippedArmor[slot]); equippedArmor[slot] = ItemData(); AudioManager::PlaySE(SE_CLICK); RecalculateStats(); }
 
-// --- クエスト ---
 void Player::UpdateHuntQuest(int eId) { for (auto& q : activeQuests) if (!q.isCompleted) { QuestData d = DataManager::GetQuestData(q.questId); if (d.type == QUEST_HUNT && d.targetId == eId) if (++q.currentCount >= d.targetCount) q.isCompleted = true; } }
 bool Player::CheckGatherQuest(int itemId, int count) { int sum = 0; for (auto& i : inventoryItems) if (i.id == itemId) sum += i.count; return sum >= count; }
 void Player::CompleteQuest(int qId) { for (auto it = activeQuests.begin(); it != activeQuests.end(); ++it) if (it->questId == qId) { QuestData d = DataManager::GetQuestData(qId); gold += d.rewardGold; if (d.rewardItemId != -1) { ItemData r = DataManager::GetItemConfigCopy(d.rewardItemId); r.count = d.rewardItemCount; AddToInventory(r); } clearedQuests.push_back(qId); activeQuests.erase(it); AudioManager::PlaySE(SE_REFORGE); return; } }
 
-// --- 戦闘アクション ---
 void Player::PerformAttack(Vector3 ad, std::vector<Enemy>& enemies, Dungeon& d, EffectManager& fx) {
     AudioManager::PlaySE(SE_ATTACK);
     Vector3 origin = Vector3Add(position, { 0, 0.8f, 0 });
@@ -159,6 +199,7 @@ void Player::PerformAttack(Vector3 ad, std::vector<Enemy>& enemies, Dungeon& d, 
         for (auto& e : enemies) if (Vector3Distance(e.position, position) < 4.5f) {
             int dmg = (int)(attackPower + GetItemTotalAtkBonus(equippedData[activeSlot]));
             e.hp -= dmg; e.ApplyKnockback(ad, 1.0f, d); fx.SpawnDamageText(e.position, dmg);
+            e.hudTimer = 5.0f;
             isStealth = false;
         }
     }
@@ -169,11 +210,11 @@ void Player::PerformSmash(Vector3 ad, std::vector<Enemy>& enemies, Dungeon& d, E
     fx.SpawnEffect(Vector3Add(position, { 0, 0.8f, 0 }), ad, FX_SMASH, RED);
     for (auto& e : enemies) if (Vector3Distance(e.position, position) < 5.0f) {
         int dmg = (int)(attackPower * 2.5f); e.hp -= dmg; e.ApplyKnockback(ad, 3.0f, d); fx.SpawnDamageText(e.position, dmg);
+        e.hudTimer = 5.0f;
         isStealth = false;
     }
 }
 
-// --- メイン更新ループ ---
 void Player::Update(Camera3D& cam, Dungeon& d, std::vector<Enemy>& enemies, EffectManager& fx, bool stop) {
     if (stop) return;
     float dt = GetFrameTime();
@@ -181,10 +222,15 @@ void Player::Update(Camera3D& cam, Dungeon& d, std::vector<Enemy>& enemies, Effe
     if (dashCooldownTimer > 0) dashCooldownTimer -= dt;
     if (smashCooldownTimer > 0) smashCooldownTimer -= dt;
     if (stealthCooldownTimer > 0) stealthCooldownTimer -= dt;
+    if (kongoCooldownTimer > 0) kongoCooldownTimer -= dt;
+    if (zoukyouCooldownTimer > 0) zoukyouCooldownTimer -= dt;
+    if (healCooldownTimer > 0) healCooldownTimer -= dt;
+
     if (dashTimer > 0) dashTimer -= dt;
     if (stealthTimer > 0) stealthTimer -= dt; else isStealth = false;
+    if (kongoTimer > 0) { kongoTimer -= dt; if (kongoTimer <= 0) RecalculateStats(); }
+    if (zoukyouTimer > 0) { zoukyouTimer -= dt; if (zoukyouTimer <= 0) RecalculateStats(); }
 
-    // 移動制御
     Vector3 cf = Vector3Normalize(Vector3Subtract(cam.target, cam.position)); cf.y = 0; cf = Vector3Normalize(cf);
     Vector3 cr = { -cf.z, 0, cf.x }, md = { 0,0,0 };
     if (IsKeyDown(KEY_W)) md = Vector3Add(md, cf); if (IsKeyDown(KEY_S)) md = Vector3Subtract(md, cf);
@@ -200,7 +246,6 @@ void Player::Update(Camera3D& cam, Dungeon& d, std::vector<Enemy>& enemies, Effe
         modelRotation = atan2f(md.x, md.z) * RAD2DEG;
     }
 
-    // 視線と攻撃
     Ray ray = GetMouseRay(GetMousePosition(), cam);
     if (ray.direction.y != 0) {
         float t = (position.y - ray.position.y) / ray.direction.y;
@@ -209,20 +254,40 @@ void Player::Update(Camera3D& cam, Dungeon& d, std::vector<Enemy>& enemies, Effe
     }
     if (attackTimer > 0) attackTimer -= dt;
     if (IsMouseButtonPressed(0) && attackTimer <= 0 && currentWeapon != NONE) { PerformAttack(lastAimDir, enemies, d, fx); attackTimer = 0.5f; animTime = 0; }
-    if (IsKeyPressed(KEY_ONE) && IsSkillUnlocked(SKILL_ACTIVE_DASH) && dashCooldownTimer <= 0) { dashTimer = 0.35f; dashCooldownTimer = 3.0f; AudioManager::PlaySE(SE_SKILL); }
-    if (IsKeyPressed(KEY_TWO) && IsSkillUnlocked(SKILL_ACTIVE_SMASH) && smashCooldownTimer <= 0 && attackTimer <= 0) { PerformSmash(lastAimDir, enemies, d, fx); smashCooldownTimer = 5.0f; attackTimer = 0.8f; animTime = 0; }
+
+    float cdMultiplier = 1.0f - cooldownReduction;
+    if (cdMultiplier < 0.2f) cdMultiplier = 0.2f;
+
+    if (IsKeyPressed(KEY_LEFT_SHIFT) && IsSkillUnlocked(SKILL_ACTIVE_DASH) && dashCooldownTimer <= 0) {
+        dashTimer = 0.35f; dashCooldownTimer = GetSkillMaxCooldown(SKILL_ACTIVE_DASH) * cdMultiplier; AudioManager::PlaySE(SE_SKILL);
+    }
+    if (IsKeyPressed(KEY_ONE) && IsSkillUnlocked(SKILL_ACTIVE_SMASH) && smashCooldownTimer <= 0 && attackTimer <= 0) {
+        PerformSmash(lastAimDir, enemies, d, fx); smashCooldownTimer = GetSkillMaxCooldown(SKILL_ACTIVE_SMASH) * cdMultiplier; attackTimer = 0.8f; animTime = 0;
+    }
+    if (IsKeyPressed(KEY_TWO) && IsSkillUnlocked(SKILL_ACTIVE_KONGO) && kongoCooldownTimer <= 0) {
+        kongoTimer = 10.0f; kongoCooldownTimer = GetSkillMaxCooldown(SKILL_ACTIVE_KONGO) * cdMultiplier; AudioManager::PlaySE(SE_SKILL); fx.SpawnEffect(position, { 0,1,0 }, FX_HIT, GOLD); RecalculateStats();
+    }
+    if (IsKeyPressed(KEY_THREE) && IsSkillUnlocked(SKILL_ACTIVE_ZOUKYOU) && zoukyouCooldownTimer <= 0) {
+        zoukyouTimer = 10.0f; zoukyouCooldownTimer = GetSkillMaxCooldown(SKILL_ACTIVE_ZOUKYOU) * cdMultiplier; AudioManager::PlaySE(SE_SKILL); fx.SpawnEffect(position, { 0,1,0 }, FX_HIT, RED); RecalculateStats();
+    }
+    if (IsKeyPressed(KEY_FOUR) && IsSkillUnlocked(SKILL_ACTIVE_STEALTH) && stealthCooldownTimer <= 0) {
+        stealthTimer = 10.0f; stealthCooldownTimer = GetSkillMaxCooldown(SKILL_ACTIVE_STEALTH) * cdMultiplier; isStealth = true; AudioManager::PlaySE(SE_SKILL); fx.SpawnEffect(position, { 0,1,0 }, FX_HIT, BLUE);
+    }
+    if (IsKeyPressed(KEY_FIVE) && IsSkillUnlocked(SKILL_ACTIVE_HEAL) && healCooldownTimer <= 0) {
+        hp += (maxHp * 0.3f) + healBonus; if (hp > maxHp) hp = maxHp;
+        healCooldownTimer = GetSkillMaxCooldown(SKILL_ACTIVE_HEAL) * cdMultiplier; AudioManager::PlaySE(SE_HEAL); fx.SpawnEffect(position, { 0,1,0 }, FX_HIT, GREEN);
+    }
+
     if (IsKeyPressed(KEY_Q)) { activeSlot = 1 - activeSlot; currentWeapon = equippedWeapons[activeSlot]; }
 
     if (attackTimer > 0) modelRotation = atan2f(lastAimDir.x, lastAimDir.z) * RAD2DEG;
 
-    // --- アニメーション状態の決定 (0:Atk, 3:Die, 4:Idle, 5:Run, 6:Sprint) ---
     int targetAnim = 4;
     if (hp <= 0) targetAnim = 3;
-    else if (attackTimer > 0) targetAnim = (currentWeapon == SWORD ? 0 : (currentWeapon == AXE ? 1 : 2));
+    else if (attackTimer > 0) targetAnim = (currentWeapon == SWORD ? 0 : (currentWeapon == AXE ? 1 : (currentWeapon == WAND ? 2 : 0))); // ★WANDの場合のアニメーションフォールバック追加
     else if (dashTimer > 0) targetAnim = 6;
     else if (isMoving) targetAnim = 5;
 
-    // ポーズのワープ防止: 移動グループ(4,5,6)間では時間をリセットしない
     if (targetAnim != currentAnimIndex) {
         bool isLoopGroup = (targetAnim >= 4);
         bool wasLoopGroup = (currentAnimIndex >= 4);
@@ -230,14 +295,12 @@ void Player::Update(Camera3D& cam, Dungeon& d, std::vector<Enemy>& enemies, Effe
         currentAnimIndex = targetAnim;
     }
 
-    // 再生速度同期
     float pSpd = 30.0f;
-    if (currentAnimIndex == 5) pSpd = 30.0f * (curSpd / 0.18f);      // Run速度同期
-    else if (currentAnimIndex == 6) pSpd = 30.0f * (curSpd / 0.45f); // Sprint速度同期
+    if (currentAnimIndex == 5) pSpd = 30.0f * (curSpd / 0.18f);
+    else if (currentAnimIndex == 6) pSpd = 30.0f * (curSpd / 0.45f);
     animTime += dt * pSpd;
 }
 
-// --- 描画処理 ---
 void Player::Draw(bool debug) {
     if (DataManager::loadedModels.count("Player") == 0) return;
     GameModel& gm = DataManager::loadedModels["Player"];
@@ -246,20 +309,16 @@ void Player::Draw(bool debug) {
     ModelAnimation anim = gm.anims[currentAnimIndex];
     int frame = (currentAnimIndex <= 3) ? (int)fminf(animTime, (float)anim.frameCount - 1) : (int)fmodf(animTime, (float)anim.frameCount);
 
-    // ポーズの更新
     UpdateModelAnimation(gm.model, anim, frame);
-    // IQM正規化 (スケール爆発防止)
     for (int i = 0; i < gm.model.boneCount; i++) gm.model.bindPose[i].scale = { 1.0f, 1.0f, 1.0f };
 
-    // ★修正: モデルの表示位置を少し下げる（原点より高い問題を解消）
     float scale = 0.01f;
-    float yOffset = -0.15f; // 必要に応じてこの値を調整してください
+    float yOffset = -0.15f;
     Vector3 drawPos = { position.x, position.y + yOffset, position.z };
 
     gm.model.transform = MatrixMultiply(MatrixRotateX(-90 * DEG2RAD), MatrixRotateY(modelRotation * DEG2RAD));
     DrawModel(gm.model, drawPos, scale, (isStealth ? Fade(BLUE, 0.4f) : WHITE));
 
-    // 武器アタッチメント
     if (currentWeapon != NONE && !isDead) {
         int handIdx = -1;
         for (int i = 0; i < gm.model.boneCount; i++) {
@@ -270,14 +329,20 @@ void Player::Draw(bool debug) {
         if (handIdx != -1) {
             Transform b = gm.model.bindPose[handIdx];
             Matrix boneMat = MatrixMultiply(QuaternionToMatrix(b.rotation), MatrixTranslate(b.translation.x, b.translation.y, b.translation.z));
-            // 武器もプレイヤーの下げた位置(drawPos)に合わせる
             Matrix playerWorld = MatrixMultiply(MatrixMultiply(MatrixScale(scale, scale, scale), gm.model.transform), MatrixTranslate(drawPos.x, drawPos.y, drawPos.z));
 
             int equipId = equippedData[activeSlot].id;
-            std::string baseKey = (currentWeapon == SWORD) ? "Wpn_Sword" : (currentWeapon == AXE ? "Wpn_Axe" : "Wpn_Spear");
+            std::string baseKey = (currentWeapon == SWORD) ? "Wpn_Sword" : (currentWeapon == AXE ? "Wpn_Axe" : (currentWeapon == WAND ? "Wpn_Wand" : "Wpn_Spear"));
             std::string finalKey = baseKey;
-            if (equipId >= 400 && equipId < 500) { if (DataManager::loadedModels.count(baseKey + "_Legend")) finalKey = baseKey + "_Legend"; }
-            if (DataManager::loadedModels.count("Wpn_" + std::to_string(equipId))) finalKey = "Wpn_" + std::to_string(equipId);
+
+            // ★修正: jsonで指定されたmodelNameがある場合はそれを優先する
+            if (!equippedData[activeSlot].modelName.empty()) {
+                finalKey = equippedData[activeSlot].modelName;
+            }
+            else {
+                if (equipId >= 400 && equipId < 500) { if (DataManager::loadedModels.count(baseKey + "_Legend")) finalKey = baseKey + "_Legend"; }
+                if (DataManager::loadedModels.count("Wpn_" + std::to_string(equipId))) finalKey = "Wpn_" + std::to_string(equipId);
+            }
 
             if (DataManager::loadedModels.count(finalKey)) {
                 Model& wm = DataManager::loadedModels[finalKey].model;
