@@ -13,6 +13,35 @@ static std::string T(const std::string& key, const std::string& def) {
     return def;
 }
 
+static std::string getKeyStr(int key) {
+    if (key == KEY_LEFT_SHIFT || key == KEY_RIGHT_SHIFT) return "Shift";
+    if (key == KEY_SPACE) return "Space";
+    if (key >= 32 && key <= 126) return std::string(1, (char)key);
+    return "Key";
+}
+
+std::string UI::GetPadBtnStr(int btn) {
+    switch (btn) {
+    case GAMEPAD_BUTTON_LEFT_FACE_UP: return "D-Up";
+    case GAMEPAD_BUTTON_LEFT_FACE_RIGHT: return "D-Right";
+    case GAMEPAD_BUTTON_LEFT_FACE_DOWN: return "D-Down";
+    case GAMEPAD_BUTTON_LEFT_FACE_LEFT: return "D-Left";
+    case GAMEPAD_BUTTON_RIGHT_FACE_UP: return "Y";
+    case GAMEPAD_BUTTON_RIGHT_FACE_RIGHT: return "B";
+    case GAMEPAD_BUTTON_RIGHT_FACE_DOWN: return "A";
+    case GAMEPAD_BUTTON_RIGHT_FACE_LEFT: return "X";
+    case GAMEPAD_BUTTON_LEFT_TRIGGER_1: return "LB";
+    case GAMEPAD_BUTTON_LEFT_TRIGGER_2: return "LT";
+    case GAMEPAD_BUTTON_RIGHT_TRIGGER_1: return "RB";
+    case GAMEPAD_BUTTON_RIGHT_TRIGGER_2: return "RT";
+    case GAMEPAD_BUTTON_MIDDLE_RIGHT: return "Start";
+    case GAMEPAD_BUTTON_MIDDLE_LEFT: return "Select";
+    case GAMEPAD_BUTTON_LEFT_THUMB: return "LS";
+    case GAMEPAD_BUTTON_RIGHT_THUMB: return "RS";
+    }
+    return "Btn_" + std::to_string(btn);
+}
+
 int UI::itemPage = 0; int UI::equipPage = 0; int UI::debugPage = 0;
 int UI::storageInvPage = 0; int UI::storageBoxPage = 0; int UI::itemSubTab = 0;
 int UI::reforgeItemIdx = -1;
@@ -29,6 +58,56 @@ float UI::detailOpenTimer = 0.0f;
 int UI::deleteConfirmSlot = 0;
 
 std::vector<SystemLogMessage> UI::systemLogs;
+std::vector<Rectangle> UI::interactables;
+
+// ★追加: ナビゲーション機能の実装
+void UI::ClearInteractables() {
+    interactables.clear();
+}
+
+void UI::RegisterInteractable(Rectangle r) {
+    interactables.push_back(r);
+}
+
+void UI::UpdatePadNavigation() {
+    if (!IsGamepadAvailable(0)) return;
+
+    Vector2 moveDir = { 0, 0 };
+    if (IsGamepadButtonPressed(0, GAMEPAD_BUTTON_LEFT_FACE_UP)) moveDir.y = -1;
+    if (IsGamepadButtonPressed(0, GAMEPAD_BUTTON_LEFT_FACE_DOWN)) moveDir.y = 1;
+    if (IsGamepadButtonPressed(0, GAMEPAD_BUTTON_LEFT_FACE_LEFT)) moveDir.x = -1;
+    if (IsGamepadButtonPressed(0, GAMEPAD_BUTTON_LEFT_FACE_RIGHT)) moveDir.x = 1;
+
+    if (moveDir.x != 0 || moveDir.y != 0) {
+        Vector2 currentPos = GetMousePosition();
+        int bestIdx = -1;
+        float bestDist = 9999999.0f;
+
+        for (size_t i = 0; i < interactables.size(); i++) {
+            Vector2 targetCenter = { interactables[i].x + interactables[i].width / 2.0f, interactables[i].y + interactables[i].height / 2.0f };
+            Vector2 diff = Vector2Subtract(targetCenter, currentPos);
+
+            float dot = (diff.x * moveDir.x + diff.y * moveDir.y);
+
+            // 入力方向にある程度進んだ位置にあるかチェック（同じボタンでスタックするのを防ぐ）
+            if (dot > 5.0f) {
+                float proj = dot;
+                float ortho = fabs(diff.x * moveDir.y - diff.y * moveDir.x);
+                float score = proj + ortho * 4.0f; // ズレているものにはペナルティ
+
+                if (score < bestDist) {
+                    bestDist = score;
+                    bestIdx = i;
+                }
+            }
+        }
+
+        if (bestIdx != -1) {
+            Vector2 center = { interactables[bestIdx].x + interactables[bestIdx].width / 2.0f, interactables[bestIdx].y + interactables[bestIdx].height / 2.0f };
+            SetMousePosition((int)center.x, (int)center.y);
+        }
+    }
+}
 
 void UI::OpenDetail(const ItemData& item) {
     focusingItem = item;
@@ -38,6 +117,8 @@ void UI::OpenDetail(const ItemData& item) {
 }
 
 bool UI::DrawButton(Rectangle r, const char* label, Font font, Color col) {
+    UI::RegisterInteractable(r); // ★自動登録
+
     bool locked = showDetail;
     bool clicked = false;
     bool hover = !locked && CheckCollisionPointRec(GetMousePosition(), r);
@@ -51,7 +132,8 @@ bool UI::DrawButton(Rectangle r, const char* label, Font font, Color col) {
     Vector2 tSize = MeasureTextEx(font, label, 18, 1);
     DrawTextEx(font, label, { r.x + r.width / 2 - tSize.x / 2, r.y + r.height / 2 - tSize.y / 2 }, 18, 1, locked ? LIGHTGRAY : WHITE);
 
-    if (hover && IsMouseButtonPressed(0)) {
+    bool clickInput = IsMouseButtonPressed(0) || IsGamepadButtonPressed(0, GAMEPAD_BUTTON_RIGHT_FACE_DOWN);
+    if (hover && clickInput) {
         clicked = true;
         AudioManager::PlaySE(SE_CLICK);
     }
@@ -108,12 +190,16 @@ void UI::DrawDetailWindow(Font font) {
     }
 
     Rectangle closeBtn = { (float)x + w / 2 - 80, (float)y + h - 70, 160, 50 };
+    UI::RegisterInteractable(closeBtn); // ★追加
+
     bool inputEnabled = (detailOpenTimer >= 0.3f); bool hover = inputEnabled && CheckCollisionPointRec(GetMousePosition(), closeBtn);
     Color btnCol = hover ? RED : MAROON; if (!inputEnabled) btnCol = Fade(MAROON, 0.5f);
     DrawRectangleRec(closeBtn, btnCol); DrawRectangleLinesEx(closeBtn, 2, WHITE);
     Vector2 txtSz = MeasureTextEx(font, T("CLOSE", "Close").c_str(), 24, 1);
     DrawTextEx(font, T("CLOSE", "Close").c_str(), { closeBtn.x + closeBtn.width / 2 - txtSz.x / 2, closeBtn.y + closeBtn.height / 2 - txtSz.y / 2 }, 24, 1, inputEnabled ? WHITE : GRAY);
-    if (hover && IsMouseButtonPressed(0)) { showDetail = false; AudioManager::PlaySE(SE_CLICK); }
+
+    bool clickInput = IsMouseButtonPressed(0) || IsGamepadButtonPressed(0, GAMEPAD_BUTTON_RIGHT_FACE_DOWN);
+    if (hover && clickInput) { showDetail = false; AudioManager::PlaySE(SE_CLICK); }
 }
 
 int UI::DrawPrompt(const char* label, int sw, int sh, Font font) {
@@ -257,19 +343,26 @@ void UI::DrawHUD(Player& p, std::vector<Enemy>& enemies, Dungeon& d, Camera3D& c
     DrawTextEx(font, TextFormat(T("HUD_GOLD_SP", "Gold: %d  SP: %d").c_str(), p.gold, p.skillPoints), { 20, (float)sh - 35 }, 18, 1, WHITE);
 
     int iconSize = 40; int startX = sw - 320; int startY = sh - 60;
-    struct SkillIcon { SkillType type; const char* labelKey; const char* key; };
+
+    struct SkillIcon { SkillType type; const char* labelKey; std::string key; std::string padKey; };
     SkillIcon icons[] = {
-        { SKILL_ACTIVE_SMASH, "SMASH", "1" },
-        { SKILL_ACTIVE_KONGO, "KONGO", "2" },
-        { SKILL_ACTIVE_ZOUKYOU, "ATKUP", "3" },
-        { SKILL_ACTIVE_STEALTH, "HIDE", "4" },
-        { SKILL_ACTIVE_HEAL, "HEAL", "5" },
-        { SKILL_ACTIVE_DASH, "DASH", "Shift" }
+        { SKILL_ACTIVE_SMASH, "SMASH", getKeyStr(DataManager::keyConfig.smash), UI::GetPadBtnStr(DataManager::keyConfig.padSmash) },
+        { SKILL_ACTIVE_KONGO, "KONGO", getKeyStr(DataManager::keyConfig.kongo), UI::GetPadBtnStr(DataManager::keyConfig.padKongo) },
+        { SKILL_ACTIVE_ZOUKYOU, "ATKUP", getKeyStr(DataManager::keyConfig.zoukyou), UI::GetPadBtnStr(DataManager::keyConfig.padZoukyou) },
+        { SKILL_ACTIVE_STEALTH, "HIDE", getKeyStr(DataManager::keyConfig.stealth), UI::GetPadBtnStr(DataManager::keyConfig.padStealth) },
+        { SKILL_ACTIVE_HEAL, "HEAL", getKeyStr(DataManager::keyConfig.heal), UI::GetPadBtnStr(DataManager::keyConfig.padHeal) },
+        { SKILL_ACTIVE_DASH, "DASH", getKeyStr(DataManager::keyConfig.dash), UI::GetPadBtnStr(DataManager::keyConfig.padDash) }
     };
+
+    bool padActive = IsGamepadAvailable(0);
 
     for (int i = 0; i < 6; i++) {
         int x = startX + i * (iconSize + 10); bool unlocked = p.IsSkillUnlocked(icons[i].type); Color baseCol = unlocked ? DARKBLUE : DARKGRAY;
-        DrawRectangle(x, startY, iconSize, iconSize, baseCol); DrawRectangleLines(x, startY, iconSize, iconSize, RAYWHITE); DrawTextEx(font, icons[i].key, { (float)x + 2, (float)startY + 2 }, 10, 1, WHITE);
+        DrawRectangle(x, startY, iconSize, iconSize, baseCol); DrawRectangleLines(x, startY, iconSize, iconSize, RAYWHITE);
+
+        std::string displayKey = padActive ? icons[i].padKey : icons[i].key;
+        DrawTextEx(font, displayKey.c_str(), { (float)x + 2, (float)startY + 2 }, 10, 1, WHITE);
+
         if (unlocked) {
             float cd = p.GetSkillCooldown(icons[i].type); float maxCd = p.GetSkillMaxCooldown(icons[i].type);
             if (cd > 0) { float ratio = cd / maxCd; DrawRectangle(x, startY + (int)((float)iconSize * (1.0f - ratio)), iconSize, (int)((float)iconSize * ratio), Fade(RED, 0.7f)); DrawTextEx(font, TextFormat("%.1f", cd), { (float)x + 5, (float)startY + 15 }, 14, 1, YELLOW); }

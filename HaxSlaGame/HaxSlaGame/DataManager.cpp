@@ -1,5 +1,6 @@
 #include "DataManager.h"
 #include "Player.h"
+#include "AudioManager.h"
 #include "raylib.h"
 #include <fstream>
 #include <iostream>
@@ -19,23 +20,87 @@ std::map<std::string, GameModel> DataManager::loadedModels;
 Model DataManager::batModel = { 0 }; Texture2D DataManager::batTexture = { 0 }; ModelAnimation* DataManager::batAnims = nullptr; int DataManager::batAnimCount = 0; bool DataManager::isBatModelLoaded = false;
 Texture2D DataManager::titleBg = { 0 };
 
+KeyConfig DataManager::keyConfig;
+
 static std::string FindRes(const std::string& name, const std::string& ext, const std::string& subDir) {
     std::string path1 = "resources/" + subDir + "/" + name + ext;
     if (FileExists(path1.c_str())) return path1;
     return "resources/" + name + ext;
 }
 
-// Åöí«â¡: ItemToJsonÇ…modelNameí«â¡
 static json ItemToJson(const ItemData& item) {
     return { {"id", item.id}, {"name", item.name}, {"type", item.type}, {"model", item.modelName}, {"heal", item.heal}, {"atkBonus", item.atkBonus}, {"defBonus", item.defBonus}, {"hpBonus", item.hpBonus}, {"speedBonus", item.speedBonus}, {"weaponSubtype", item.weaponSubtype}, {"count", item.count}, {"modifierId", item.modifierId}, {"dropChance", item.dropChance} };
 }
 
-// Åöí«â¡: JsonToItemÇ…modelNameí«â¡
 static ItemData JsonToItem(const json& j) {
     ItemData d; d.id = j.value("id", -1); d.name = j.value("name", ""); d.type = j.value("type", ""); d.modelName = j.value("model", ""); d.heal = j.value("heal", 0.0f); d.atkBonus = j.value("atkBonus", 0.0f); d.defBonus = j.value("defBonus", 0.0f); d.hpBonus = j.value("hpBonus", 0.0f); d.speedBonus = j.value("speedBonus", 0.0f); d.weaponSubtype = j.value("weaponSubtype", -1); d.count = j.value("count", 1); d.modifierId = j.value("modifierId", 0); d.dropChance = j.value("dropChance", 0.0f); return d;
 }
 
+void DataManager::LoadConfig() {
+    std::ifstream f("config.json");
+    if (f.is_open()) {
+        try {
+            json j; f >> j;
+            keyConfig.moveForward = j.value("moveForward", 87);
+            keyConfig.moveBackward = j.value("moveBackward", 83);
+            keyConfig.moveLeft = j.value("moveLeft", 65);
+            keyConfig.moveRight = j.value("moveRight", 68);
+            keyConfig.dash = j.value("dash", 340);
+            keyConfig.smash = j.value("smash", 49);
+            keyConfig.kongo = j.value("kongo", 50);
+            keyConfig.zoukyou = j.value("zoukyou", 51);
+            keyConfig.stealth = j.value("stealth", 52);
+            keyConfig.heal = j.value("heal", 53);
+            keyConfig.swapWeapon = j.value("swapWeapon", 81);
+
+            keyConfig.padDash = j.value("padDash", 13);
+            keyConfig.padSmash = j.value("padSmash", 14);
+            keyConfig.padKongo = j.value("padKongo", 5);
+            keyConfig.padZoukyou = j.value("padZoukyou", 6);
+            keyConfig.padStealth = j.value("padStealth", 7);
+            keyConfig.padHeal = j.value("padHeal", 8);
+            keyConfig.padSwap = j.value("padSwap", 11);
+            keyConfig.padAttack = j.value("padAttack", 15);
+
+            if (j.contains("bgmVolume")) AudioManager::SetBGMVolume(j["bgmVolume"]);
+            if (j.contains("seVolume")) AudioManager::SetSEVolume(j["seVolume"]);
+        }
+        catch (...) {}
+    }
+}
+
+void DataManager::SaveConfig() {
+    json j;
+    j["moveForward"] = keyConfig.moveForward;
+    j["moveBackward"] = keyConfig.moveBackward;
+    j["moveLeft"] = keyConfig.moveLeft;
+    j["moveRight"] = keyConfig.moveRight;
+    j["dash"] = keyConfig.dash;
+    j["smash"] = keyConfig.smash;
+    j["kongo"] = keyConfig.kongo;
+    j["zoukyou"] = keyConfig.zoukyou;
+    j["stealth"] = keyConfig.stealth;
+    j["heal"] = keyConfig.heal;
+    j["swapWeapon"] = keyConfig.swapWeapon;
+
+    j["padDash"] = keyConfig.padDash;
+    j["padSmash"] = keyConfig.padSmash;
+    j["padKongo"] = keyConfig.padKongo;
+    j["padZoukyou"] = keyConfig.padZoukyou;
+    j["padStealth"] = keyConfig.padStealth;
+    j["padHeal"] = keyConfig.padHeal;
+    j["padSwap"] = keyConfig.padSwap;
+    j["padAttack"] = keyConfig.padAttack;
+
+    j["bgmVolume"] = AudioManager::bgmVolume;
+    j["seVolume"] = AudioManager::seVolume;
+    std::ofstream o("config.json");
+    o << j.dump(4);
+}
+
 void DataManager::LoadAllData() {
+    LoadConfig();
+
     try {
         std::ifstream iF("items.json"); if (iF.is_open()) { json j; iF >> j; itemConfigs.clear(); for (auto& i : j) itemConfigs.push_back(JsonToItem(i)); }
         std::ifstream rF("recipes.json"); if (rF.is_open()) { json j; rF >> j; recipes.clear(); for (auto& r : j) { CraftRecipe cr; cr.resultItemId = r.value("resultId", 0); cr.cost = r.value("cost", 0); if (r.contains("materials")) for (auto& m : r["materials"]) cr.materials.push_back({ m.value("id", 0), m.value("count", 1) }); recipes.push_back(cr); } }
@@ -90,7 +155,6 @@ void DataManager::LoadAllData() {
         }
     }
 
-    // ÅöèCê≥: JSONÇ≈modelñºÇ™éwíËÇ≥ÇÍÇƒÇ¢ÇÈèÍçáÇÕÇªÇøÇÁÇóDêÊÇ≈ì«Ç›çûÇﬁ
     for (auto& cfg : itemConfigs) {
         if (cfg.type == "EQUIP") {
             std::string wKey = cfg.modelName.empty() ? ("Wpn_" + std::to_string(cfg.id)) : cfg.modelName;

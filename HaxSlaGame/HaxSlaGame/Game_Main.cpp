@@ -7,7 +7,6 @@
 #include <time.h>
 #include <algorithm>
 
-// ★追加: 日本語テキストをJSONから安全に取得するヘルパー関数
 static std::string T(const std::string& key, const std::string& def) {
     if (DataManager::uiStrings.count(key)) return DataManager::uiStrings[key];
     return def;
@@ -159,54 +158,112 @@ void Game::Run() { while (!WindowShouldClose()) { Update(); Draw(); } }
 void Game::UpdateDebugRoom() {
     AudioManager::Update(); UpdateCamera(&camera, CAMERA_FREE);
     for (auto& e : enemies) e.animFrameCounter++;
-    if (IsKeyPressed(KEY_ESCAPE) || IsKeyPressed(KEY_TAB)) { state = STATE_TITLE; enemies.clear(); AudioManager::PlayBGM(BGM_TITLE); }
+    if (IsKeyPressed(KEY_ESCAPE) || IsKeyPressed(KEY_TAB) || IsGamepadButtonPressed(0, GAMEPAD_BUTTON_MIDDLE_RIGHT)) { state = STATE_TITLE; enemies.clear(); AudioManager::PlayBGM(BGM_TITLE); }
 }
 
 void Game::Update() {
     AudioManager::Update();
+
+    bool stopPlayer = showMenu || showPrompt || showStorage || showReforgeMenu || showWarpMenu || showCraftMenu || showQuestMenu || state == STATE_TITLE;
+    if (UI::showDetail) stopPlayer = true;
+
+    // ★追加: 前フレームで登録されたボタンに対して、十字キーでマウス移動を行う
+    if (stopPlayer) {
+        UI::UpdatePadNavigation();
+    }
+    UI::ClearInteractables(); // 一旦クリア（次の描画で再登録）
+
+    // ★追加: 「戻る/キャンセル」ボタンの共通処理
+    bool cancelInput = false;
+    if (IsGamepadAvailable(0)) {
+        if (stopPlayer || state == STATE_TITLE) {
+            if (IsGamepadButtonPressed(0, GAMEPAD_BUTTON_RIGHT_FACE_RIGHT)) cancelInput = true;
+        }
+    }
+    if (IsKeyPressed(KEY_ESCAPE) || (stopPlayer && IsMouseButtonPressed(MOUSE_BUTTON_RIGHT))) {
+        cancelInput = true;
+    }
+
+    if (cancelInput) {
+        AudioManager::PlaySE(SE_CLICK);
+        if (UI::showDetail) UI::showDetail = false;
+        else if (UI::deleteConfirmSlot > 0) UI::deleteConfirmSlot = 0;
+        else if (showPrompt) { showPrompt = false; sceneTimer = 1.0f; }
+        else if (showMenu) showMenu = false;
+        else if (showStorage) showStorage = false;
+        else if (showReforgeMenu) showReforgeMenu = false;
+        else if (showWarpMenu) showWarpMenu = false;
+        else if (showCraftMenu) showCraftMenu = false;
+        else if (showQuestMenu) showQuestMenu = false;
+    }
+
     if (state == STATE_TITLE) return;
     if (state == STATE_DEBUG_ROOM) { UpdateDebugRoom(); return; }
 
     float dt = GetFrameTime();
-    if (state == STATE_GAMEOVER || state == STATE_GAMECLEAR) { if (IsMouseButtonPressed(0) || IsKeyPressed(KEY_SPACE)) { ApplyDeathPenalty(); } return; }
+    if (state == STATE_GAMEOVER || state == STATE_GAMECLEAR) {
+        if (IsMouseButtonPressed(0) || IsKeyPressed(KEY_SPACE) || IsGamepadButtonPressed(0, GAMEPAD_BUTTON_RIGHT_FACE_DOWN)) {
+            ApplyDeathPenalty();
+        }
+        return;
+    }
 
     if (IsKeyPressed(KEY_F1)) debugMode = !debugMode;
-    if (IsKeyPressed(KEY_TAB)) { if (!UI::showDetail) { showMenu = !showMenu; AudioManager::PlaySE(SE_CLICK); } }
+    if (IsKeyPressed(KEY_TAB) || IsGamepadButtonPressed(0, GAMEPAD_BUTTON_MIDDLE_RIGHT)) {
+        if (!UI::showDetail) { showMenu = !showMenu; AudioManager::PlaySE(SE_CLICK); }
+    }
     if (debugMode) { if (IsKeyPressed(KEY_N)) NextFloor(); if (IsKeyPressed(KEY_R)) ReturnHome(); }
 
-    bool stopPlayer = showMenu || showPrompt || showStorage || showReforgeMenu || showWarpMenu || showCraftMenu || showQuestMenu;
-    if (UI::showDetail) stopPlayer = true;
-
-    Vector3 offset = Vector3Subtract(camera.position, camera.target);
-    camera.target = player->position;
-    camera.position = Vector3Add(player->position, offset);
-
-    if (!stopPlayer) {
-        if (IsMouseButtonDown(1) || GetMouseWheelMove() != 0) {
-            UpdateCamera(&camera, CAMERA_THIRD_PERSON);
-            Vector3 camOffset = Vector3Subtract(camera.position, camera.target);
-            float dist = Vector3Length(camOffset);
-            float horizontalDist = sqrtf(camOffset.x * camOffset.x + camOffset.z * camOffset.z);
-            float pitch = atan2f(camOffset.y, horizontalDist);
-
-            float minPitch = 20.0f * DEG2RAD; float maxPitch = 75.0f * DEG2RAD; bool camChanged = false;
-            if (pitch < minPitch) { pitch = minPitch; camChanged = true; }
-            if (pitch > maxPitch) { pitch = maxPitch; camChanged = true; }
-
-            float minDist = 5.0f; float maxDist = 30.0f;
-            if (dist < minDist) { dist = minDist; camChanged = true; }
-            if (dist > maxDist) { dist = maxDist; camChanged = true; }
-
-            if (camChanged) {
-                float yaw = atan2f(camOffset.x, camOffset.z);
-                float newHorizontal = dist * cosf(pitch);
-                camOffset.y = dist * sinf(pitch);
-                camOffset.x = newHorizontal * sinf(yaw);
-                camOffset.z = newHorizontal * cosf(yaw);
-                camera.position = Vector3Add(camera.target, camOffset);
-            }
+    if (IsGamepadAvailable(0) && stopPlayer) {
+        float mx = GetGamepadAxisMovement(0, GAMEPAD_AXIS_LEFT_X);
+        float my = GetGamepadAxisMovement(0, GAMEPAD_AXIS_LEFT_Y);
+        if (fabs(mx) > 0.1f || fabs(my) > 0.1f) {
+            Vector2 mousePos = GetMousePosition();
+            mousePos.x += mx * 12.0f;
+            mousePos.y += my * 12.0f;
+            SetMousePosition((int)mousePos.x, (int)mousePos.y);
         }
     }
+
+    Vector3 camOffset = Vector3Subtract(camera.position, camera.target);
+    float dist = Vector3Length(camOffset);
+    float horizontalDist = sqrtf(camOffset.x * camOffset.x + camOffset.z * camOffset.z);
+    float pitch = atan2f(camOffset.y, horizontalDist);
+    float yaw = atan2f(camOffset.x, camOffset.z);
+
+    if (!stopPlayer) {
+        if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) {
+            Vector2 delta = GetMouseDelta();
+            yaw -= delta.x * 0.01f;
+            pitch -= delta.y * 0.01f; // ★修正: マウスの上下操作も反転 (- に変更)
+        }
+        if (IsGamepadAvailable(0)) {
+            float rx = GetGamepadAxisMovement(0, GAMEPAD_AXIS_RIGHT_X);
+            float ry = GetGamepadAxisMovement(0, GAMEPAD_AXIS_RIGHT_Y);
+            if (fabs(rx) > 0.2f || fabs(ry) > 0.2f) {
+                yaw -= rx * 0.05f;
+                pitch -= ry * 0.05f; // ★修正: スティック上下の反転 (- に変更)
+            }
+        }
+        float wheel = GetMouseWheelMove();
+        if (wheel != 0) {
+            dist -= wheel * 2.0f;
+        }
+    }
+
+    float minPitch = 10.0f * DEG2RAD; float maxPitch = 80.0f * DEG2RAD;
+    if (pitch < minPitch) pitch = minPitch;
+    if (pitch > maxPitch) pitch = maxPitch;
+    float minDist = 5.0f; float maxDist = 30.0f;
+    if (dist < minDist) dist = minDist;
+    if (dist > maxDist) dist = maxDist;
+
+    camera.target = player->position;
+    float newHorizontal = dist * cosf(pitch);
+    camOffset.y = dist * sinf(pitch);
+    camOffset.x = newHorizontal * sinf(yaw);
+    camOffset.z = newHorizontal * cosf(yaw);
+    camera.position = Vector3Add(camera.target, camOffset);
 
     player->Update(camera, dungeon, enemies, fxManager, stopPlayer);
     fxManager.Update(dt, dungeon); fxManager.CheckProjectileCollisions(enemies, *player, dungeon); dungeon.UpdateVisibility(player->position);
@@ -283,38 +340,40 @@ void Game::Update() {
             }
         }
 
+        auto dist2D = [](Vector3 a, Vector3 b) { return Vector2Distance({ a.x, a.z }, { b.x, b.z }); };
+        bool clickAction = IsMouseButtonPressed(0) || IsGamepadButtonPressed(0, GAMEPAD_BUTTON_RIGHT_FACE_DOWN);
+
         if (sceneTimer > 0) sceneTimer -= dt;
         else {
             bool canUseStairs = true;
-            int maxF = (currentDungeonId == 0) ? 30 : (currentDungeonId == 1) ? 50 : 100;
             if (!isPortfolioMode && floor > 0 && floor % 10 == 0 && !bossDefeated) canUseStairs = false;
             if (isPortfolioMode && (floor == 2 || floor == 3) && !bossDefeated) canUseStairs = false;
 
-            if (state == STATE_HOME && !isPortfolioMode) {
+            if (state == STATE_HOME) {
                 hoveredEntranceIndex = -1;
                 for (int i = 0; i < 3; i++) {
-                    if (dungeon.dungeonEntrances[i].x != -999 && Vector3Distance(player->position, dungeon.dungeonEntrances[i]) < 2.0f) {
+                    if (dungeon.dungeonEntrances[i].x != -999 && dist2D(player->position, dungeon.dungeonEntrances[i]) < 2.0f) {
                         hoveredEntranceIndex = i; showPrompt = true;
                     }
                 }
             }
             if (state == STATE_DUNGEON) {
-                if (canUseStairs && Vector3Distance(player->position, dungeon.stairsDownPos) < 2.0f) { showPrompt = true; }
-                if (Vector3Distance(player->position, dungeon.stairsUpPos) < 2.0f) showPrompt = true;
-                if (dungeon.portalPos.x != -999 && Vector3Distance(player->position, dungeon.portalPos) < 2.0f) showPrompt = true;
+                if (canUseStairs && dungeon.stairsDownPos.x != -999 && dist2D(player->position, dungeon.stairsDownPos) < 2.0f) { showPrompt = true; }
+                if (dungeon.stairsUpPos.x != -999 && dist2D(player->position, dungeon.stairsUpPos) < 2.0f) showPrompt = true;
+                if (dungeon.portalPos.x != -999 && dist2D(player->position, dungeon.portalPos) < 2.0f) showPrompt = true;
             }
         }
 
-        if (dungeon.healStationPos.x != -999 && Vector3Distance(player->position, dungeon.healStationPos) < 2.0f) {
+        if (dungeon.healStationPos.x != -999 && dist2D(player->position, dungeon.healStationPos) < 2.0f) {
             if (player->hp < player->maxHp) { player->hp += 50.0f * dt; if (player->hp > player->maxHp) player->hp = player->maxHp; if (GetRandomValue(0, 10) < 2) fxManager.SpawnEffect(Vector3Add(player->position, { 0,1,0 }), { 0,1,0 }, FX_HIT, GREEN); }
         }
 
-        if (state == STATE_HOME && !isPortfolioMode) {
-            if (Vector3Distance(player->position, dungeon.storageBoxPos) < 2.0f && IsMouseButtonPressed(0)) { showStorage = true; AudioManager::PlaySE(SE_CLICK); }
-            if (Vector3Distance(player->position, dungeon.reforgeStationPos) < 2.0f && IsMouseButtonPressed(0)) { showReforgeMenu = true; AudioManager::PlaySE(SE_CLICK); }
-            if (dungeon.portalPos.x != -999 && Vector3Distance(player->position, dungeon.portalPos) < 2.0f && IsMouseButtonPressed(0)) { showWarpMenu = true; AudioManager::PlaySE(SE_CLICK); }
-            if (dungeon.craftStationPos.x != -999 && Vector3Distance(player->position, dungeon.craftStationPos) < 2.0f && IsMouseButtonPressed(0)) { showCraftMenu = true; AudioManager::PlaySE(SE_CLICK); }
-            if (dungeon.questBoardPos.x != -999 && Vector3Distance(player->position, dungeon.questBoardPos) < 2.0f && IsMouseButtonPressed(0)) { showQuestMenu = true; AudioManager::PlaySE(SE_CLICK); }
+        if (state == STATE_HOME) {
+            if (dungeon.storageBoxPos.x != -999 && dist2D(player->position, dungeon.storageBoxPos) < 2.0f && clickAction) { showStorage = true; AudioManager::PlaySE(SE_CLICK); }
+            if (dungeon.reforgeStationPos.x != -999 && dist2D(player->position, dungeon.reforgeStationPos) < 2.0f && clickAction) { showReforgeMenu = true; AudioManager::PlaySE(SE_CLICK); }
+            if (dungeon.portalPos.x != -999 && dist2D(player->position, dungeon.portalPos) < 2.0f && clickAction) { showWarpMenu = true; AudioManager::PlaySE(SE_CLICK); }
+            if (dungeon.craftStationPos.x != -999 && dist2D(player->position, dungeon.craftStationPos) < 2.0f && clickAction) { showCraftMenu = true; AudioManager::PlaySE(SE_CLICK); }
+            if (dungeon.questBoardPos.x != -999 && dist2D(player->position, dungeon.questBoardPos) < 2.0f && clickAction) { showQuestMenu = true; AudioManager::PlaySE(SE_CLICK); }
         }
     }
     for (int i = (int)logs.size() - 1; i >= 0; i--) { logs[i].life -= dt; if (logs[i].life <= 0) logs.erase(logs.begin() + i); }

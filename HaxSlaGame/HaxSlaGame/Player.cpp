@@ -109,7 +109,6 @@ void Player::RecalculateStats() {
 
 void Player::InitSkillTree() {
     skillTree.clear();
-
     skillTree.push_back({ 0, T("SKILL_NAME_START", "START"), {600, 400}, {}, true, 0, 0,0,0,0,0, T("SKILL_DESC_START", "Skill Tree Start"), SKILL_PASSIVE });
     skillTree.push_back({ 1, T("SKILL_NAME_ATK1", "ATK I"),  {600, 300}, {0}, false, 1, 3.0f, 0, 0, 0, 0, T("SKILL_DESC_ATK1", "ATK +3"), SKILL_PASSIVE });
     skillTree.push_back({ 2, T("SKILL_NAME_ATK2", "ATK II"), {600, 200}, {1}, false, 2, 5.0f, 0, 0, 0, 0, T("SKILL_DESC_ATK2", "ATK +5"), SKILL_PASSIVE });
@@ -233,8 +232,18 @@ void Player::Update(Camera3D& cam, Dungeon& d, std::vector<Enemy>& enemies, Effe
 
     Vector3 cf = Vector3Normalize(Vector3Subtract(cam.target, cam.position)); cf.y = 0; cf = Vector3Normalize(cf);
     Vector3 cr = { -cf.z, 0, cf.x }, md = { 0,0,0 };
-    if (IsKeyDown(KEY_W)) md = Vector3Add(md, cf); if (IsKeyDown(KEY_S)) md = Vector3Subtract(md, cf);
-    if (IsKeyDown(KEY_A)) md = Vector3Subtract(md, cr); if (IsKeyDown(KEY_D)) md = Vector3Add(md, cr);
+
+    if (IsKeyDown(DataManager::keyConfig.moveForward)) md = Vector3Add(md, cf);
+    if (IsKeyDown(DataManager::keyConfig.moveBackward)) md = Vector3Subtract(md, cf);
+    if (IsKeyDown(DataManager::keyConfig.moveLeft)) md = Vector3Subtract(md, cr);
+    if (IsKeyDown(DataManager::keyConfig.moveRight)) md = Vector3Add(md, cr);
+
+    if (IsGamepadAvailable(0)) {
+        float axisX = GetGamepadAxisMovement(0, GAMEPAD_AXIS_LEFT_X);
+        float axisY = GetGamepadAxisMovement(0, GAMEPAD_AXIS_LEFT_Y);
+        if (fabs(axisX) > 0.2f) md = Vector3Add(md, Vector3Scale(cr, axisX));
+        if (fabs(axisY) > 0.2f) md = Vector3Add(md, Vector3Scale(cf, -axisY));
+    }
 
     bool isMoving = (Vector3Length(md) > 0.1f);
     float curSpd = (dashTimer > 0) ? baseSpeed * 2.8f : baseSpeed;
@@ -246,45 +255,98 @@ void Player::Update(Camera3D& cam, Dungeon& d, std::vector<Enemy>& enemies, Effe
         modelRotation = atan2f(md.x, md.z) * RAD2DEG;
     }
 
-    Ray ray = GetMouseRay(GetMousePosition(), cam);
-    if (ray.direction.y != 0) {
-        float t = (position.y - ray.position.y) / ray.direction.y;
-        Vector3 tp = Vector3Add(ray.position, Vector3Scale(ray.direction, t));
-        lastAimDir = Vector3Normalize(Vector3Subtract(tp, position)); lastAimDir.y = 0;
+    // ★修正: デバイスごとのエイム優先処理 (マウスカーソルが動いたらマウスを優先、パッドを触ったらパッド優先)
+    static bool useMouseAim = true;
+    Vector2 mouseDelta = GetMouseDelta();
+    if (fabs(mouseDelta.x) > 1.0f || fabs(mouseDelta.y) > 1.0f || IsMouseButtonPressed(0) || IsMouseButtonPressed(1)) {
+        useMouseAim = true;
     }
+
+    if (IsGamepadAvailable(0)) {
+        float rx = GetGamepadAxisMovement(0, GAMEPAD_AXIS_RIGHT_X);
+        float ry = GetGamepadAxisMovement(0, GAMEPAD_AXIS_RIGHT_Y);
+        float lx = GetGamepadAxisMovement(0, GAMEPAD_AXIS_LEFT_X);
+        float ly = GetGamepadAxisMovement(0, GAMEPAD_AXIS_LEFT_Y);
+        bool padAttack = IsGamepadButtonPressed(0, DataManager::keyConfig.padAttack);
+        if (fabs(rx) > 0.2f || fabs(ry) > 0.2f || fabs(lx) > 0.2f || fabs(ly) > 0.2f || padAttack) {
+            useMouseAim = false;
+        }
+    }
+
+    if (useMouseAim) {
+        Ray ray = GetMouseRay(GetMousePosition(), cam);
+        if (ray.direction.y != 0) {
+            float t = (position.y - ray.position.y) / ray.direction.y;
+            Vector3 tp = Vector3Add(ray.position, Vector3Scale(ray.direction, t));
+            lastAimDir = Vector3Normalize(Vector3Subtract(tp, position)); lastAimDir.y = 0;
+        }
+    }
+    else {
+        if (IsGamepadAvailable(0)) {
+            float rx = GetGamepadAxisMovement(0, GAMEPAD_AXIS_RIGHT_X);
+            float ry = GetGamepadAxisMovement(0, GAMEPAD_AXIS_RIGHT_Y);
+            if (fabs(rx) > 0.2f || fabs(ry) > 0.2f) {
+                Vector3 aim = Vector3Add(Vector3Scale(cr, rx), Vector3Scale(cf, -ry));
+                lastAimDir = Vector3Normalize(aim);
+            }
+            else {
+                if (isMoving) {
+                    lastAimDir = Vector3Normalize(md);
+                }
+                else {
+                    Vector3 camFwd = Vector3Normalize(Vector3Subtract(cam.target, cam.position));
+                    camFwd.y = 0; camFwd = Vector3Normalize(camFwd);
+                    lastAimDir = camFwd;
+                }
+            }
+        }
+    }
+
     if (attackTimer > 0) attackTimer -= dt;
-    if (IsMouseButtonPressed(0) && attackTimer <= 0 && currentWeapon != NONE) { PerformAttack(lastAimDir, enemies, d, fx); attackTimer = 0.5f; animTime = 0; }
+    bool attackInput = IsMouseButtonPressed(0) || IsGamepadButtonPressed(0, DataManager::keyConfig.padAttack);
+    if (attackInput && attackTimer <= 0 && currentWeapon != NONE) {
+        PerformAttack(lastAimDir, enemies, d, fx);
+        attackTimer = 0.5f; animTime = 0;
+    }
 
     float cdMultiplier = 1.0f - cooldownReduction;
     if (cdMultiplier < 0.2f) cdMultiplier = 0.2f;
 
-    if (IsKeyPressed(KEY_LEFT_SHIFT) && IsSkillUnlocked(SKILL_ACTIVE_DASH) && dashCooldownTimer <= 0) {
+    bool btnDash = IsKeyPressed(DataManager::keyConfig.dash) || IsGamepadButtonPressed(0, DataManager::keyConfig.padDash);
+    bool btnSmash = IsKeyPressed(DataManager::keyConfig.smash) || IsGamepadButtonPressed(0, DataManager::keyConfig.padSmash);
+    bool btnKongo = IsKeyPressed(DataManager::keyConfig.kongo) || IsGamepadButtonPressed(0, DataManager::keyConfig.padKongo);
+    bool btnZoukyou = IsKeyPressed(DataManager::keyConfig.zoukyou) || IsGamepadButtonPressed(0, DataManager::keyConfig.padZoukyou);
+    bool btnStealth = IsKeyPressed(DataManager::keyConfig.stealth) || IsGamepadButtonPressed(0, DataManager::keyConfig.padStealth);
+    bool btnHeal = IsKeyPressed(DataManager::keyConfig.heal) || IsGamepadButtonPressed(0, DataManager::keyConfig.padHeal);
+    bool btnSwap = IsKeyPressed(DataManager::keyConfig.swapWeapon) || IsGamepadButtonPressed(0, DataManager::keyConfig.padSwap);
+
+    if (btnDash && IsSkillUnlocked(SKILL_ACTIVE_DASH) && dashCooldownTimer <= 0) {
         dashTimer = 0.35f; dashCooldownTimer = GetSkillMaxCooldown(SKILL_ACTIVE_DASH) * cdMultiplier; AudioManager::PlaySE(SE_SKILL);
     }
-    if (IsKeyPressed(KEY_ONE) && IsSkillUnlocked(SKILL_ACTIVE_SMASH) && smashCooldownTimer <= 0 && attackTimer <= 0) {
+    if (btnSmash && IsSkillUnlocked(SKILL_ACTIVE_SMASH) && smashCooldownTimer <= 0 && attackTimer <= 0) {
         PerformSmash(lastAimDir, enemies, d, fx); smashCooldownTimer = GetSkillMaxCooldown(SKILL_ACTIVE_SMASH) * cdMultiplier; attackTimer = 0.8f; animTime = 0;
     }
-    if (IsKeyPressed(KEY_TWO) && IsSkillUnlocked(SKILL_ACTIVE_KONGO) && kongoCooldownTimer <= 0) {
+    if (btnKongo && IsSkillUnlocked(SKILL_ACTIVE_KONGO) && kongoCooldownTimer <= 0) {
         kongoTimer = 10.0f; kongoCooldownTimer = GetSkillMaxCooldown(SKILL_ACTIVE_KONGO) * cdMultiplier; AudioManager::PlaySE(SE_SKILL); fx.SpawnEffect(position, { 0,1,0 }, FX_HIT, GOLD); RecalculateStats();
     }
-    if (IsKeyPressed(KEY_THREE) && IsSkillUnlocked(SKILL_ACTIVE_ZOUKYOU) && zoukyouCooldownTimer <= 0) {
+    if (btnZoukyou && IsSkillUnlocked(SKILL_ACTIVE_ZOUKYOU) && zoukyouCooldownTimer <= 0) {
         zoukyouTimer = 10.0f; zoukyouCooldownTimer = GetSkillMaxCooldown(SKILL_ACTIVE_ZOUKYOU) * cdMultiplier; AudioManager::PlaySE(SE_SKILL); fx.SpawnEffect(position, { 0,1,0 }, FX_HIT, RED); RecalculateStats();
     }
-    if (IsKeyPressed(KEY_FOUR) && IsSkillUnlocked(SKILL_ACTIVE_STEALTH) && stealthCooldownTimer <= 0) {
+    if (btnStealth && IsSkillUnlocked(SKILL_ACTIVE_STEALTH) && stealthCooldownTimer <= 0) {
         stealthTimer = 10.0f; stealthCooldownTimer = GetSkillMaxCooldown(SKILL_ACTIVE_STEALTH) * cdMultiplier; isStealth = true; AudioManager::PlaySE(SE_SKILL); fx.SpawnEffect(position, { 0,1,0 }, FX_HIT, BLUE);
     }
-    if (IsKeyPressed(KEY_FIVE) && IsSkillUnlocked(SKILL_ACTIVE_HEAL) && healCooldownTimer <= 0) {
+    if (btnHeal && IsSkillUnlocked(SKILL_ACTIVE_HEAL) && healCooldownTimer <= 0) {
         hp += (maxHp * 0.3f) + healBonus; if (hp > maxHp) hp = maxHp;
         healCooldownTimer = GetSkillMaxCooldown(SKILL_ACTIVE_HEAL) * cdMultiplier; AudioManager::PlaySE(SE_HEAL); fx.SpawnEffect(position, { 0,1,0 }, FX_HIT, GREEN);
     }
 
-    if (IsKeyPressed(KEY_Q)) { activeSlot = 1 - activeSlot; currentWeapon = equippedWeapons[activeSlot]; }
+    if (btnSwap) { activeSlot = 1 - activeSlot; currentWeapon = equippedWeapons[activeSlot]; }
 
     if (attackTimer > 0) modelRotation = atan2f(lastAimDir.x, lastAimDir.z) * RAD2DEG;
 
     int targetAnim = 4;
     if (hp <= 0) targetAnim = 3;
-    else if (attackTimer > 0) targetAnim = (currentWeapon == SWORD ? 0 : (currentWeapon == AXE ? 1 : (currentWeapon == WAND ? 2 : 0))); // ★WANDの場合のアニメーションフォールバック追加
+    else if (attackTimer > 0) targetAnim = (currentWeapon == SWORD ? 0 : (currentWeapon == AXE ? 1 : (currentWeapon == WAND ? 2 : 0)));
     else if (dashTimer > 0) targetAnim = 6;
     else if (isMoving) targetAnim = 5;
 
@@ -335,7 +397,6 @@ void Player::Draw(bool debug) {
             std::string baseKey = (currentWeapon == SWORD) ? "Wpn_Sword" : (currentWeapon == AXE ? "Wpn_Axe" : (currentWeapon == WAND ? "Wpn_Wand" : "Wpn_Spear"));
             std::string finalKey = baseKey;
 
-            // ★修正: jsonで指定されたmodelNameがある場合はそれを優先する
             if (!equippedData[activeSlot].modelName.empty()) {
                 finalKey = equippedData[activeSlot].modelName;
             }

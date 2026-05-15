@@ -103,7 +103,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalIncludeDirectories>C:\haku\hakusura\HaxSlaGame\HaxSlaGame\imgui</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\imgui</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

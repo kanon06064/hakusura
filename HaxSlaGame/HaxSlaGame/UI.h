@@ -40,6 +40,13 @@ public:
     static void UpdateSystemLogs(float deltaTime);
     static void DrawSystemLogs(Font font);
 
+    static std::string GetPadBtnStr(int btn);
+
+    // ★追加: ゲームパッドによるUIナビゲーション(十字キー操作)の管理機構
+    static void ClearInteractables();
+    static void RegisterInteractable(Rectangle r);
+    static void UpdatePadNavigation();
+
     static int itemPage, equipPage, debugPage, storageInvPage, storageBoxPage, itemSubTab;
     static int selectedDungeonTab;
     static int questScroll;
@@ -57,6 +64,7 @@ private:
     static Vector2 mapOffset;
 
     static std::vector<SystemLogMessage> systemLogs;
+    static std::vector<Rectangle> interactables; // ★追加: ナビゲーション対象の矩形リスト
 
     static void DrawDetailWindow(Font font);
     static void OpenDetail(const ItemData& item);

@@ -25,4 +25,8 @@ private:
     static std::map<MusicType, Music> musicMap;
     static std::map<SoundType, Sound> soundMap;
     static MusicType currentBGM;
+
+    // ★追加: 各オーディオ素材ごとの基準(ベース)音量
+    static std::map<MusicType, float> bgmBaseVolumes;
+    static std::map<SoundType, float> seBaseVolumes;
 };

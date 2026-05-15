@@ -1,0 +1,23 @@
+{
+    "bgmVolume": 0.5,
+    "dash": 340,
+    "heal": 53,
+    "kongo": 50,
+    "moveBackward": 83,
+    "moveForward": 87,
+    "moveLeft": 65,
+    "moveRight": 68,
+    "padAttack": 12,
+    "padDash": 11,
+    "padHeal": 10,
+    "padKongo": 2,
+    "padSmash": 1,
+    "padStealth": 4,
+    "padSwap": 9,
+    "padZoukyou": 3,
+    "seVolume": 0.5,
+    "smash": 49,
+    "stealth": 52,
+    "swapWeapon": 81,
+    "zoukyou": 51
+}

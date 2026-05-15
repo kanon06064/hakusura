@@ -15,14 +15,19 @@ int UI::DrawMenu(Player& p, Dungeon& d, MenuTab& tab, Font font) {
     int eventCode = 0;
     int sw = GetScreenWidth(), sh = GetScreenHeight();
     DrawRectangle(100, 50, sw - 200, sh - 100, Fade(DARKGRAY, 0.95f));
-    const char* tKeys[] = { "EQUIP", "SKILL", "MAP", "ITEMS", "DEBUG", "SYSTEM", "OPTION" };
-    const char* tDefs[] = { "Equip", "Skill", "Map", "Items", "Debug", "System", "Option" };
 
-    for (int i = 0; i < 7; i++) {
-        Rectangle r = { 110.0f + (float)i * 135, 70.0f, 130.0f, 40.0f };
+    const char* tKeys[] = { "EQUIP", "SKILL", "MAP", "ITEMS", "DEBUG", "SYSTEM", "OPTION", "CONTROL" };
+    const char* tDefs[] = { "Equip", "Skill", "Map", "Items", "Debug", "System", "Option", "Control" };
+
+    for (int i = 0; i < 8; i++) {
+        Rectangle r = { 100.0f + (float)i * 120, 70.0f, 115.0f, 40.0f };
         Color tabColor = (tab == i) ? BLUE : DARKGRAY;
         if (UI::DrawButton(r, T(tKeys[i], tDefs[i]).c_str(), font, tabColor)) { tab = (MenuTab)i; }
     }
+
+    bool clickInput = IsMouseButtonPressed(0) || IsGamepadButtonPressed(0, GAMEPAD_BUTTON_RIGHT_FACE_DOWN);
+    bool downInput = IsMouseButtonDown(0) || IsGamepadButtonDown(0, GAMEPAD_BUTTON_RIGHT_FACE_DOWN);
+    bool rightDownInput = IsMouseButtonDown(MOUSE_BUTTON_RIGHT) || IsGamepadButtonDown(0, GAMEPAD_BUTTON_RIGHT_TRIGGER_2);
 
     if (tab == EQUIP) {
         DrawTextEx(font, T("ACTIVE_SLOTS", "Equipped").c_str(), { 120, 130 }, 20, 1, GOLD);
@@ -30,9 +35,12 @@ int UI::DrawMenu(Player& p, Dungeon& d, MenuTab& tab, Font font) {
             int y = 160 + i * 105; bool isEmpty = (p.equippedData[i].id == -1);
             Rectangle slotRect = { 120, (float)y, 260, 95 }; Rectangle btnRect = { 300, (float)y + 25, 70, 40 };
             Color slotCol = (p.activeSlot == i) ? MAROON : BLACK; if (showDetail) slotCol = ColorBrightness(slotCol, -0.4f);
+
+            UI::RegisterInteractable(slotRect); // ★追加: アイテム枠も十字キーで選べるように
+
             DrawRectangleRec(slotRect, slotCol);
             if (!showDetail && !isEmpty && CheckCollisionPointRec(GetMousePosition(), slotRect)) {
-                if (!CheckCollisionPointRec(GetMousePosition(), btnRect)) { if (IsMouseButtonPressed(0)) OpenDetail(p.equippedData[i]); }
+                if (!CheckCollisionPointRec(GetMousePosition(), btnRect)) { if (clickInput) OpenDetail(p.equippedData[i]); }
             }
             if (!isEmpty) {
                 DrawTextEx(font, Player::GetFullItemName(p.equippedData[i]).c_str(), { 130, (float)y + 25 }, 20, 1, Player::GetItemRarityColor(p.equippedData[i]));
@@ -49,9 +57,12 @@ int UI::DrawMenu(Player& p, Dungeon& d, MenuTab& tab, Font font) {
             int y = 160 + i * 70; DrawTextEx(font, T(armorKeys[i], armorNames[i]).c_str(), { 420, (float)y + 20 }, 16, 1, LIGHTGRAY);
             bool isEmpty = (p.equippedArmor[i].id == -1);
             Rectangle slotRect = { 480, (float)y, 200, 60 }; Rectangle btnRect = { 610, (float)y + 10, 70, 40 };
+
+            UI::RegisterInteractable(slotRect); // ★追加
+
             DrawRectangleRec(slotRect, showDetail ? ColorBrightness(BLACK, -0.4f) : BLACK); DrawRectangleLinesEx(slotRect, 1, showDetail ? GRAY : DARKGRAY);
             if (!showDetail && !isEmpty && CheckCollisionPointRec(GetMousePosition(), slotRect)) {
-                if (!CheckCollisionPointRec(GetMousePosition(), btnRect)) { if (IsMouseButtonPressed(0)) OpenDetail(p.equippedArmor[i]); }
+                if (!CheckCollisionPointRec(GetMousePosition(), btnRect)) { if (clickInput) OpenDetail(p.equippedArmor[i]); }
             }
             if (!isEmpty) {
                 DrawTextEx(font, Player::GetFullItemName(p.equippedArmor[i]).c_str(), { 490, (float)y + 10 }, 14, 1, Player::GetItemRarityColor(p.equippedArmor[i]));
@@ -67,12 +78,14 @@ int UI::DrawMenu(Player& p, Dungeon& d, MenuTab& tab, Font font) {
         for (int i = 0; i < perP; i++) {
             int idx = equipPage * perP + i; if (idx >= (int)p.inventoryEquip.size()) break;
             int y = 160 + i * 45; Rectangle r = { 720, (float)y, 300, 40 };
+
+            UI::RegisterInteractable(r); // ★追加
+
             DrawRectangleRec(r, showDetail ? ColorBrightness(BLACK, -0.4f) : BLACK);
-            if (!showDetail && CheckCollisionPointRec(GetMousePosition(), r)) { if (GetMouseX() < 950) { if (IsMouseButtonPressed(0)) OpenDetail(p.inventoryEquip[idx]); } }
+            if (!showDetail && CheckCollisionPointRec(GetMousePosition(), r)) { if (GetMouseX() < 950) { if (clickInput) OpenDetail(p.inventoryEquip[idx]); } }
             DrawTextEx(font, Player::GetFullItemName(p.inventoryEquip[idx]).c_str(), { 730, (float)y + 10 }, 14, 1, Player::GetItemRarityColor(p.inventoryEquip[idx]));
 
             if (p.inventoryEquip[idx].type == "EQUIP") {
-                // ★修正: 装備時に配列が変動するためbreak
                 if (UI::DrawButton({ 940, (float)y, 40, 40 }, T("W1", "W1").c_str(), font, DARKGRAY)) { p.EquipWeapon(idx, 0); break; }
                 if (UI::DrawButton({ 985, (float)y, 40, 40 }, T("W2", "W2").c_str(), font, DARKGRAY)) { p.EquipWeapon(idx, 1); break; }
             }
@@ -89,7 +102,14 @@ int UI::DrawMenu(Player& p, Dungeon& d, MenuTab& tab, Font font) {
     else if (tab == SKILL) {
         Rectangle viewArea = { 100, 120, (float)sw - 200, (float)sh - 170 };
         DrawTextEx(font, T("CAM_CONTROL", "Right Click & Drag to Move").c_str(), { 120, 620 }, 16, 1, LIGHTGRAY);
-        if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT) && !showDetail) { Vector2 delta = GetMouseDelta(); skillOffset = Vector2Add(skillOffset, delta); }
+        if (rightDownInput && !showDetail) {
+            Vector2 delta = GetMouseDelta();
+            if (IsGamepadAvailable(0)) {
+                delta.x = GetGamepadAxisMovement(0, GAMEPAD_AXIS_RIGHT_X) * 10.0f;
+                delta.y = GetGamepadAxisMovement(0, GAMEPAD_AXIS_RIGHT_Y) * 10.0f;
+            }
+            skillOffset = Vector2Add(skillOffset, delta);
+        }
         BeginScissorMode((int)viewArea.x, (int)viewArea.y, (int)viewArea.width, (int)viewArea.height);
 
         for (auto& node : p.skillTree) {
@@ -118,6 +138,9 @@ int UI::DrawMenu(Player& p, Dungeon& d, MenuTab& tab, Font font) {
                 nodeColor = node.unlocked ? ORANGE : (available ? PURPLE : DARKGRAY);
             }
 
+            Rectangle nodeRect = { drawPos.x - 35, drawPos.y - 35, 70, 70 };
+            UI::RegisterInteractable(nodeRect); // ★追加: スキルアイコンを十字キー対応
+
             DrawPoly(drawPos, 6, 35, 0, nodeColor);
             DrawPolyLines(drawPos, 6, 35, 0, RAYWHITE);
             DrawTextEx(font, node.name.c_str(), { drawPos.x - 28, drawPos.y - 8 }, 12, 1, node.unlocked ? BLACK : WHITE);
@@ -129,7 +152,7 @@ int UI::DrawMenu(Player& p, Dungeon& d, MenuTab& tab, Font font) {
             if (!showDetail && CheckCollisionPointRec(GetMousePosition(), viewArea)) {
                 if (CheckCollisionPointCircle(GetMousePosition(), drawPos, 35)) {
                     hoveredSkillId = i;
-                    if (available && IsMouseButtonPressed(0)) p.UnlockSkill(node.id);
+                    if (available && clickInput) p.UnlockSkill(node.id);
                 }
             }
         }
@@ -159,8 +182,9 @@ int UI::DrawMenu(Player& p, Dungeon& d, MenuTab& tab, Font font) {
         const char* subK[] = { "CONSUMABLE", "MATERIAL" };
         for (int i = 0; i < 2; i++) {
             Rectangle r = { 120.0f + (float)i * 210, 120, 200, 35 }; Color c = (itemSubTab == i) ? GREEN : BLACK; if (showDetail) c = ColorBrightness(c, -0.4f);
-            if (!showDetail && CheckCollisionPointRec(GetMousePosition(), r) && IsMouseButtonPressed(0)) { itemSubTab = i; itemPage = 0; }
+            if (!showDetail && CheckCollisionPointRec(GetMousePosition(), r) && clickInput) { itemSubTab = i; itemPage = 0; }
             DrawRectangleRec(r, c); std::string label = T(subK[i], subK[i]); DrawTextEx(font, label.c_str(), { r.x + 10, r.y + 8 }, 16, 1, WHITE);
+            UI::RegisterInteractable(r); // ★追加
         }
         std::vector<int> filtered; std::string target = (itemSubTab == 0) ? "CONSUMABLE" : "MATERIAL"; for (int i = 0; i < (int)p.inventoryItems.size(); i++) if (p.inventoryItems[i].type == target) filtered.push_back(i);
         const int perP = 10; int maxP = (int)ceil((float)filtered.size() / perP); if (maxP < 1) maxP = 1;
@@ -169,11 +193,13 @@ int UI::DrawMenu(Player& p, Dungeon& d, MenuTab& tab, Font font) {
             int lIdx = itemPage * perP + i; if (lIdx >= (int)filtered.size()) break;
             int invIdx = filtered[lIdx]; auto& item = p.inventoryItems[invIdx];
             int y = 165 + i * 42; Rectangle itemRect = { 120, (float)y, 400, 38 };
+
+            UI::RegisterInteractable(itemRect); // ★追加
+
             DrawRectangleRec(itemRect, Fade(BLACK, showDetail ? 0.2f : 0.4f));
             DrawTextEx(font, TextFormat("%s x%d", item.name.c_str(), item.count), { 135, (float)y + 10 }, 18, 1.0f, Player::GetItemRarityColor(item));
-            if (!showDetail && CheckCollisionPointRec(GetMousePosition(), itemRect)) { if (IsMouseButtonPressed(0)) OpenDetail(item); }
+            if (!showDetail && CheckCollisionPointRec(GetMousePosition(), itemRect)) { if (clickInput) OpenDetail(item); }
 
-            // ★修正: 消費アイテム使用時に配列が変動するためbreak
             if (itemSubTab == 0 && UI::DrawButton({ 530, (float)y, 80, 38 }, T("USE", "Use").c_str(), font, GREEN)) {
                 p.UseItem(invIdx);
                 break;
@@ -194,7 +220,14 @@ int UI::DrawMenu(Player& p, Dungeon& d, MenuTab& tab, Font font) {
     else if (tab == MAP_TAB) {
         Rectangle viewArea = { 110, 120, (float)sw - 220, (float)sh - 170 };
         DrawTextEx(font, T("MAP_CONTROL", "Right Click & Drag to Move").c_str(), { 120, 620 }, 16, 1, LIGHTGRAY);
-        if (!showDetail && CheckCollisionPointRec(GetMousePosition(), viewArea) && IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) { Vector2 delta = GetMouseDelta(); mapOffset = Vector2Add(mapOffset, delta); }
+        if (!showDetail && CheckCollisionPointRec(GetMousePosition(), viewArea) && rightDownInput) {
+            Vector2 delta = GetMouseDelta();
+            if (IsGamepadAvailable(0)) {
+                delta.x = GetGamepadAxisMovement(0, GAMEPAD_AXIS_RIGHT_X) * 10.0f;
+                delta.y = GetGamepadAxisMovement(0, GAMEPAD_AXIS_RIGHT_Y) * 10.0f;
+            }
+            mapOffset = Vector2Add(mapOffset, delta);
+        }
         BeginScissorMode((int)viewArea.x, (int)viewArea.y, (int)viewArea.width, (int)viewArea.height);
         float sc = 12.0f; float offX = (viewArea.x + viewArea.width / 2.0f) - (d.currentWidth * sc / 2.0f) + mapOffset.x; float offY = (viewArea.y + viewArea.height / 2.0f) - (d.currentHeight * sc / 2.0f) + mapOffset.y;
         DrawRectangle(offX - 5, offY - 5, d.currentWidth * sc + 10, d.currentHeight * sc + 10, BLACK);
@@ -216,13 +249,141 @@ int UI::DrawMenu(Player& p, Dungeon& d, MenuTab& tab, Font font) {
     }
     else if (tab == OPTION_TAB) {
         DrawTextEx(font, T("SOUND_SETTING", "Sound Settings").c_str(), { 150, 150 }, 24, 1, WHITE);
-        DrawTextEx(font, TextFormat(T("VOL_BGM", "BGM Volume: %.1f").c_str(), AudioManager::bgmVolume), { 150, 200 }, 20, 1, WHITE);
-        Rectangle bgmBar = { 150, 230, 300, 20 }; DrawRectangleRec(bgmBar, GRAY); DrawRectangle(bgmBar.x, bgmBar.y, bgmBar.width * AudioManager::bgmVolume, bgmBar.height, GREEN);
-        if (!showDetail && CheckCollisionPointRec(GetMousePosition(), { 150, 220, 300, 40 }) && IsMouseButtonDown(0)) { float newVol = (GetMouseX() - 150) / 300.0f; AudioManager::SetBGMVolume(newVol); }
 
-        DrawTextEx(font, TextFormat(T("VOL_SE", "SE Volume: %.1f").c_str(), AudioManager::seVolume), { 150, 300 }, 20, 1, WHITE);
-        Rectangle seBar = { 150, 330, 300, 20 }; DrawRectangleRec(seBar, GRAY); DrawRectangle(seBar.x, seBar.y, seBar.width * AudioManager::seVolume, seBar.height, ORANGE);
-        if (!showDetail && CheckCollisionPointRec(GetMousePosition(), { 150, 320, 300, 40 }) && IsMouseButtonDown(0)) { float newVol = (GetMouseX() - 150) / 300.0f; AudioManager::SetSEVolume(newVol); if (IsMouseButtonPressed(0)) AudioManager::PlaySE(SE_CLICK); }
+        int bgmVolInt = (int)roundf(AudioManager::bgmVolume * 100.0f);
+        DrawTextEx(font, TextFormat(T("VOL_BGM", "BGM Volume: %d").c_str(), bgmVolInt), { 150, 200 }, 20, 1, WHITE);
+
+        Rectangle bgmBar = { 150, 230, 300, 20 };
+        UI::RegisterInteractable(bgmBar); // ★追加
+
+        DrawRectangleRec(bgmBar, GRAY);
+        DrawRectangle(bgmBar.x, bgmBar.y, bgmBar.width * AudioManager::bgmVolume, bgmBar.height, GREEN);
+
+        if (!showDetail && CheckCollisionPointRec(GetMousePosition(), { 150, 220, 300, 40 }) && downInput) {
+            float newVol = (GetMouseX() - 150) / 300.0f;
+            AudioManager::SetBGMVolume(newVol);
+            DataManager::SaveConfig();
+        }
+
+        if (UI::DrawButton({ 470, 220, 40, 40 }, "-", font, GRAY)) {
+            AudioManager::SetBGMVolume(AudioManager::bgmVolume - 0.05f);
+            DataManager::SaveConfig();
+        }
+        if (UI::DrawButton({ 520, 220, 40, 40 }, "+", font, GRAY)) {
+            AudioManager::SetBGMVolume(AudioManager::bgmVolume + 0.05f);
+            DataManager::SaveConfig();
+        }
+
+        int seVolInt = (int)roundf(AudioManager::seVolume * 100.0f);
+        DrawTextEx(font, TextFormat(T("VOL_SE", "SE Volume: %d").c_str(), seVolInt), { 150, 300 }, 20, 1, WHITE);
+
+        Rectangle seBar = { 150, 330, 300, 20 };
+        UI::RegisterInteractable(seBar); // ★追加
+
+        DrawRectangleRec(seBar, GRAY);
+        DrawRectangle(seBar.x, seBar.y, seBar.width * AudioManager::seVolume, seBar.height, ORANGE);
+
+        if (!showDetail && CheckCollisionPointRec(GetMousePosition(), { 150, 320, 300, 40 }) && downInput) {
+            float newVol = (GetMouseX() - 150) / 300.0f;
+            AudioManager::SetSEVolume(newVol);
+            DataManager::SaveConfig();
+            if (clickInput) AudioManager::PlaySE(SE_CLICK);
+        }
+
+        if (UI::DrawButton({ 470, 320, 40, 40 }, "-", font, GRAY)) {
+            AudioManager::SetSEVolume(AudioManager::seVolume - 0.05f);
+            DataManager::SaveConfig();
+            AudioManager::PlaySE(SE_CLICK);
+        }
+        if (UI::DrawButton({ 520, 320, 40, 40 }, "+", font, GRAY)) {
+            AudioManager::SetSEVolume(AudioManager::seVolume + 0.05f);
+            DataManager::SaveConfig();
+            AudioManager::PlaySE(SE_CLICK);
+        }
+    }
+    else if (tab == CONTROL_TAB) {
+        static int waitingForKeyIndex = -1;
+        static bool waitingForPad = false;
+
+        DrawTextEx(font, T("KEY_CONFIG", "Key Configuration").c_str(), { 150, 130 }, 24, 1, WHITE);
+
+        struct BindInfo { const char* label; const char* tKey; int* keyPtr; int* padPtr; };
+        BindInfo binds[] = {
+            {"Move Forward", "KEY_FWD", &DataManager::keyConfig.moveForward, nullptr},
+            {"Move Backward","KEY_BACK",&DataManager::keyConfig.moveBackward, nullptr},
+            {"Move Left",    "KEY_LEFT",&DataManager::keyConfig.moveLeft, nullptr},
+            {"Move Right",   "KEY_RIGHT",&DataManager::keyConfig.moveRight, nullptr},
+            {"Attack",       "KEY_ATK", nullptr, &DataManager::keyConfig.padAttack},
+            {"Dash",         "KEY_DASH",&DataManager::keyConfig.dash, &DataManager::keyConfig.padDash},
+            {"Smash",        "KEY_SMASH",&DataManager::keyConfig.smash, &DataManager::keyConfig.padSmash},
+            {"Kongo",        "KEY_KONGO",&DataManager::keyConfig.kongo, &DataManager::keyConfig.padKongo},
+            {"Zoukyou",      "KEY_ZOUKYOU",&DataManager::keyConfig.zoukyou, &DataManager::keyConfig.padZoukyou},
+            {"Stealth",      "KEY_STEALTH",&DataManager::keyConfig.stealth, &DataManager::keyConfig.padStealth},
+            {"Heal",         "KEY_HEAL",&DataManager::keyConfig.heal, &DataManager::keyConfig.padHeal},
+            {"Swap Weapon",  "KEY_SWAP",&DataManager::keyConfig.swapWeapon, &DataManager::keyConfig.padSwap},
+        };
+
+        if (waitingForKeyIndex != -1) {
+            DrawRectangle(0, 0, sw, sh, Fade(BLACK, 0.8f));
+            DrawTextEx(font, T("PRESS_ANY_KEY", "Press any key to assign...").c_str(), { (float)sw / 2 - 200, (float)sh / 2 - 20 }, 24, 1, YELLOW);
+
+            if (waitingForPad) {
+                for (int i = 1; i < 32; i++) {
+                    if (IsGamepadButtonPressed(0, i)) {
+                        *binds[waitingForKeyIndex].padPtr = i;
+                        waitingForKeyIndex = -1;
+                        DataManager::SaveConfig();
+                        AudioManager::PlaySE(SE_CLICK);
+                        break;
+                    }
+                }
+            }
+            else {
+                int keyPressed = GetKeyPressed();
+                if (keyPressed > 0) {
+                    *binds[waitingForKeyIndex].keyPtr = keyPressed;
+                    waitingForKeyIndex = -1;
+                    DataManager::SaveConfig();
+                    AudioManager::PlaySE(SE_CLICK);
+                }
+            }
+        }
+        else {
+            for (int i = 0; i < 12; i++) {
+                int col = i / 6;
+                int row = i % 6;
+                float x = 120.0f + col * 450.0f;
+                float y = 180.0f + row * 60.0f;
+
+                DrawTextEx(font, T(binds[i].tKey, binds[i].label).c_str(), { x, y + 10 }, 20, 1, LIGHTGRAY);
+
+                if (binds[i].keyPtr != nullptr) {
+                    std::string keyName = "KEY_" + std::to_string(*binds[i].keyPtr);
+                    if (*binds[i].keyPtr >= 32 && *binds[i].keyPtr <= 126) keyName = std::string(1, (char)*binds[i].keyPtr);
+                    else if (*binds[i].keyPtr == KEY_LEFT_SHIFT || *binds[i].keyPtr == KEY_RIGHT_SHIFT) keyName = "SHIFT";
+                    else if (*binds[i].keyPtr == KEY_SPACE) keyName = "SPACE";
+
+                    Rectangle btnR = { x + 160, y, 90, 40 };
+                    if (UI::DrawButton(btnR, keyName.c_str(), font, DARKGRAY)) {
+                        waitingForKeyIndex = i; waitingForPad = false; AudioManager::PlaySE(SE_CLICK);
+                    }
+                }
+                else {
+                    DrawTextEx(font, T("LCLICK", "L-Click").c_str(), { x + 175, y + 10 }, 16, 1, GRAY);
+                }
+
+                if (binds[i].padPtr != nullptr) {
+                    std::string padName = UI::GetPadBtnStr(*binds[i].padPtr);
+                    Rectangle btnR = { x + 260, y, 90, 40 };
+                    if (UI::DrawButton(btnR, padName.c_str(), font, Fade(DARKBLUE, 0.8f))) {
+                        waitingForKeyIndex = i; waitingForPad = true; AudioManager::PlaySE(SE_CLICK);
+                    }
+                }
+                else {
+                    DrawTextEx(font, T("LSTICK", "L-Stick").c_str(), { x + 275, y + 10 }, 16, 1, GRAY);
+                }
+            }
+        }
     }
 
     DrawDetailWindow(font);

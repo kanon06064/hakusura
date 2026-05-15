@@ -136,22 +136,30 @@ void Game::Draw() {
             int maxF = (currentDungeonId == 0) ? 30 : (currentDungeonId == 1) ? 50 : 100;
             const char* m = "UNKNOWN";
 
+            auto dist2D = [](Vector3 a, Vector3 b) { return Vector2Distance({ a.x, a.z }, { b.x, b.z }); };
+
             if (state == STATE_HOME && hoveredEntranceIndex != -1) m = "ENTER_DUNGEON";
             else if (state == STATE_DUNGEON) {
-                if (floor == maxF) m = "RETURN_HOME";
-                else if (Vector3Distance(player->position, dungeon.stairsDownPos) < 2.0f) m = "GO_DEEPER";
-                else if (Vector3Distance(player->position, dungeon.stairsUpPos) < 2.0f) m = "RETURN_HOME";
-                else if (dungeon.portalPos.x != -999 && Vector3Distance(player->position, dungeon.portalPos) < 2.0f) m = "RETURN_HOME";
+                if (!isPortfolioMode && floor == maxF) m = "RETURN_HOME";
+                else if (dungeon.stairsDownPos.x != -999 && dist2D(player->position, dungeon.stairsDownPos) < 2.0f) m = "GO_DEEPER";
+                else if (dungeon.stairsUpPos.x != -999 && dist2D(player->position, dungeon.stairsUpPos) < 2.0f) m = "RETURN_HOME";
+                else if (dungeon.portalPos.x != -999 && dist2D(player->position, dungeon.portalPos) < 2.0f) m = "RETURN_HOME";
             }
 
             int res = UI::DrawPrompt(m, screenWidth, screenHeight, font);
+
+            if (IsGamepadAvailable(0)) {
+                if (IsGamepadButtonPressed(0, GAMEPAD_BUTTON_RIGHT_FACE_DOWN)) res = 1;
+                if (IsGamepadButtonPressed(0, GAMEPAD_BUTTON_RIGHT_FACE_RIGHT)) res = 2;
+            }
+
             if (res == 1) {
                 if (state == STATE_HOME && hoveredEntranceIndex != -1) {
                     currentDungeonId = hoveredEntranceIndex;
                     floor = 0;
                     NextFloor();
                 }
-                else if (state == STATE_DUNGEON && floor > 0 && floor != maxF && Vector3Distance(player->position, dungeon.stairsDownPos) < 2.0f) {
+                else if (state == STATE_DUNGEON && dungeon.stairsDownPos.x != -999 && dist2D(player->position, dungeon.stairsDownPos) < 2.0f) {
                     NextFloor();
                 }
                 else {
@@ -171,7 +179,6 @@ void Game::Draw() {
         ImGui::Text("FPS: %d", GetFPS());
         ImGui::Separator();
 
-        // ★追加: デバッグ画面で現在読み込まれているモデルの状態を詳細表示
         if (DataManager::loadedModels.count("Player") > 0) {
             GameModel& pm = DataManager::loadedModels["Player"];
             ImGui::TextColored(ImVec4(1, 1, 0, 1), "Player Model Status:");

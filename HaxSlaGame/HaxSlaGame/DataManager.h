@@ -21,7 +21,7 @@ public:
     static std::map<std::string, std::string> uiStrings;
     static std::vector<Modifier> modifiers;
     static std::vector<CraftRecipe> recipes;
-    static std::vector<QuestData> quests; // ★追加：クエストデータ
+    static std::vector<QuestData> quests;
 
     static std::map<std::string, GameModel> loadedModels;
 
@@ -33,6 +33,10 @@ public:
 
     static Texture2D titleBg;
 
+    static KeyConfig keyConfig;
+    static void LoadConfig();
+    static void SaveConfig();
+
     static void LoadAllData();
     static void UnloadAllData();
 
@@ -40,7 +44,7 @@ public:
     static EnemyData GetBossEnemy(int floor, int dungeonId);
 
     static ItemData GetItemConfigCopy(int id);
-    static QuestData GetQuestData(int id); // ★追加：IDからクエストを取得
+    static QuestData GetQuestData(int id);
 
     static Modifier GetModifier(int id);
     static int GetRandomModifierId();
