@@ -45,6 +45,10 @@ struct KeyConfig {
     int padHeal = 8;      // GAMEPAD_BUTTON_LEFT_FACE_LEFT (Dpad Left)
     int padSwap = 11;     // GAMEPAD_BUTTON_RIGHT_TRIGGER_1 (R1/RB)
     int padAttack = 15;   // GAMEPAD_BUTTON_RIGHT_FACE_RIGHT (B/Circle)
+
+    float mouseSensitivity = 1.0f;
+    float padSensitivity = 1.0f;
+    bool isFullscreen = false; // ★追加: フルスクリーン状態の保存
 };
 
 struct Projectile { Vector3 pos = { 0.0f, 0.0f, 0.0f }; Vector3 vel = { 0.0f, 0.0f, 0.0f }; float radius = 0.0f; bool active = false; int type = 0; bool isPlayer = false; };

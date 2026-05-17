@@ -27,6 +27,11 @@ Game::Game()
     DataManager::LoadAllData();
     maxFloors = { 0, 0, 0 };
 
+    // ★追加: コンフィグ読み込み後にフルスクリーン設定を反映させる
+    if (DataManager::keyConfig.isFullscreen && !IsWindowFullscreen()) {
+        ToggleFullscreen();
+    }
+
     std::vector<int> cps;
     for (int i = 32; i < 127; i++) cps.push_back(i);
     for (int i = 0x3000; i <= 0x30FF; i++) cps.push_back(i);
@@ -167,13 +172,11 @@ void Game::Update() {
     bool stopPlayer = showMenu || showPrompt || showStorage || showReforgeMenu || showWarpMenu || showCraftMenu || showQuestMenu || state == STATE_TITLE;
     if (UI::showDetail) stopPlayer = true;
 
-    // ★追加: 前フレームで登録されたボタンに対して、十字キーでマウス移動を行う
     if (stopPlayer) {
         UI::UpdatePadNavigation();
     }
-    UI::ClearInteractables(); // 一旦クリア（次の描画で再登録）
+    UI::ClearInteractables();
 
-    // ★追加: 「戻る/キャンセル」ボタンの共通処理
     bool cancelInput = false;
     if (IsGamepadAvailable(0)) {
         if (stopPlayer || state == STATE_TITLE) {
@@ -234,15 +237,17 @@ void Game::Update() {
     if (!stopPlayer) {
         if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) {
             Vector2 delta = GetMouseDelta();
-            yaw -= delta.x * 0.01f;
-            pitch -= delta.y * 0.01f; // ★修正: マウスの上下操作も反転 (- に変更)
+            // ★変更: マウス感度を掛ける
+            yaw -= delta.x * 0.01f * DataManager::keyConfig.mouseSensitivity;
+            pitch += delta.y * 0.01f * DataManager::keyConfig.mouseSensitivity;
         }
         if (IsGamepadAvailable(0)) {
             float rx = GetGamepadAxisMovement(0, GAMEPAD_AXIS_RIGHT_X);
             float ry = GetGamepadAxisMovement(0, GAMEPAD_AXIS_RIGHT_Y);
             if (fabs(rx) > 0.2f || fabs(ry) > 0.2f) {
-                yaw -= rx * 0.05f;
-                pitch -= ry * 0.05f; // ★修正: スティック上下の反転 (- に変更)
+                // ★変更: パッド感度を掛ける
+                yaw -= rx * 0.05f * DataManager::keyConfig.padSensitivity;
+                pitch -= ry * 0.05f * DataManager::keyConfig.padSensitivity;
             }
         }
         float wheel = GetMouseWheelMove();

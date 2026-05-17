@@ -11,11 +11,37 @@
 #include <string>
 #include <cctype>
 
+// 変数の実体定義
+Vector3 Player::customWeaponOffsetPos = { -10.0f, 0.0f, 0.0f };
+Vector3 Player::customWeaponOffsetRot = { 90.0f, 180.0f, 0.0f };
+float Player::customWeaponScale = 100.0f;
+
 static std::string T(const std::string& key, const std::string& def) {
     if (DataManager::uiStrings.count(key)) return DataManager::uiStrings[key];
     return def;
 }
 
+// ボーンのスケールを復活させ、数学的に正しい順序でグローバル行列を生成
+static Matrix GetPlayerBoneGlobalMatrix(Model model, ModelAnimation anim, int frame, int boneIndex) {
+    if (boneIndex < 0 || boneIndex >= model.boneCount) return MatrixIdentity();
+    if (anim.frameCount <= 0 || anim.framePoses == nullptr) return MatrixIdentity();
+
+    if (frame < 0) frame = 0;
+    if (frame >= anim.frameCount) frame = anim.frameCount - 1;
+
+    // RaylibのIQMアニメーション(framePoses)には既にルートからの絶対座標が格納されています。
+    // 親ボーンを辿って乗算すると二重適用になり座標が彼方へ飛んでしまうため、単一ボーンを取り出します。
+    Transform b = anim.framePoses[frame][boneIndex];
+
+    // 引継ぎ書の指示にある「スケール1.0（等倍）を維持した純粋な手の動きの行列」を作成するため、
+    // ボーン自体のスケール(b.scale)を除外して合成します。
+    Matrix mat = MatrixMultiply(
+        QuaternionToMatrix(b.rotation),
+        MatrixTranslate(b.translation.x, b.translation.y, b.translation.z)
+    );
+
+    return mat;
+}
 Player::Player(Vector3 sp) : position(sp), baseSpeed(0.18f), radius(0.45f), attackTimer(0), isAttacking(false),
 lastAimDir({ 1,0,0 }), hp(100), maxHp(100), attackPower(12), defense(5), level(1), exp(0),
 expToNext(100), skillPoints(0), gold(0)
@@ -42,9 +68,7 @@ expToNext(100), skillPoints(0), gold(0)
     isDead = false;
 
     ItemData s1 = DataManager::GetItemConfigCopy(0);
-    ItemData s2 = DataManager::GetItemConfigCopy(100);
     if (s1.id != -1) { equippedData[0] = s1; equippedWeapons[0] = (WeaponType)s1.weaponSubtype; }
-    if (s2.id != -1) { equippedData[1] = s2; equippedWeapons[1] = (WeaponType)s2.weaponSubtype; }
     currentWeapon = equippedWeapons[0];
 
     InitSkillTree();
@@ -255,11 +279,10 @@ void Player::Update(Camera3D& cam, Dungeon& d, std::vector<Enemy>& enemies, Effe
         modelRotation = atan2f(md.x, md.z) * RAD2DEG;
     }
 
-    // ★修正: デバイスごとのエイム優先処理 (マウスカーソルが動いたらマウスを優先、パッドを触ったらパッド優先)
-    static bool useMouseAim = true;
+    bool usingGamepadAim = false;
     Vector2 mouseDelta = GetMouseDelta();
     if (fabs(mouseDelta.x) > 1.0f || fabs(mouseDelta.y) > 1.0f || IsMouseButtonPressed(0) || IsMouseButtonPressed(1)) {
-        useMouseAim = true;
+        usingGamepadAim = false;
     }
 
     if (IsGamepadAvailable(0)) {
@@ -267,13 +290,13 @@ void Player::Update(Camera3D& cam, Dungeon& d, std::vector<Enemy>& enemies, Effe
         float ry = GetGamepadAxisMovement(0, GAMEPAD_AXIS_RIGHT_Y);
         float lx = GetGamepadAxisMovement(0, GAMEPAD_AXIS_LEFT_X);
         float ly = GetGamepadAxisMovement(0, GAMEPAD_AXIS_LEFT_Y);
-        bool padAttack = IsGamepadButtonPressed(0, DataManager::keyConfig.padAttack);
+        bool padAttack = IsGamepadButtonDown(0, DataManager::keyConfig.padAttack);
         if (fabs(rx) > 0.2f || fabs(ry) > 0.2f || fabs(lx) > 0.2f || fabs(ly) > 0.2f || padAttack) {
-            useMouseAim = false;
+            usingGamepadAim = true;
         }
     }
 
-    if (useMouseAim) {
+    if (!usingGamepadAim) {
         Ray ray = GetMouseRay(GetMousePosition(), cam);
         if (ray.direction.y != 0) {
             float t = (position.y - ray.position.y) / ray.direction.y;
@@ -375,7 +398,7 @@ void Player::Draw(bool debug) {
     for (int i = 0; i < gm.model.boneCount; i++) gm.model.bindPose[i].scale = { 1.0f, 1.0f, 1.0f };
 
     float scale = 0.01f;
-    float yOffset = -0.15f;
+    float yOffset = -0.4f;
     Vector3 drawPos = { position.x, position.y + yOffset, position.z };
 
     gm.model.transform = MatrixMultiply(MatrixRotateX(-90 * DEG2RAD), MatrixRotateY(modelRotation * DEG2RAD));
@@ -386,19 +409,41 @@ void Player::Draw(bool debug) {
         for (int i = 0; i < gm.model.boneCount; i++) {
             std::string bName = gm.model.bones[i].name;
             for (auto& c : bName) c = (char)tolower(c);
-            if (bName.find("weapon_r") != std::string::npos || bName.find("hand_r") != std::string::npos) { handIdx = i; break; }
+
+            if (bName.find("hand_r") != std::string::npos ||
+                bName.find("handright") != std::string::npos ||
+                bName.find("hand.r") != std::string::npos) {
+                handIdx = i;
+                break;
+            }
         }
+
         if (handIdx != -1) {
-            Transform b = gm.model.bindPose[handIdx];
-            Matrix boneMat = MatrixMultiply(QuaternionToMatrix(b.rotation), MatrixTranslate(b.translation.x, b.translation.y, b.translation.z));
-            Matrix playerWorld = MatrixMultiply(MatrixMultiply(MatrixScale(scale, scale, scale), gm.model.transform), MatrixTranslate(drawPos.x, drawPos.y, drawPos.z));
+            Matrix boneMat = GetPlayerBoneGlobalMatrix(gm.model, anim, frame, handIdx);
+
+            Matrix playerWorld = MatrixMultiply(
+                MatrixMultiply(MatrixScale(scale, scale, scale), gm.model.transform),
+                MatrixTranslate(drawPos.x, drawPos.y, drawPos.z)
+            );
+
+            Matrix weaponScale = MatrixScale(customWeaponScale, customWeaponScale, customWeaponScale);
+
+            Matrix offsetMatrix = MatrixMultiply(
+                MatrixRotateXYZ({ customWeaponOffsetRot.x * DEG2RAD, customWeaponOffsetRot.y * DEG2RAD, customWeaponOffsetRot.z * DEG2RAD }),
+                MatrixTranslate(customWeaponOffsetPos.x, customWeaponOffsetPos.y, customWeaponOffsetPos.z)
+            );
+
+            Matrix finalTransform = MatrixMultiply(weaponScale, offsetMatrix);
+            finalTransform = MatrixMultiply(finalTransform, boneMat);
+            finalTransform = MatrixMultiply(finalTransform, playerWorld);
 
             int equipId = equippedData[activeSlot].id;
             std::string baseKey = (currentWeapon == SWORD) ? "Wpn_Sword" : (currentWeapon == AXE ? "Wpn_Axe" : (currentWeapon == WAND ? "Wpn_Wand" : "Wpn_Spear"));
             std::string finalKey = baseKey;
 
-            if (!equippedData[activeSlot].modelName.empty()) {
-                finalKey = equippedData[activeSlot].modelName;
+            std::string customName = equippedData[activeSlot].modelName;
+            if (!customName.empty() && DataManager::loadedModels.count(customName) > 0) {
+                finalKey = customName;
             }
             else {
                 if (equipId >= 400 && equipId < 500) { if (DataManager::loadedModels.count(baseKey + "_Legend")) finalKey = baseKey + "_Legend"; }
@@ -407,10 +452,31 @@ void Player::Draw(bool debug) {
 
             if (DataManager::loadedModels.count(finalKey)) {
                 Model& wm = DataManager::loadedModels[finalKey].model;
-                wm.transform = MatrixMultiply(boneMat, playerWorld);
+                wm.transform = finalTransform;
                 DrawModel(wm, { 0,0,0 }, 1.0f, WHITE);
                 wm.transform = MatrixIdentity();
             }
+            else {
+                Model& wm = DataManager::fallbackWeaponModel;
+                wm.transform = finalTransform;
+                DrawModel(wm, { 0,0,0 }, 1.0f, RED);
+                DrawModelWires(wm, { 0,0,0 }, 1.0f, MAROON);
+                wm.transform = MatrixIdentity();
+            }
+
+            // ★常にテスト用の青い球とXYZ軸の線を描画する処理を復活
+            Vector3 handPos = { finalTransform.m12, finalTransform.m13, finalTransform.m14 };
+            DrawSphere(handPos, 0.2f, Fade(BLUE, 0.8f));
+
+            Vector3 right = { finalTransform.m0, finalTransform.m1, finalTransform.m2 };
+            Vector3 up = { finalTransform.m4, finalTransform.m5, finalTransform.m6 };
+            Vector3 forward = { finalTransform.m8, finalTransform.m9, finalTransform.m10 };
+
+            right = Vector3Normalize(right); up = Vector3Normalize(up); forward = Vector3Normalize(forward);
+
+            DrawLine3D(handPos, Vector3Add(handPos, Vector3Scale(right, 2.0f)), RED);   // X
+            DrawLine3D(handPos, Vector3Add(handPos, Vector3Scale(up, 2.0f)), GREEN);    // Y
+            DrawLine3D(handPos, Vector3Add(handPos, Vector3Scale(forward, 2.0f)), BLUE); // Z
         }
     }
     gm.model.transform = MatrixIdentity();

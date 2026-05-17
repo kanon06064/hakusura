@@ -20,6 +20,8 @@ std::map<std::string, GameModel> DataManager::loadedModels;
 Model DataManager::batModel = { 0 }; Texture2D DataManager::batTexture = { 0 }; ModelAnimation* DataManager::batAnims = nullptr; int DataManager::batAnimCount = 0; bool DataManager::isBatModelLoaded = false;
 Texture2D DataManager::titleBg = { 0 };
 
+Model DataManager::fallbackWeaponModel = { 0 };
+
 KeyConfig DataManager::keyConfig;
 
 static std::string FindRes(const std::string& name, const std::string& ext, const std::string& subDir) {
@@ -62,6 +64,10 @@ void DataManager::LoadConfig() {
             keyConfig.padSwap = j.value("padSwap", 11);
             keyConfig.padAttack = j.value("padAttack", 15);
 
+            keyConfig.mouseSensitivity = j.value("mouseSensitivity", 1.0f);
+            keyConfig.padSensitivity = j.value("padSensitivity", 1.0f);
+            keyConfig.isFullscreen = j.value("isFullscreen", false); // Åöí«â¡
+
             if (j.contains("bgmVolume")) AudioManager::SetBGMVolume(j["bgmVolume"]);
             if (j.contains("seVolume")) AudioManager::SetSEVolume(j["seVolume"]);
         }
@@ -92,14 +98,27 @@ void DataManager::SaveConfig() {
     j["padSwap"] = keyConfig.padSwap;
     j["padAttack"] = keyConfig.padAttack;
 
+    j["mouseSensitivity"] = keyConfig.mouseSensitivity;
+    j["padSensitivity"] = keyConfig.padSensitivity;
+    j["isFullscreen"] = keyConfig.isFullscreen; // Åöí«â¡
+
     j["bgmVolume"] = AudioManager::bgmVolume;
     j["seVolume"] = AudioManager::seVolume;
     std::ofstream o("config.json");
     o << j.dump(4);
 }
 
+void DataManager::ResetConfig() {
+    keyConfig = KeyConfig(); // ç\ë¢ëÃÇÃèâä˙ílÇ≈è„èëÇ´
+    AudioManager::SetBGMVolume(0.5f);
+    AudioManager::SetSEVolume(0.5f);
+    SaveConfig();
+}
+
 void DataManager::LoadAllData() {
     LoadConfig();
+
+    fallbackWeaponModel = LoadModelFromMesh(GenMeshCube(0.1f, 1.2f, 0.2f));
 
     try {
         std::ifstream iF("items.json"); if (iF.is_open()) { json j; iF >> j; itemConfigs.clear(); for (auto& i : j) itemConfigs.push_back(JsonToItem(i)); }
@@ -180,6 +199,7 @@ void DataManager::LoadAllData() {
 void DataManager::UnloadAllData() {
     for (auto& pair : loadedModels) { if (pair.second.loaded) { UnloadTexture(pair.second.texture); if (pair.second.anims != nullptr) UnloadModelAnimations(pair.second.anims, pair.second.animCount); UnloadModel(pair.second.model); } }
     loadedModels.clear(); isBatModelLoaded = false; if (titleBg.id != 0) { UnloadTexture(titleBg); }
+    if (fallbackWeaponModel.meshCount > 0) UnloadModel(fallbackWeaponModel);
 }
 
 EnemyData DataManager::GetRandomEnemyForFloor(int floor, int dungeonId) {

@@ -3,6 +3,9 @@
 #include "AudioManager.h"
 #include "raymath.h"
 #include "rlgl.h"
+#include "imgui.h"
+#include "rlImGui.h"
+#include "UI.h"
 
 static std::string T(const std::string& key, const std::string& def) {
     if (DataManager::uiStrings.count(key)) return DataManager::uiStrings[key];
@@ -194,14 +197,22 @@ void Game::Draw() {
             ImGui::Text("HP: %.0f / %.0f", player->hp, player->maxHp);
             ImGui::Text("Level: %d  EXP: %d", player->level, player->exp);
             ImGui::Separator();
+
+            ImGui::TextColored(ImVec4(1, 0.5f, 0, 1), "Weapon Offset Tweaker");
+            ImGui::DragFloat("Scale (Size)", &Player::customWeaponScale, 0.01f, 0.01f, 100.0f);
+            ImGui::DragFloat3("Position", &Player::customWeaponOffsetPos.x, 0.01f);
+            ImGui::DragFloat3("Rotation", &Player::customWeaponOffsetRot.x, 1.0f);
+            ImGui::Separator();
         }
+
         ImGui::Text("Enemies Count: %d", (int)enemies.size());
-        if (ImGui::BeginChild("EnemyList", ImVec2(0, 150), true)) {
-            for (size_t i = 0; i < enemies.size(); i++) {
-                ImGui::Text("[%d] %s  HP: %.1f/%.1f", (int)i, enemies[i].data.modelName.c_str(), enemies[i].hp, enemies[i].maxHp);
-            }
-            ImGui::EndChild();
+        // šC³: BeginChild‚Íí‚ÉEndChild‚Æ‘Î‚ÅŒÄ‚ÔiƒGƒ‰[Œ´ˆö‚ÌC³j
+        ImGui::BeginChild("EnemyList", ImVec2(0, 150), true);
+        for (size_t i = 0; i < enemies.size(); i++) {
+            ImGui::Text("[%d] %s  HP: %.1f/%.1f", (int)i, enemies[i].data.modelName.c_str(), enemies[i].hp, enemies[i].maxHp);
         }
+        ImGui::EndChild();
+
         if (ImGui::Button("Heal Player")) { if (player) player->hp = player->maxHp; }
         ImGui::SameLine();
         if (ImGui::Button("Kill All Enemies")) { for (auto& e : enemies) e.hp = 0; }

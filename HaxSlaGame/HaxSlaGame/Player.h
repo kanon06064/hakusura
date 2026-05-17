@@ -35,6 +35,11 @@ public:
     float healBonus;
     bool isStealth;
 
+    // ★追加: デバッグメニューからリアルタイムで武器の位置・角度・スケールを微調整するための変数
+    static Vector3 customWeaponOffsetPos;
+    static Vector3 customWeaponOffsetRot;
+    static float customWeaponScale;
+
     WeaponType equippedWeapons[2], currentWeapon;
     ItemData equippedData[2];
     ItemData equippedArmor[5];

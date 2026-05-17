@@ -213,5 +213,12 @@
   "KEY_SWAP": "武器切り替え",
   "PRESS_ANY_KEY": "割り当てるボタンを押してください...",
   "LCLICK": "左クリック",
-  "LSTICK": "左スティック"
-}
+  "LSTICK": "左スティック",
+  "SENS_MOUSE": "マウス感度: %.1f",
+  "SENS_PAD": "パッド感度: %.1f",
+  "RESET_CONFIG": "設定を初期化",
+  "SCREEN_MODE": "画面モード",
+  "WINDOWED": "ウィンドウ",
+  "FULLSCREEN": "フルスクリーン",
+  "CTRL_SCREEN_SETTING": "操作・画面設定"
+} 

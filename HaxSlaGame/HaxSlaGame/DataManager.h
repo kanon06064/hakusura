@@ -31,11 +31,14 @@ public:
     static int batAnimCount;
     static bool isBatModelLoaded;
 
+    static Model fallbackWeaponModel;
+
     static Texture2D titleBg;
 
     static KeyConfig keyConfig;
     static void LoadConfig();
     static void SaveConfig();
+    static void ResetConfig(); // ★追加: コンフィグをデフォルトにリセットする
 
     static void LoadAllData();
     static void UnloadAllData();

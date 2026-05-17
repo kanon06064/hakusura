@@ -3,6 +3,7 @@
     "id": 0,
     "name": "木の剣",
     "type": "EQUIP",
+    "model": "Wpn_Sword",
     "atkBonus": 5,
     "weaponSubtype": 0,
     "dropChance": 0
@@ -171,6 +172,7 @@
     "id": 101,
     "name": "略奪者の剣",
     "type": "EQUIP",
+    "model": "Wpn_Sword",
     "atkBonus": 5,
     "weaponSubtype": 0,
     "dropChance": 0.05
@@ -179,6 +181,7 @@
     "id": 102,
     "name": "略奪者の槍",
     "type": "EQUIP",
+    "model": "Wpn_Spear",
     "atkBonus": 6,
     "weaponSubtype": 1,
     "dropChance": 0.05
@@ -187,6 +190,7 @@
     "id": 103,
     "name": "略奪者の斧",
     "type": "EQUIP",
+    "model": "Wpn_Axe",
     "atkBonus": 8,
     "weaponSubtype": 2,
     "dropChance": 0.05
@@ -195,15 +199,16 @@
     "id": 105,
     "name": "略奪者の杖",
     "type": "EQUIP",
+    "model": "Wpn_Wand",
     "atkBonus": 6,
     "weaponSubtype": 3,
     "dropChance": 0.05
   },
-
   {
     "id": 201,
     "name": "魂のナイトブレード",
     "type": "EQUIP",
+    "model": "Wpn_Sword",
     "atkBonus": 15,
     "weaponSubtype": 0,
     "dropChance": 0.03
@@ -212,6 +217,7 @@
     "id": 202,
     "name": "魂のランス",
     "type": "EQUIP",
+    "model": "Wpn_Spear",
     "atkBonus": 16,
     "weaponSubtype": 1,
     "dropChance": 0.03
@@ -220,6 +226,7 @@
     "id": 203,
     "name": "魂の戦斧",
     "type": "EQUIP",
+    "model": "Wpn_Axe",
     "atkBonus": 20,
     "weaponSubtype": 2,
     "dropChance": 0.03
@@ -228,15 +235,16 @@
     "id": 205,
     "name": "魂のウィッチスタッフ",
     "type": "EQUIP",
+    "model": "Wpn_Wand",
     "atkBonus": 18,
     "weaponSubtype": 3,
     "dropChance": 0.03
   },
-
   {
     "id": 301,
     "name": "魔鋼鉄の剣",
     "type": "EQUIP",
+    "model": "Wpn_Sword",
     "atkBonus": 40,
     "weaponSubtype": 0,
     "dropChance": 0.015
@@ -245,6 +253,7 @@
     "id": 302,
     "name": "魔鋼鉄の重槍",
     "type": "EQUIP",
+    "model": "Wpn_Spear",
     "atkBonus": 45,
     "weaponSubtype": 1,
     "dropChance": 0.015
@@ -253,6 +262,7 @@
     "id": 303,
     "name": "魔鋼鉄の大斧",
     "type": "EQUIP",
+    "model": "Wpn_Axe",
     "atkBonus": 55,
     "weaponSubtype": 2,
     "dropChance": 0.015
@@ -261,15 +271,16 @@
     "id": 305,
     "name": "魔鋼鉄の魔杖",
     "type": "EQUIP",
+    "model": "Wpn_Wand",
     "atkBonus": 50,
     "weaponSubtype": 3,
     "dropChance": 0.015
   },
-
   {
     "id": 401,
     "name": "機神の聖剣",
     "type": "EQUIP",
+    "model": "Wpn_Sword_Legend",
     "atkBonus": 100,
     "weaponSubtype": 0,
     "dropChance": 0.005
@@ -278,6 +289,7 @@
     "id": 402,
     "name": "機神の神槍",
     "type": "EQUIP",
+    "model": "Wpn_Spear_Legend",
     "atkBonus": 110,
     "weaponSubtype": 1,
     "dropChance": 0.005
@@ -286,6 +298,7 @@
     "id": 403,
     "name": "機神の滅斧",
     "type": "EQUIP",
+    "model": "Wpn_Axe_Legend",
     "atkBonus": 140,
     "weaponSubtype": 2,
     "dropChance": 0.005
@@ -294,11 +307,11 @@
     "id": 405,
     "name": "機神の零杖",
     "type": "EQUIP",
+    "model": "Wpn_Wand_Legend",
     "atkBonus": 120,
     "weaponSubtype": 3,
     "dropChance": 0.005
   },
-
   {
     "id": 500,
     "name": "革の帽子",
@@ -344,7 +357,6 @@
     "speedBonus": 0.01,
     "dropChance": 0
   },
-
   {
     "id": 510,
     "name": "ボーンヘルム",
@@ -390,7 +402,6 @@
     "speedBonus": 0.01,
     "dropChance": 0
   },
-
   {
     "id": 520,
     "name": "封魔の冠",
@@ -436,7 +447,6 @@
     "speedBonus": 0.03,
     "dropChance": 0
   },
-
   {
     "id": 530,
     "name": "オリハルコンヘルム",
@@ -482,7 +492,6 @@
     "speedBonus": 0.05,
     "dropChance": 0
   },
-
   {
     "id": 540,
     "name": "アダマンヘルム",

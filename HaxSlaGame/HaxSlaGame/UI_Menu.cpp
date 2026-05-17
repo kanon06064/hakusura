@@ -36,7 +36,7 @@ int UI::DrawMenu(Player& p, Dungeon& d, MenuTab& tab, Font font) {
             Rectangle slotRect = { 120, (float)y, 260, 95 }; Rectangle btnRect = { 300, (float)y + 25, 70, 40 };
             Color slotCol = (p.activeSlot == i) ? MAROON : BLACK; if (showDetail) slotCol = ColorBrightness(slotCol, -0.4f);
 
-            UI::RegisterInteractable(slotRect); // ★追加: アイテム枠も十字キーで選べるように
+            UI::RegisterInteractable(slotRect);
 
             DrawRectangleRec(slotRect, slotCol);
             if (!showDetail && !isEmpty && CheckCollisionPointRec(GetMousePosition(), slotRect)) {
@@ -58,7 +58,7 @@ int UI::DrawMenu(Player& p, Dungeon& d, MenuTab& tab, Font font) {
             bool isEmpty = (p.equippedArmor[i].id == -1);
             Rectangle slotRect = { 480, (float)y, 200, 60 }; Rectangle btnRect = { 610, (float)y + 10, 70, 40 };
 
-            UI::RegisterInteractable(slotRect); // ★追加
+            UI::RegisterInteractable(slotRect);
 
             DrawRectangleRec(slotRect, showDetail ? ColorBrightness(BLACK, -0.4f) : BLACK); DrawRectangleLinesEx(slotRect, 1, showDetail ? GRAY : DARKGRAY);
             if (!showDetail && !isEmpty && CheckCollisionPointRec(GetMousePosition(), slotRect)) {
@@ -79,7 +79,7 @@ int UI::DrawMenu(Player& p, Dungeon& d, MenuTab& tab, Font font) {
             int idx = equipPage * perP + i; if (idx >= (int)p.inventoryEquip.size()) break;
             int y = 160 + i * 45; Rectangle r = { 720, (float)y, 300, 40 };
 
-            UI::RegisterInteractable(r); // ★追加
+            UI::RegisterInteractable(r);
 
             DrawRectangleRec(r, showDetail ? ColorBrightness(BLACK, -0.4f) : BLACK);
             if (!showDetail && CheckCollisionPointRec(GetMousePosition(), r)) { if (GetMouseX() < 950) { if (clickInput) OpenDetail(p.inventoryEquip[idx]); } }
@@ -139,7 +139,7 @@ int UI::DrawMenu(Player& p, Dungeon& d, MenuTab& tab, Font font) {
             }
 
             Rectangle nodeRect = { drawPos.x - 35, drawPos.y - 35, 70, 70 };
-            UI::RegisterInteractable(nodeRect); // ★追加: スキルアイコンを十字キー対応
+            UI::RegisterInteractable(nodeRect);
 
             DrawPoly(drawPos, 6, 35, 0, nodeColor);
             DrawPolyLines(drawPos, 6, 35, 0, RAYWHITE);
@@ -184,7 +184,7 @@ int UI::DrawMenu(Player& p, Dungeon& d, MenuTab& tab, Font font) {
             Rectangle r = { 120.0f + (float)i * 210, 120, 200, 35 }; Color c = (itemSubTab == i) ? GREEN : BLACK; if (showDetail) c = ColorBrightness(c, -0.4f);
             if (!showDetail && CheckCollisionPointRec(GetMousePosition(), r) && clickInput) { itemSubTab = i; itemPage = 0; }
             DrawRectangleRec(r, c); std::string label = T(subK[i], subK[i]); DrawTextEx(font, label.c_str(), { r.x + 10, r.y + 8 }, 16, 1, WHITE);
-            UI::RegisterInteractable(r); // ★追加
+            UI::RegisterInteractable(r);
         }
         std::vector<int> filtered; std::string target = (itemSubTab == 0) ? "CONSUMABLE" : "MATERIAL"; for (int i = 0; i < (int)p.inventoryItems.size(); i++) if (p.inventoryItems[i].type == target) filtered.push_back(i);
         const int perP = 10; int maxP = (int)ceil((float)filtered.size() / perP); if (maxP < 1) maxP = 1;
@@ -194,7 +194,7 @@ int UI::DrawMenu(Player& p, Dungeon& d, MenuTab& tab, Font font) {
             int invIdx = filtered[lIdx]; auto& item = p.inventoryItems[invIdx];
             int y = 165 + i * 42; Rectangle itemRect = { 120, (float)y, 400, 38 };
 
-            UI::RegisterInteractable(itemRect); // ★追加
+            UI::RegisterInteractable(itemRect);
 
             DrawRectangleRec(itemRect, Fade(BLACK, showDetail ? 0.2f : 0.4f));
             DrawTextEx(font, TextFormat("%s x%d", item.name.c_str(), item.count), { 135, (float)y + 10 }, 18, 1.0f, Player::GetItemRarityColor(item));
@@ -248,59 +248,143 @@ int UI::DrawMenu(Player& p, Dungeon& d, MenuTab& tab, Font font) {
         Rectangle titleBtn = { 120, 300, 200, 60 }; if (UI::DrawButton(titleBtn, T("RETURN_TITLE", "Return to Title").c_str(), font, RED)) { eventCode = 2; }
     }
     else if (tab == OPTION_TAB) {
-        DrawTextEx(font, T("SOUND_SETTING", "Sound Settings").c_str(), { 150, 150 }, 24, 1, WHITE);
+        // --- 左カラム: サウンド設定 ---
+        DrawTextEx(font, T("SOUND_SETTING", "Sound Settings").c_str(), { 150, 130 }, 24, 1, WHITE);
 
         int bgmVolInt = (int)roundf(AudioManager::bgmVolume * 100.0f);
-        DrawTextEx(font, TextFormat(T("VOL_BGM", "BGM Volume: %d").c_str(), bgmVolInt), { 150, 200 }, 20, 1, WHITE);
+        DrawTextEx(font, TextFormat(T("VOL_BGM", "BGM Volume: %d").c_str(), bgmVolInt), { 150, 180 }, 20, 1, WHITE);
 
-        Rectangle bgmBar = { 150, 230, 300, 20 };
-        UI::RegisterInteractable(bgmBar); // ★追加
+        Rectangle bgmBar = { 150, 210, 300, 20 };
+        UI::RegisterInteractable(bgmBar);
 
         DrawRectangleRec(bgmBar, GRAY);
         DrawRectangle(bgmBar.x, bgmBar.y, bgmBar.width * AudioManager::bgmVolume, bgmBar.height, GREEN);
 
-        if (!showDetail && CheckCollisionPointRec(GetMousePosition(), { 150, 220, 300, 40 }) && downInput) {
+        if (!showDetail && CheckCollisionPointRec(GetMousePosition(), { 150, 200, 300, 40 }) && downInput) {
             float newVol = (GetMouseX() - 150) / 300.0f;
             AudioManager::SetBGMVolume(newVol);
             DataManager::SaveConfig();
         }
 
-        if (UI::DrawButton({ 470, 220, 40, 40 }, "-", font, GRAY)) {
+        if (UI::DrawButton({ 470, 200, 40, 40 }, "-", font, GRAY)) {
             AudioManager::SetBGMVolume(AudioManager::bgmVolume - 0.05f);
             DataManager::SaveConfig();
         }
-        if (UI::DrawButton({ 520, 220, 40, 40 }, "+", font, GRAY)) {
+        if (UI::DrawButton({ 520, 200, 40, 40 }, "+", font, GRAY)) {
             AudioManager::SetBGMVolume(AudioManager::bgmVolume + 0.05f);
             DataManager::SaveConfig();
         }
 
         int seVolInt = (int)roundf(AudioManager::seVolume * 100.0f);
-        DrawTextEx(font, TextFormat(T("VOL_SE", "SE Volume: %d").c_str(), seVolInt), { 150, 300 }, 20, 1, WHITE);
+        DrawTextEx(font, TextFormat(T("VOL_SE", "SE Volume: %d").c_str(), seVolInt), { 150, 270 }, 20, 1, WHITE);
 
-        Rectangle seBar = { 150, 330, 300, 20 };
-        UI::RegisterInteractable(seBar); // ★追加
+        Rectangle seBar = { 150, 300, 300, 20 };
+        UI::RegisterInteractable(seBar);
 
         DrawRectangleRec(seBar, GRAY);
         DrawRectangle(seBar.x, seBar.y, seBar.width * AudioManager::seVolume, seBar.height, ORANGE);
 
-        if (!showDetail && CheckCollisionPointRec(GetMousePosition(), { 150, 320, 300, 40 }) && downInput) {
+        if (!showDetail && CheckCollisionPointRec(GetMousePosition(), { 150, 290, 300, 40 }) && downInput) {
             float newVol = (GetMouseX() - 150) / 300.0f;
             AudioManager::SetSEVolume(newVol);
             DataManager::SaveConfig();
             if (clickInput) AudioManager::PlaySE(SE_CLICK);
         }
 
-        if (UI::DrawButton({ 470, 320, 40, 40 }, "-", font, GRAY)) {
+        if (UI::DrawButton({ 470, 290, 40, 40 }, "-", font, GRAY)) {
             AudioManager::SetSEVolume(AudioManager::seVolume - 0.05f);
             DataManager::SaveConfig();
             AudioManager::PlaySE(SE_CLICK);
         }
-        if (UI::DrawButton({ 520, 320, 40, 40 }, "+", font, GRAY)) {
+        if (UI::DrawButton({ 520, 290, 40, 40 }, "+", font, GRAY)) {
             AudioManager::SetSEVolume(AudioManager::seVolume + 0.05f);
             DataManager::SaveConfig();
             AudioManager::PlaySE(SE_CLICK);
         }
-    }
+
+        // --- 右カラム: 操作・画面設定 ---
+        DrawTextEx(font, T("CTRL_SCREEN_SETTING", "Control & Screen").c_str(), { 650, 130 }, 24, 1, WHITE);
+
+        DrawTextEx(font, TextFormat(T("SENS_MOUSE", "Mouse Sensitivity: %.1f").c_str(), DataManager::keyConfig.mouseSensitivity), { 650, 180 }, 20, 1, WHITE);
+        Rectangle mSensBar = { 650, 210, 300, 20 };
+        UI::RegisterInteractable(mSensBar);
+        DrawRectangleRec(mSensBar, GRAY);
+        float mRatio = (DataManager::keyConfig.mouseSensitivity - 0.1f) / 4.9f;
+        if (mRatio < 0) mRatio = 0; if (mRatio > 1) mRatio = 1;
+        DrawRectangle(mSensBar.x, mSensBar.y, mSensBar.width * mRatio, mSensBar.height, SKYBLUE);
+
+        if (!showDetail && CheckCollisionPointRec(GetMousePosition(), { 650, 200, 300, 40 }) && downInput) {
+            float newRatio = (GetMouseX() - 650) / 300.0f;
+            if (newRatio < 0) newRatio = 0; if (newRatio > 1) newRatio = 1;
+            DataManager::keyConfig.mouseSensitivity = 0.1f + newRatio * 4.9f;
+            DataManager::SaveConfig();
+        }
+        if (UI::DrawButton({ 970, 200, 40, 40 }, "-", font, GRAY)) {
+            DataManager::keyConfig.mouseSensitivity -= 0.1f;
+            if (DataManager::keyConfig.mouseSensitivity < 0.1f) DataManager::keyConfig.mouseSensitivity = 0.1f;
+            DataManager::SaveConfig();
+        }
+        if (UI::DrawButton({ 1020, 200, 40, 40 }, "+", font, GRAY)) {
+            DataManager::keyConfig.mouseSensitivity += 0.1f;
+            if (DataManager::keyConfig.mouseSensitivity > 5.0f) DataManager::keyConfig.mouseSensitivity = 5.0f;
+            DataManager::SaveConfig();
+        }
+
+        DrawTextEx(font, TextFormat(T("SENS_PAD", "Pad Sensitivity: %.1f").c_str(), DataManager::keyConfig.padSensitivity), { 650, 270 }, 20, 1, WHITE);
+        Rectangle pSensBar = { 650, 300, 300, 20 };
+        UI::RegisterInteractable(pSensBar);
+        DrawRectangleRec(pSensBar, GRAY);
+        float pRatio = (DataManager::keyConfig.padSensitivity - 0.1f) / 4.9f;
+        if (pRatio < 0) pRatio = 0; if (pRatio > 1) pRatio = 1;
+        DrawRectangle(pSensBar.x, pSensBar.y, pSensBar.width * pRatio, pSensBar.height, PURPLE);
+
+        if (!showDetail && CheckCollisionPointRec(GetMousePosition(), { 650, 290, 300, 40 }) && downInput) {
+            float newRatio = (GetMouseX() - 650) / 300.0f;
+            if (newRatio < 0) newRatio = 0; if (newRatio > 1) newRatio = 1;
+            DataManager::keyConfig.padSensitivity = 0.1f + newRatio * 4.9f;
+            DataManager::SaveConfig();
+        }
+        if (UI::DrawButton({ 970, 290, 40, 40 }, "-", font, GRAY)) {
+            DataManager::keyConfig.padSensitivity -= 0.1f;
+            if (DataManager::keyConfig.padSensitivity < 0.1f) DataManager::keyConfig.padSensitivity = 0.1f;
+            DataManager::SaveConfig();
+        }
+        if (UI::DrawButton({ 1020, 290, 40, 40 }, "+", font, GRAY)) {
+            DataManager::keyConfig.padSensitivity += 0.1f;
+            if (DataManager::keyConfig.padSensitivity > 5.0f) DataManager::keyConfig.padSensitivity = 5.0f;
+            DataManager::SaveConfig();
+        }
+
+        // --- 画面モード（フルスクリーン） ---
+        DrawTextEx(font, T("SCREEN_MODE", "Screen Mode").c_str(), { 650, 370 }, 20, 1, WHITE);
+
+        bool isFS = DataManager::keyConfig.isFullscreen;
+        if (UI::DrawButton({ 650, 410, 150, 40 }, T("WINDOWED", "Windowed").c_str(), font, isFS ? DARKGRAY : BLUE)) {
+            if (isFS) {
+                ToggleFullscreen();
+                DataManager::keyConfig.isFullscreen = false;
+                DataManager::SaveConfig();
+                AudioManager::PlaySE(SE_CLICK);
+            }
+        }
+        if (UI::DrawButton({ 820, 410, 150, 40 }, T("FULLSCREEN", "Fullscreen").c_str(), font, isFS ? BLUE : DARKGRAY)) {
+            if (!isFS) {
+                ToggleFullscreen();
+                DataManager::keyConfig.isFullscreen = true;
+                DataManager::SaveConfig();
+                AudioManager::PlaySE(SE_CLICK);
+            }
+        }
+
+        // リセットボタン
+        if (UI::DrawButton({ (float)sw - 350, (float)sh - 170, 200, 50 }, T("RESET_CONFIG", "Reset Settings").c_str(), font, MAROON)) {
+            DataManager::ResetConfig();
+            // 初期状態(ウィンドウモード)と現在の状態が食い違っているなら直す
+            if (DataManager::keyConfig.isFullscreen && !IsWindowFullscreen()) ToggleFullscreen();
+            if (!DataManager::keyConfig.isFullscreen && IsWindowFullscreen()) ToggleFullscreen();
+            AudioManager::PlaySE(SE_SAVE);
+        }
+        }
     else if (tab == CONTROL_TAB) {
         static int waitingForKeyIndex = -1;
         static bool waitingForPad = false;
@@ -382,6 +466,12 @@ int UI::DrawMenu(Player& p, Dungeon& d, MenuTab& tab, Font font) {
                 else {
                     DrawTextEx(font, T("LSTICK", "L-Stick").c_str(), { x + 275, y + 10 }, 16, 1, GRAY);
                 }
+            }
+
+            // ★追加: リセットボタン (キー割り当て画面からも初期化できるようにする)
+            if (UI::DrawButton({ (float)sw - 350, (float)sh - 170, 200, 50 }, T("RESET_CONFIG", "Reset Settings").c_str(), font, MAROON)) {
+                DataManager::ResetConfig();
+                AudioManager::PlaySE(SE_SAVE);
             }
         }
     }
