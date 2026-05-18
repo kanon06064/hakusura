@@ -12,7 +12,6 @@
 #include <algorithm>
 #include <cctype>
 
-// 敵キャラクターのボーン行列を取得する関数
 Matrix GetBoneMatrix(Model model, ModelAnimation anim, int frame, int boneIndex) {
     if (boneIndex < 0 || boneIndex >= model.boneCount) return MatrixIdentity();
     Transform boneTransform = anim.framePoses[frame][boneIndex];
@@ -23,24 +22,42 @@ Matrix GetBoneMatrix(Model model, ModelAnimation anim, int frame, int boneIndex)
     return mat;
 }
 
+// ★修正: 全てのメンバ変数を明示的に初期化する
 Enemy::Enemy(Vector3 sp, EnemyData d, int fl) {
-    position = sp; data = d; eType = (EnemyType)d.type; state = STATE_PATROL; level = fl;
+    position = sp;
+    data = d;
+    eType = (EnemyType)d.type;
+    state = STATE_PATROL;
+    level = fl;
 
-    maxHp = d.hp + (level * 10.0f); hp = maxHp;
-    speed = d.speed; detectRange = d.detect; attackRange = d.atkRange;
+    maxHp = d.hp + (level * 10.0f);
+    hp = maxHp;
+    speed = d.speed;
+    detectRange = d.detect;
+    attackRange = d.atkRange;
 
     int levelBonus = (int)((float)d.exp * 0.1f * (float)level) + level;
     expValue = d.exp + levelBonus;
 
-    radius = 0.45f; attackTimer = 0; hudTimer = 0;
-    lastAttackDir = { 1,0,0 }; patrolTarget = sp;
-    lastPos = sp; stuckCount = 0;
-    animFrameCounter = GetRandomValue(0, 30); // アニメーションが全員揃わないよう開始をズラす
+    radius = 0.45f;
+    attackTimer = 0.0f;
+    hudTimer = 0.0f;
+    lastAttackDir = { 1.0f, 0.0f, 0.0f };
+    patrolTarget = sp; // 巡回目標地点を初期位置に設定
 
-    isDying = false; isDead = false;
-    isBoss = false; bossAttackType = 0; bossComboStep = 0; bossActionTimer = 0.0f; bossTargetDir = { 0,0,0 };
+    lastPos = sp;
+    stuckCount = 0;
+    animFrameCounter = GetRandomValue(0, 30);
+
+    isDying = false;
+    isDead = false;
+
+    isBoss = false;
+    bossAttackType = 0;
+    bossComboStep = 0;
+    bossActionTimer = 0.0f;
+    bossTargetDir = { 0.0f, 0.0f, 0.0f };
 }
-
 void Enemy::StartDeath() {
     if (isDying) return;
     isDying = true; animFrameCounter = 0;
