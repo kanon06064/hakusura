@@ -72,8 +72,8 @@
   "NOT_ENOUGH_GOLD": "ゴールド不足",
 
   "DUNGEON_1": "第一層 (B1~B30)",
-  "DUNGEON_2": "第二層 (B31~B50)",
-  "DUNGEON_3": "最深部 (B51~B100)",
+  "DUNGEON_2": "第二層 (B1~B50)",
+  "DUNGEON_3": "最深部 (B1~B100)",
   "LOCKED": "未解放",
   "NO_WARP": "ワープ可能な階層がありません",
   "FLOOR_INFO": "階層 %d",

@@ -42,7 +42,7 @@ std::string UI::GetPadBtnStr(int btn) {
     return "Btn_" + std::to_string(btn);
 }
 
-int UI::itemPage = 0; int UI::equipPage = 0; int UI::debugPage = 0;
+int UI::itemPage = 0; int UI::equipPage = 0;
 int UI::storageInvPage = 0; int UI::storageBoxPage = 0; int UI::itemSubTab = 0;
 int UI::reforgeItemIdx = -1;
 int UI::warpScroll = 0;
@@ -60,14 +60,8 @@ int UI::deleteConfirmSlot = 0;
 std::vector<SystemLogMessage> UI::systemLogs;
 std::vector<Rectangle> UI::interactables;
 
-// ★追加: ナビゲーション機能の実装
-void UI::ClearInteractables() {
-    interactables.clear();
-}
-
-void UI::RegisterInteractable(Rectangle r) {
-    interactables.push_back(r);
-}
+void UI::ClearInteractables() { interactables.clear(); }
+void UI::RegisterInteractable(Rectangle r) { interactables.push_back(r); }
 
 void UI::UpdatePadNavigation() {
     if (!IsGamepadAvailable(0)) return;
@@ -88,20 +82,13 @@ void UI::UpdatePadNavigation() {
             Vector2 diff = Vector2Subtract(targetCenter, currentPos);
 
             float dot = (diff.x * moveDir.x + diff.y * moveDir.y);
-
-            // 入力方向にある程度進んだ位置にあるかチェック（同じボタンでスタックするのを防ぐ）
             if (dot > 5.0f) {
                 float proj = dot;
                 float ortho = fabs(diff.x * moveDir.y - diff.y * moveDir.x);
-                float score = proj + ortho * 4.0f; // ズレているものにはペナルティ
-
-                if (score < bestDist) {
-                    bestDist = score;
-                    bestIdx = i;
-                }
+                float score = proj + ortho * 4.0f;
+                if (score < bestDist) { bestDist = score; bestIdx = i; }
             }
         }
-
         if (bestIdx != -1) {
             Vector2 center = { interactables[bestIdx].x + interactables[bestIdx].width / 2.0f, interactables[bestIdx].y + interactables[bestIdx].height / 2.0f };
             SetMousePosition((int)center.x, (int)center.y);
@@ -110,46 +97,30 @@ void UI::UpdatePadNavigation() {
 }
 
 void UI::OpenDetail(const ItemData& item) {
-    focusingItem = item;
-    showDetail = true;
-    detailOpenTimer = 0.0f;
-    AudioManager::PlaySE(SE_CLICK);
+    focusingItem = item; showDetail = true; detailOpenTimer = 0.0f; AudioManager::PlaySE(SE_CLICK);
 }
 
 bool UI::DrawButton(Rectangle r, const char* label, Font font, Color col) {
-    UI::RegisterInteractable(r); // ★自動登録
-
-    bool locked = showDetail;
-    bool clicked = false;
+    UI::RegisterInteractable(r);
+    bool locked = showDetail; bool clicked = false;
     bool hover = !locked && CheckCollisionPointRec(GetMousePosition(), r);
-
     Color drawCol = locked ? ColorBrightness(col, -0.4f) : col;
     if (hover) drawCol = ColorBrightness(col, 0.2f);
-
-    DrawRectangleRec(r, drawCol);
-    DrawRectangleLinesEx(r, 2, locked ? GRAY : RAYWHITE);
-
+    DrawRectangleRec(r, drawCol); DrawRectangleLinesEx(r, 2, locked ? GRAY : RAYWHITE);
     Vector2 tSize = MeasureTextEx(font, label, 18, 1);
     DrawTextEx(font, label, { r.x + r.width / 2 - tSize.x / 2, r.y + r.height / 2 - tSize.y / 2 }, 18, 1, locked ? LIGHTGRAY : WHITE);
-
     bool clickInput = IsMouseButtonPressed(0) || IsGamepadButtonPressed(0, GAMEPAD_BUTTON_RIGHT_FACE_DOWN);
-    if (hover && clickInput) {
-        clicked = true;
-        AudioManager::PlaySE(SE_CLICK);
-    }
+    if (hover && clickInput) { clicked = true; AudioManager::PlaySE(SE_CLICK); }
     return clicked;
 }
 
 void UI::DrawDetailWindow(Font font) {
     if (!showDetail) return;
     detailOpenTimer += GetFrameTime();
-
     int sw = GetScreenWidth(); int sh = GetScreenHeight();
     DrawRectangle(0, 0, sw, sh, Fade(BLACK, 0.7f));
-
     int w = 450; int h = 550;
     int x = (sw - w) / 2; int y = (sh - h) / 2;
-
     DrawRectangle(x, y, w, h, Fade(DARKBLUE, 0.95f));
     DrawRectangleLinesEx({ (float)x, (float)y, (float)w, (float)h }, 3, GOLD);
 
@@ -190,16 +161,10 @@ void UI::DrawDetailWindow(Font font) {
     }
 
     Rectangle closeBtn = { (float)x + w / 2 - 80, (float)y + h - 70, 160, 50 };
-    UI::RegisterInteractable(closeBtn); // ★追加
-
-    bool inputEnabled = (detailOpenTimer >= 0.3f); bool hover = inputEnabled && CheckCollisionPointRec(GetMousePosition(), closeBtn);
-    Color btnCol = hover ? RED : MAROON; if (!inputEnabled) btnCol = Fade(MAROON, 0.5f);
-    DrawRectangleRec(closeBtn, btnCol); DrawRectangleLinesEx(closeBtn, 2, WHITE);
-    Vector2 txtSz = MeasureTextEx(font, T("CLOSE", "Close").c_str(), 24, 1);
-    DrawTextEx(font, T("CLOSE", "Close").c_str(), { closeBtn.x + closeBtn.width / 2 - txtSz.x / 2, closeBtn.y + closeBtn.height / 2 - txtSz.y / 2 }, 24, 1, inputEnabled ? WHITE : GRAY);
-
-    bool clickInput = IsMouseButtonPressed(0) || IsGamepadButtonPressed(0, GAMEPAD_BUTTON_RIGHT_FACE_DOWN);
-    if (hover && clickInput) { showDetail = false; AudioManager::PlaySE(SE_CLICK); }
+    bool inputEnabled = (detailOpenTimer >= 0.3f);
+    if (UI::DrawButton(closeBtn, T("CLOSE", "Close").c_str(), font, inputEnabled ? MAROON : Fade(MAROON, 0.5f))) {
+        if (inputEnabled) { showDetail = false; AudioManager::PlaySE(SE_CLICK); }
+    }
 }
 
 int UI::DrawPrompt(const char* label, int sw, int sh, Font font) {
@@ -260,7 +225,7 @@ int UI::DrawTitleScreen(Font font) {
 }
 
 void UI::DrawHUD(Player& p, std::vector<Enemy>& enemies, Dungeon& d, Camera3D& cam, int floor, int dungeonId, bool debug, Font font) {
-    int sw = GetScreenWidth(), sh = GetScreenHeight();
+    int sw = GetScreenWidth(); int sh = GetScreenHeight();
 
     std::string floorText;
     if (floor > 1000) { floorText = TextFormat(T("STAGE", "STAGE %d").c_str(), floor - 1000); }
@@ -343,7 +308,6 @@ void UI::DrawHUD(Player& p, std::vector<Enemy>& enemies, Dungeon& d, Camera3D& c
     DrawTextEx(font, TextFormat(T("HUD_GOLD_SP", "Gold: %d  SP: %d").c_str(), p.gold, p.skillPoints), { 20, (float)sh - 35 }, 18, 1, WHITE);
 
     int iconSize = 40; int startX = sw - 320; int startY = sh - 60;
-
     struct SkillIcon { SkillType type; const char* labelKey; std::string key; std::string padKey; };
     SkillIcon icons[] = {
         { SKILL_ACTIVE_SMASH, "SMASH", getKeyStr(DataManager::keyConfig.smash), UI::GetPadBtnStr(DataManager::keyConfig.padSmash) },
@@ -353,16 +317,13 @@ void UI::DrawHUD(Player& p, std::vector<Enemy>& enemies, Dungeon& d, Camera3D& c
         { SKILL_ACTIVE_HEAL, "HEAL", getKeyStr(DataManager::keyConfig.heal), UI::GetPadBtnStr(DataManager::keyConfig.padHeal) },
         { SKILL_ACTIVE_DASH, "DASH", getKeyStr(DataManager::keyConfig.dash), UI::GetPadBtnStr(DataManager::keyConfig.padDash) }
     };
-
     bool padActive = IsGamepadAvailable(0);
 
     for (int i = 0; i < 6; i++) {
         int x = startX + i * (iconSize + 10); bool unlocked = p.IsSkillUnlocked(icons[i].type); Color baseCol = unlocked ? DARKBLUE : DARKGRAY;
         DrawRectangle(x, startY, iconSize, iconSize, baseCol); DrawRectangleLines(x, startY, iconSize, iconSize, RAYWHITE);
-
         std::string displayKey = padActive ? icons[i].padKey : icons[i].key;
         DrawTextEx(font, displayKey.c_str(), { (float)x + 2, (float)startY + 2 }, 10, 1, WHITE);
-
         if (unlocked) {
             float cd = p.GetSkillCooldown(icons[i].type); float maxCd = p.GetSkillMaxCooldown(icons[i].type);
             if (cd > 0) { float ratio = cd / maxCd; DrawRectangle(x, startY + (int)((float)iconSize * (1.0f - ratio)), iconSize, (int)((float)iconSize * ratio), Fade(RED, 0.7f)); DrawTextEx(font, TextFormat("%.1f", cd), { (float)x + 5, (float)startY + 15 }, 14, 1, YELLOW); }
@@ -400,7 +361,8 @@ void UI::UpdateSystemLogs(float deltaTime) {
     for (auto it = systemLogs.begin(); it != systemLogs.end(); ) { it->lifeTime -= deltaTime; if (it->lifeTime <= 0.0f) { it = systemLogs.erase(it); } else { ++it; } }
 }
 void UI::DrawSystemLogs(Font font) {
-    int startY = GetScreenHeight() - 150; int startX = 20; int fontSize = 20; int lineSpacing = 25;
+    int startY = GetScreenHeight() - 150;
+    int startX = 20; int fontSize = 20; int lineSpacing = 25;
     for (size_t i = 0; i < systemLogs.size(); ++i) {
         float alpha = 1.0f; if (systemLogs[i].lifeTime < 1.0f) { alpha = systemLogs[i].lifeTime; }
         Color textColor = systemLogs[i].color; textColor.a = static_cast<unsigned char>(255 * alpha);

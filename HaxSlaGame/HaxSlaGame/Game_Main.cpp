@@ -7,11 +7,13 @@
 #include <time.h>
 #include <algorithm>
 
+// 翻訳テキスト取得用ヘルパー関数
 static std::string T(const std::string& key, const std::string& def) {
     if (DataManager::uiStrings.count(key)) return DataManager::uiStrings[key];
     return def;
 }
 
+// コンストラクタ：ウィンドウの生成と初期設定
 Game::Game()
     : screenWidth(1280), screenHeight(720), player(nullptr), camera({ 0 }), state(STATE_TITLE),
     floor(0), currentDungeonId(0), unlockedDungeonId(0), currentSlot(0), hoveredEntranceIndex(-1),
@@ -21,22 +23,24 @@ Game::Game()
 {
     InitWindow(screenWidth, screenHeight, "3D Hack and Slash RPG Refactored");
 
-    rlImGuiSetup(true);
+    rlImGuiSetup(true); // F1キーで開くデバッグUIのセットアップ
     AudioManager::Init();
     SetTargetFPS(60);
-    DataManager::LoadAllData();
+    DataManager::LoadAllData(); // JSON設定や3Dモデルのロード
     maxFloors = { 0, 0, 0 };
 
-    // ★追加: コンフィグ読み込み後にフルスクリーン設定を反映させる
+    // コンフィグでフルスクリーン設定がONになっていれば適用する
     if (DataManager::keyConfig.isFullscreen && !IsWindowFullscreen()) {
+        int monitor = GetCurrentMonitor();
+        SetWindowSize(GetMonitorWidth(monitor), GetMonitorHeight(monitor));
         ToggleFullscreen();
     }
 
     std::vector<int> cps;
-    for (int i = 32; i < 127; i++) cps.push_back(i);
-    for (int i = 0x3000; i <= 0x30FF; i++) cps.push_back(i);
-    for (int i = 0x4E00; i <= 0x9FAF; i++) cps.push_back(i);
-    for (int i = 0xFF00; i <= 0xFFEF; i++) cps.push_back(i);
+    for (int i = 32; i < 127; i++) cps.push_back(i); // 英数字
+    for (int i = 0x3000; i <= 0x30FF; i++) cps.push_back(i); // ひらがな・カタカナ
+    for (int i = 0x4E00; i <= 0x9FAF; i++) cps.push_back(i); // 漢字
+    for (int i = 0xFF00; i <= 0xFFEF; i++) cps.push_back(i); // 全角英数字
 
     font = LoadFontEx("jp_font.ttf", 32, cps.data(), (int)cps.size());
     if (font.texture.id == 0) font = LoadFontEx("C:/Windows/Fonts/msgothic.ttc", 32, cps.data(), (int)cps.size());
@@ -56,21 +60,24 @@ Game::~Game() {
 }
 
 void Game::InitGame() {
-    floor = 0;
-    currentDungeonId = 0;
-    unlockedDungeonId = 0;
-    maxFloors = { 0, 0, 0 };
-    hoveredEntranceIndex = -1;
+    floor = 0; currentDungeonId = 0; unlockedDungeonId = 0;
+    maxFloors = { 0, 0, 0 }; hoveredEntranceIndex = -1;
 
     state = STATE_HOME; bossDefeated = false;
     dungeon.Generate(true, 0, currentDungeonId, unlockedDungeonId);
 
     isPortfolioMode = false;
     if (player) delete player;
-    Vector3 startPos = dungeon.GetStartPosition(); startPos.y = 0.5f; player = new Player(startPos);
+    Vector3 startPos = dungeon.GetStartPosition(); startPos.y = 0.5f;
+    player = new Player(startPos);
+
     camera = { {player->position.x + 10.0f, 15.0f, player->position.z + 10.0f}, player->position, {0.0f, 1.0f, 0.0f}, 45.0f, 0 };
-    fxManager.projectiles.clear(); fxManager.effects.clear(); fxManager.damageTexts.clear(); enemies.clear(); droppedItems.clear(); storageItems.clear(); storageEquip.clear();
-    debugMode = false; showMenu = false; showStorage = false; showReforgeMenu = false; showWarpMenu = false; showCraftMenu = false; showQuestMenu = false; showPrompt = false; currentTab = EQUIP; sceneTimer = 0;
+
+    fxManager.projectiles.clear(); fxManager.effects.clear(); fxManager.damageTexts.clear();
+    enemies.clear(); droppedItems.clear(); storageItems.clear(); storageEquip.clear();
+    debugMode = false; showMenu = false; showStorage = false; showReforgeMenu = false;
+    showWarpMenu = false; showCraftMenu = false; showQuestMenu = false; showPrompt = false;
+    currentTab = EQUIP; sceneTimer = 0;
 
     AudioManager::PlayBGM(BGM_HOME);
 }
@@ -80,9 +87,7 @@ void Game::StartPortfolioMode() {
     isPortfolioMode = true;
     currentSlot = 3;
 
-    player->level = 99;
-    player->gold = 999999;
-    player->skillPoints = 9999;
+    player->level = 99; player->gold = 999999; player->skillPoints = 9999;
     for (auto& node : player->skillTree) node.unlocked = true;
 
     for (const auto& item : DataManager::itemConfigs) {
@@ -122,14 +127,26 @@ void Game::InitDebugRoom() {
         x++;
     }
 }
-
 void Game::StartDebugRoom() { if (player) delete player; player = new Player({ 0,0,0 }); InitDebugRoom(); }
 
 void Game::LoadAndStart(int slot) {
     currentSlot = slot; InitGame();
     if (DataManager::LoadGame(slot, player, floor, currentDungeonId, unlockedDungeonId, maxFloors, storageItems, storageEquip, isPortfolioMode)) {
         if (floor == 0) { state = STATE_HOME; dungeon.Generate(true, 0, currentDungeonId, unlockedDungeonId); AudioManager::PlayBGM(BGM_HOME); }
-        else { state = STATE_DUNGEON; dungeon.Generate(false, floor, currentDungeonId, unlockedDungeonId); SpawnEnemies(10 + floor); AudioManager::PlayBGM(BGM_DUNGEON); }
+        else {
+            state = STATE_DUNGEON;
+            dungeon.Generate(false, floor, currentDungeonId, unlockedDungeonId);
+
+            int maxF = (currentDungeonId == 0) ? 30 : (currentDungeonId == 1) ? 50 : 100;
+            if (isPortfolioMode) maxF = 3;
+            if (floor == maxF) {
+                dungeon.portalPos = dungeon.stairsDownPos;
+                dungeon.stairsDownPos = { -999, -999, -999 };
+            }
+
+            SpawnEnemies(10 + floor);
+            AudioManager::PlayBGM(BGM_DUNGEON);
+        }
         Vector3 startPos = dungeon.GetStartPosition(); player->position = { startPos.x, 0.5f, startPos.z };
     }
     else { InitGame(); }
@@ -143,19 +160,35 @@ void Game::SaveCurrentSlot() {
 
 void Game::SpawnEnemies(int count) {
     if (state == STATE_HOME) return; enemies.clear();
+
+    int spawnCount = count;
+    if (spawnCount > 25) spawnCount = 25;
+
     if (isPortfolioMode) {
-        if (floor == 1) { for (int i = 0; i < count; i++) { enemies.push_back(Enemy(dungeon.GetRandomFloorPos(), DataManager::GetRandomEnemyForFloor(30, 0), 30)); } }
+        if (floor == 1) { for (int i = 0; i < spawnCount; i++) { enemies.push_back(Enemy(dungeon.GetRandomFloorPos(), DataManager::GetRandomEnemyForFloor(30, 0), 30)); } }
         else if (floor == 2) { if (dungeon.bossSpawnPos.x != -999) { Enemy boss(dungeon.bossSpawnPos, DataManager::GetBossEnemy(30, 0), 50); boss.maxHp *= 3.0f; boss.hp = boss.maxHp; boss.radius = 1.5f; boss.isBoss = true; enemies.push_back(boss); } bossDefeated = false; }
         else if (floor == 3) { if (dungeon.bossSpawnPos.x != -999) { Enemy boss(dungeon.bossSpawnPos, DataManager::GetBossEnemy(100, 2), 100); boss.maxHp *= 3.0f; boss.hp = boss.maxHp; boss.radius = 1.5f; boss.isBoss = true; enemies.push_back(boss); } bossDefeated = false; }
         return;
     }
+
     if (floor > 0 && floor % 10 == 5) return;
-    int enemyLevel = floor; if (currentDungeonId == 1) enemyLevel += 30; if (currentDungeonId == 2) enemyLevel += 60;
+
+    int enemyLevel = floor;
+    if (currentDungeonId == 1) enemyLevel += 30;
+    if (currentDungeonId == 2) enemyLevel += 60;
+
     if (floor > 0 && floor % 10 == 0) {
-        if (dungeon.bossSpawnPos.x != -999) { Enemy boss(dungeon.bossSpawnPos, DataManager::GetBossEnemy(floor, currentDungeonId), enemyLevel); boss.maxHp *= 3.0f; boss.hp = boss.maxHp; boss.radius = 1.5f; boss.isBoss = true; enemies.push_back(boss); }
+        if (dungeon.bossSpawnPos.x != -999) {
+            Enemy boss(dungeon.bossSpawnPos, DataManager::GetBossEnemy(floor, currentDungeonId), enemyLevel);
+            boss.maxHp *= 3.0f; boss.hp = boss.maxHp; boss.radius = 1.5f; boss.isBoss = true;
+            enemies.push_back(boss);
+        }
         bossDefeated = false; return;
     }
-    for (int i = 0; i < count; i++) { enemies.push_back(Enemy(dungeon.GetRandomFloorPos(), DataManager::GetRandomEnemyForFloor(floor, currentDungeonId), enemyLevel)); }
+
+    for (int i = 0; i < spawnCount; i++) {
+        enemies.push_back(Enemy(dungeon.GetRandomFloorPos(), DataManager::GetRandomEnemyForFloor(floor, currentDungeonId), enemyLevel));
+    }
 }
 
 void Game::Run() { while (!WindowShouldClose()) { Update(); Draw(); } }
@@ -167,14 +200,15 @@ void Game::UpdateDebugRoom() {
 }
 
 void Game::Update() {
+    screenWidth = GetScreenWidth();
+    screenHeight = GetScreenHeight();
+
     AudioManager::Update();
 
     bool stopPlayer = showMenu || showPrompt || showStorage || showReforgeMenu || showWarpMenu || showCraftMenu || showQuestMenu || state == STATE_TITLE;
     if (UI::showDetail) stopPlayer = true;
 
-    if (stopPlayer) {
-        UI::UpdatePadNavigation();
-    }
+    if (stopPlayer) { UI::UpdatePadNavigation(); }
     UI::ClearInteractables();
 
     bool cancelInput = false;
@@ -183,8 +217,13 @@ void Game::Update() {
             if (IsGamepadButtonPressed(0, GAMEPAD_BUTTON_RIGHT_FACE_RIGHT)) cancelInput = true;
         }
     }
-    if (IsKeyPressed(KEY_ESCAPE) || (stopPlayer && IsMouseButtonPressed(MOUSE_BUTTON_RIGHT))) {
-        cancelInput = true;
+
+    if (IsKeyPressed(KEY_ESCAPE)) { cancelInput = true; }
+
+    if (stopPlayer && IsMouseButtonPressed(MOUSE_BUTTON_RIGHT)) {
+        if (UI::showDetail) { UI::showDetail = false; AudioManager::PlaySE(SE_CLICK); }
+        else if (UI::deleteConfirmSlot > 0) { UI::deleteConfirmSlot = 0; AudioManager::PlaySE(SE_CLICK); }
+        else if (showPrompt) { showPrompt = false; sceneTimer = 1.0f; AudioManager::PlaySE(SE_CLICK); }
     }
 
     if (cancelInput) {
@@ -204,6 +243,7 @@ void Game::Update() {
     if (state == STATE_DEBUG_ROOM) { UpdateDebugRoom(); return; }
 
     float dt = GetFrameTime();
+
     if (state == STATE_GAMEOVER || state == STATE_GAMECLEAR) {
         if (IsMouseButtonPressed(0) || IsKeyPressed(KEY_SPACE) || IsGamepadButtonPressed(0, GAMEPAD_BUTTON_RIGHT_FACE_DOWN)) {
             ApplyDeathPenalty();
@@ -222,8 +262,7 @@ void Game::Update() {
         float my = GetGamepadAxisMovement(0, GAMEPAD_AXIS_LEFT_Y);
         if (fabs(mx) > 0.1f || fabs(my) > 0.1f) {
             Vector2 mousePos = GetMousePosition();
-            mousePos.x += mx * 12.0f;
-            mousePos.y += my * 12.0f;
+            mousePos.x += mx * 12.0f; mousePos.y += my * 12.0f;
             SetMousePosition((int)mousePos.x, (int)mousePos.y);
         }
     }
@@ -237,7 +276,6 @@ void Game::Update() {
     if (!stopPlayer) {
         if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) {
             Vector2 delta = GetMouseDelta();
-            // ★変更: マウス感度を掛ける
             yaw -= delta.x * 0.01f * DataManager::keyConfig.mouseSensitivity;
             pitch += delta.y * 0.01f * DataManager::keyConfig.mouseSensitivity;
         }
@@ -245,23 +283,18 @@ void Game::Update() {
             float rx = GetGamepadAxisMovement(0, GAMEPAD_AXIS_RIGHT_X);
             float ry = GetGamepadAxisMovement(0, GAMEPAD_AXIS_RIGHT_Y);
             if (fabs(rx) > 0.2f || fabs(ry) > 0.2f) {
-                // ★変更: パッド感度を掛ける
                 yaw -= rx * 0.05f * DataManager::keyConfig.padSensitivity;
                 pitch -= ry * 0.05f * DataManager::keyConfig.padSensitivity;
             }
         }
         float wheel = GetMouseWheelMove();
-        if (wheel != 0) {
-            dist -= wheel * 2.0f;
-        }
+        if (wheel != 0) { dist -= wheel * 2.0f; }
     }
 
     float minPitch = 10.0f * DEG2RAD; float maxPitch = 80.0f * DEG2RAD;
-    if (pitch < minPitch) pitch = minPitch;
-    if (pitch > maxPitch) pitch = maxPitch;
+    if (pitch < minPitch) pitch = minPitch; if (pitch > maxPitch) pitch = maxPitch;
     float minDist = 5.0f; float maxDist = 30.0f;
-    if (dist < minDist) dist = minDist;
-    if (dist > maxDist) dist = maxDist;
+    if (dist < minDist) dist = minDist; if (dist > maxDist) dist = maxDist;
 
     camera.target = player->position;
     float newHorizontal = dist * cosf(pitch);
@@ -271,7 +304,9 @@ void Game::Update() {
     camera.position = Vector3Add(camera.target, camOffset);
 
     player->Update(camera, dungeon, enemies, fxManager, stopPlayer);
-    fxManager.Update(dt, dungeon); fxManager.CheckProjectileCollisions(enemies, *player, dungeon); dungeon.UpdateVisibility(player->position);
+    fxManager.Update(dt, dungeon);
+    fxManager.CheckProjectileCollisions(enemies, *player, dungeon);
+    dungeon.UpdateVisibility(player->position);
 
     if (!stopPlayer) {
         if (player->hp <= 0 && state != STATE_HOME) { state = STATE_GAMEOVER; AudioManager::PlayBGM(BGM_NONE); }
@@ -363,9 +398,23 @@ void Game::Update() {
                 }
             }
             if (state == STATE_DUNGEON) {
-                if (canUseStairs && dungeon.stairsDownPos.x != -999 && dist2D(player->position, dungeon.stairsDownPos) < 2.0f) { showPrompt = true; }
-                if (dungeon.stairsUpPos.x != -999 && dist2D(player->position, dungeon.stairsUpPos) < 2.0f) showPrompt = true;
-                if (dungeon.portalPos.x != -999 && dist2D(player->position, dungeon.portalPos) < 2.0f) showPrompt = true;
+                // maxF の定義を各分岐で統一
+                int maxF = (currentDungeonId == 0) ? 30 : (currentDungeonId == 1) ? 50 : 100;
+                if (isPortfolioMode) maxF = 3;
+
+                // ★ポータル判定 (maxF を安全に参照)
+                if (floor == maxF && dungeon.portalPos.x != -999 && dist2D(player->position, dungeon.portalPos) < 2.0f) {
+                    showPrompt = true;
+                }
+                else if (canUseStairs && dungeon.stairsDownPos.x != -999 && dist2D(player->position, dungeon.stairsDownPos) < 2.0f) {
+                    showPrompt = true;
+                }
+                else if (dungeon.stairsUpPos.x != -999 && dist2D(player->position, dungeon.stairsUpPos) < 2.0f) {
+                    showPrompt = true;
+                }
+                else if (dungeon.portalPos.x != -999 && dist2D(player->position, dungeon.portalPos) < 2.0f) {
+                    showPrompt = true;
+                }
             }
         }
 
@@ -381,6 +430,7 @@ void Game::Update() {
             if (dungeon.questBoardPos.x != -999 && dist2D(player->position, dungeon.questBoardPos) < 2.0f && clickAction) { showQuestMenu = true; AudioManager::PlaySE(SE_CLICK); }
         }
     }
+
     for (int i = (int)logs.size() - 1; i >= 0; i--) { logs[i].life -= dt; if (logs[i].life <= 0) logs.erase(logs.begin() + i); }
 }
 
@@ -406,7 +456,12 @@ void Game::NextFloor() {
         floor++; state = STATE_DUNGEON; bossDefeated = false;
         if (floor == 1) { dungeon.Generate(false, 1, currentDungeonId, unlockedDungeonId); SpawnEnemies(15); }
         else if (floor == 2) { dungeon.Generate(false, 10, currentDungeonId, unlockedDungeonId); SpawnEnemies(0); }
-        else if (floor == 3) { dungeon.Generate(false, 100, currentDungeonId, unlockedDungeonId); SpawnEnemies(0); }
+        else if (floor == 3) {
+            dungeon.Generate(false, 100, currentDungeonId, unlockedDungeonId);
+            dungeon.portalPos = dungeon.stairsDownPos;
+            dungeon.stairsDownPos = { -999, -999, -999 };
+            SpawnEnemies(0);
+        }
         Vector3 startPos = dungeon.GetStartPosition(); player->position = { startPos.x, 0.5f, startPos.z };
         droppedItems.clear(); fxManager.projectiles.clear(); fxManager.effects.clear(); fxManager.damageTexts.clear();
         AudioManager::PlayBGM(BGM_DUNGEON); return;
@@ -415,6 +470,13 @@ void Game::NextFloor() {
     floor++; if (floor > maxFloors[currentDungeonId]) maxFloors[currentDungeonId] = floor;
     state = STATE_DUNGEON; bossDefeated = false;
     dungeon.Generate(false, floor, currentDungeonId, unlockedDungeonId);
+
+    int maxF = (currentDungeonId == 0) ? 30 : (currentDungeonId == 1) ? 50 : 100;
+    if (floor == maxF) {
+        dungeon.portalPos = dungeon.stairsDownPos;
+        dungeon.stairsDownPos = { -999, -999, -999 };
+    }
+
     Vector3 startPos = dungeon.GetStartPosition(); player->position = { startPos.x, 0.5f, startPos.z };
     droppedItems.clear(); fxManager.projectiles.clear(); fxManager.effects.clear(); fxManager.damageTexts.clear();
 
@@ -442,6 +504,14 @@ void Game::NextFloor() {
 void Game::WarpToFloor(int targetDungeon, int targetFloor) {
     currentDungeonId = targetDungeon; floor = targetFloor; state = STATE_DUNGEON; bossDefeated = false;
     dungeon.Generate(false, floor, currentDungeonId, unlockedDungeonId);
+
+    int maxF = (currentDungeonId == 0) ? 30 : (currentDungeonId == 1) ? 50 : 100;
+    if (isPortfolioMode) maxF = 3;
+    if (floor == maxF) {
+        dungeon.portalPos = dungeon.stairsDownPos;
+        dungeon.stairsDownPos = { -999, -999, -999 };
+    }
+
     Vector3 startPos = dungeon.GetStartPosition(); player->position = { startPos.x, 0.5f, startPos.z };
     droppedItems.clear(); fxManager.projectiles.clear(); fxManager.effects.clear(); fxManager.damageTexts.clear();
 

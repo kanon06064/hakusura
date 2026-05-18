@@ -8,12 +8,10 @@ float AudioManager::seVolume = 0.5f;
 MusicType AudioManager::currentBGM = BGM_NONE;
 std::map<MusicType, Music> AudioManager::musicMap;
 std::map<SoundType, Sound> AudioManager::soundMap;
-
-// ベース音量用のマップ実体
 std::map<MusicType, float> AudioManager::bgmBaseVolumes;
 std::map<SoundType, float> AudioManager::seBaseVolumes;
 
-// サブフォルダと直下の両方を自動検索するヘルパー関数
+// 実行ファイル直下と "resources/" フォルダ内の両方から音声ファイルを探すヘルパー関数
 static std::string FindAudioPath(const std::string& filename) {
     std::string path1 = "resources/Music/" + filename;
     if (FileExists(path1.c_str())) return path1;
@@ -21,7 +19,7 @@ static std::string FindAudioPath(const std::string& filename) {
 }
 
 void AudioManager::Init() {
-    InitAudioDevice();
+    InitAudioDevice(); // Raylibのオーディオデバイス初期化
     LoadAll();
 }
 
@@ -32,17 +30,17 @@ void AudioManager::Close() {
 }
 
 void AudioManager::LoadAll() {
-    // BGM読み込み
+    // --- BGMの読み込み ---
     musicMap[BGM_TITLE] = LoadMusicStream(FindAudioPath("bgm_title.mp3").c_str());
     musicMap[BGM_HOME] = LoadMusicStream(FindAudioPath("bgm_home.mp3").c_str());
     musicMap[BGM_DUNGEON] = LoadMusicStream(FindAudioPath("bgm_dungeon.mp3").c_str());
 
-    // ★BGMごとのベース音量を設定 (素材ごとに異なる音圧をここで均一化・ラッピング)
+    // BGMごとのベース音量を設定 (素材ごとに異なる音圧をここで調整)
     bgmBaseVolumes[BGM_TITLE] = 1.0f;
     bgmBaseVolumes[BGM_HOME] = 0.8f;
     bgmBaseVolumes[BGM_DUNGEON] = 0.9f;
 
-    // SE読み込み
+    // --- SE(効果音)の読み込み ---
     soundMap[SE_ATTACK] = LoadSound(FindAudioPath("se_attack.wav").c_str());
     soundMap[SE_ENEMY_ATTACK] = LoadSound(FindAudioPath("se_enemy_attack.wav").c_str());
     soundMap[SE_CLICK] = LoadSound(FindAudioPath("se_click.wav").c_str());
@@ -53,10 +51,10 @@ void AudioManager::LoadAll() {
     soundMap[SE_LEVELUP] = LoadSound(FindAudioPath("se_levelup.wav").c_str());
     soundMap[SE_HEAL] = LoadSound(FindAudioPath("se_heal.wav").c_str());
 
-    // ★SEごとのベース音量を設定 (うるさい音は下げて、小さい音は上げる)
+    // SEごとのベース音量を設定 (例: UIクリック音はうるさくなりやすいので下げる)
     seBaseVolumes[SE_ATTACK] = 1.0f;
     seBaseVolumes[SE_ENEMY_ATTACK] = 0.8f;
-    seBaseVolumes[SE_CLICK] = 0.6f;  // UIクリック音はうるさくなりやすいので控えめに
+    seBaseVolumes[SE_CLICK] = 0.6f;
     seBaseVolumes[SE_SKILL] = 1.0f;
     seBaseVolumes[SE_STAIRS] = 0.7f;
     seBaseVolumes[SE_SAVE] = 0.8f;
@@ -64,11 +62,11 @@ void AudioManager::LoadAll() {
     seBaseVolumes[SE_LEVELUP] = 0.9f;
     seBaseVolumes[SE_HEAL] = 0.8f;
 
-    // ボリューム初期設定
     SetBGMVolume(bgmVolume);
     SetSEVolume(seVolume);
 }
 
+// BGMはストリーム再生のため、毎フレーム UpdateMusicStream() を呼ぶ必要がある
 void AudioManager::Update() {
     if (currentBGM != BGM_NONE && musicMap.count(currentBGM)) {
         UpdateMusicStream(musicMap[currentBGM]);
@@ -76,7 +74,7 @@ void AudioManager::Update() {
 }
 
 void AudioManager::PlayBGM(MusicType type) {
-    if (currentBGM == type) return;
+    if (currentBGM == type) return; // 既に再生中の場合は無視
 
     if (currentBGM != BGM_NONE && musicMap.count(currentBGM)) {
         StopMusicStream(musicMap[currentBGM]);
@@ -87,7 +85,7 @@ void AudioManager::PlayBGM(MusicType type) {
     if (currentBGM != BGM_NONE && musicMap.count(currentBGM)) {
         PlayMusicStream(musicMap[currentBGM]);
 
-        // ★ユーザー設定音量 × BGM固有のベース音量 で最終的な音量を決定し再生
+        // ユーザー設定音量 × BGM固有のベース音量 で最終的な音量を決定
         float base = bgmBaseVolumes.count(currentBGM) ? bgmBaseVolumes[currentBGM] : 1.0f;
         SetMusicVolume(musicMap[currentBGM], bgmVolume * base);
     }
@@ -95,7 +93,7 @@ void AudioManager::PlayBGM(MusicType type) {
 
 void AudioManager::PlaySE(SoundType type) {
     if (soundMap.count(type)) {
-        // ★ユーザー設定音量 × SE固有のベース音量 で最終的な音量を決定し再生
+        // ユーザー設定音量 × SE固有のベース音量 で最終的な音量を決定
         float base = seBaseVolumes.count(type) ? seBaseVolumes[type] : 1.0f;
         SetSoundVolume(soundMap[type], seVolume * base);
         PlaySound(soundMap[type]);
@@ -107,8 +105,8 @@ void AudioManager::SetBGMVolume(float vol) {
     if (bgmVolume < 0.0f) bgmVolume = 0.0f;
     if (bgmVolume > 1.0f) bgmVolume = 1.0f;
 
+    // 再生中のBGMの音量を変更する際もベース音量を反映させる
     if (currentBGM != BGM_NONE && musicMap.count(currentBGM)) {
-        // ★再生中のBGMの音量を変更する際もベース音量を反映させる
         float base = bgmBaseVolumes.count(currentBGM) ? bgmBaseVolumes[currentBGM] : 1.0f;
         SetMusicVolume(musicMap[currentBGM], bgmVolume * base);
     }

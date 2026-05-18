@@ -38,6 +38,7 @@ void Game::DrawDebugRoom() {
 
 void Game::Draw() {
     BeginDrawing();
+
     if (state == STATE_TITLE) {
         int slot = UI::DrawTitleScreen(font);
         if (slot > 0) {
@@ -50,7 +51,9 @@ void Game::Draw() {
             }
         }
     }
-    else if (state == STATE_DEBUG_ROOM) { DrawDebugRoom(); }
+    else if (state == STATE_DEBUG_ROOM) {
+        DrawDebugRoom();
+    }
     else if (state == STATE_GAMEOVER) {
         ClearBackground(BLACK);
         DrawTextEx(font, T("DEATH_TITLE", "YOU DIED").c_str(), { (float)screenWidth / 2 - 100, (float)screenHeight / 2 - 50 }, 60, 2, RED);
@@ -71,8 +74,15 @@ void Game::Draw() {
         if (!isPortfolioMode && floor > 0 && floor % 10 == 0 && !bossDefeated) hideStairs = true;
         if (isPortfolioMode && (floor == 2 || floor == 3) && !bossDefeated) hideStairs = true;
 
-        if (hideStairs && dungeon.stairsDownPos.x != -999) {
-            DrawCube(dungeon.stairsDownPos, 2.1f, 2.0f, 2.1f, BLACK);
+        if (hideStairs) {
+            // 通常の階段隠し
+            if (dungeon.stairsDownPos.x != -999) {
+                DrawCube(dungeon.stairsDownPos, 2.5f, 3.0f, 2.5f, BLACK);
+            }
+            // ★追加: ボス部屋の真ん中（ボススポーン地点付近）にあるポータルも隠す
+            if (dungeon.portalPos.x != -999 && Vector3Distance(dungeon.portalPos, dungeon.bossSpawnPos) < 2.0f) {
+                DrawCube(dungeon.portalPos, 2.5f, 3.0f, 2.5f, BLACK);
+            }
         }
 
         fxManager.Draw();
@@ -104,13 +114,12 @@ void Game::Draw() {
         EndMode3D();
 
         fxManager.Draw2D(font, camera);
+        UI::DrawLogs(logs, *player, camera, font);
+        UI::DrawNearbyItems(*player, droppedItems, dungeon, camera, font);
 
         int displayFloor = isPortfolioMode ? (floor + 1000) : floor;
 
         UI::DrawHUD(*player, enemies, dungeon, camera, displayFloor, currentDungeonId, debugMode, font);
-        UI::DrawLogs(logs, *player, camera, font);
-        UI::DrawNearbyItems(*player, droppedItems, dungeon, camera, font);
-
         UI::UpdateSystemLogs(GetFrameTime());
         UI::DrawSystemLogs(font);
 
@@ -143,7 +152,7 @@ void Game::Draw() {
 
             if (state == STATE_HOME && hoveredEntranceIndex != -1) m = "ENTER_DUNGEON";
             else if (state == STATE_DUNGEON) {
-                if (!isPortfolioMode && floor == maxF) m = "RETURN_HOME";
+                if (!isPortfolioMode && floor == maxF && dist2D(player->position, dungeon.portalPos) < 2.0f) m = "RETURN_HOME"; // 最下層用のポータル判定
                 else if (dungeon.stairsDownPos.x != -999 && dist2D(player->position, dungeon.stairsDownPos) < 2.0f) m = "GO_DEEPER";
                 else if (dungeon.stairsUpPos.x != -999 && dist2D(player->position, dungeon.stairsUpPos) < 2.0f) m = "RETURN_HOME";
                 else if (dungeon.portalPos.x != -999 && dist2D(player->position, dungeon.portalPos) < 2.0f) m = "RETURN_HOME";
@@ -206,7 +215,6 @@ void Game::Draw() {
         }
 
         ImGui::Text("Enemies Count: %d", (int)enemies.size());
-        // ★修正: BeginChildは常にEndChildと対で呼ぶ（エラー原因の修正）
         ImGui::BeginChild("EnemyList", ImVec2(0, 150), true);
         for (size_t i = 0; i < enemies.size(); i++) {
             ImGui::Text("[%d] %s  HP: %.1f/%.1f", (int)i, enemies[i].data.modelName.c_str(), enemies[i].hp, enemies[i].maxHp);
@@ -226,6 +234,32 @@ void Game::Draw() {
                 player->hp = player->maxHp;
             }
         }
+        ImGui::SameLine();
+        if (ImGui::Button("SP +999")) {
+            if (player) player->skillPoints += 999;
+        }
+
+        ImGui::Separator();
+        ImGui::TextColored(ImVec4(0, 1, 0, 1), "Item Spawner");
+        ImGui::BeginChild("ItemSpawner", ImVec2(0, 200), true);
+        for (auto& cfg : DataManager::itemConfigs) {
+            ImGui::PushID(cfg.id);
+
+            std::string engName = cfg.modelName;
+            if (engName.empty()) {
+                if (cfg.type == "MATERIAL") engName = "Material_" + std::to_string(cfg.id);
+                else if (cfg.type == "CONSUMABLE") engName = "Consumable_" + std::to_string(cfg.id);
+                else engName = "Item_" + std::to_string(cfg.id);
+            }
+            ImGui::Text("[%s] %s", cfg.type.c_str(), engName.c_str());
+
+            ImGui::SameLine(ImGui::GetWindowWidth() - 60);
+            if (ImGui::Button("Get")) {
+                if (player) player->AddToInventory(cfg);
+            }
+            ImGui::PopID();
+        }
+        ImGui::EndChild();
 
         ImGui::End();
     }

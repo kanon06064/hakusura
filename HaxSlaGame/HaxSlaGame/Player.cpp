@@ -11,7 +11,7 @@
 #include <string>
 #include <cctype>
 
-// 変数の実体定義
+// 変数の実体定義 (F1メニューで調整したデフォルト値)
 Vector3 Player::customWeaponOffsetPos = { -10.0f, 0.0f, 0.0f };
 Vector3 Player::customWeaponOffsetRot = { 90.0f, 180.0f, 0.0f };
 float Player::customWeaponScale = 100.0f;
@@ -21,7 +21,8 @@ static std::string T(const std::string& key, const std::string& def) {
     return def;
 }
 
-// ボーンのスケールを復活させ、数学的に正しい順序でグローバル行列を生成
+// 【重要】アニメーションしている手の位置(ボーン)のグローバル行列を取得する
+// これにより、手が動くのに合わせて武器も全く同じように動かすことができる
 static Matrix GetPlayerBoneGlobalMatrix(Model model, ModelAnimation anim, int frame, int boneIndex) {
     if (boneIndex < 0 || boneIndex >= model.boneCount) return MatrixIdentity();
     if (anim.frameCount <= 0 || anim.framePoses == nullptr) return MatrixIdentity();
@@ -29,12 +30,12 @@ static Matrix GetPlayerBoneGlobalMatrix(Model model, ModelAnimation anim, int fr
     if (frame < 0) frame = 0;
     if (frame >= anim.frameCount) frame = anim.frameCount - 1;
 
-    // RaylibのIQMアニメーション(framePoses)には既にルートからの絶対座標が格納されています。
-    // 親ボーンを辿って乗算すると二重適用になり座標が彼方へ飛んでしまうため、単一ボーンを取り出します。
+    // RaylibのIQMアニメーション(framePoses)には既にルートからの絶対座標が格納されているため、
+    // 親ボーンを辿って乗算する必要はない。単一ボーンを取り出すだけでよい。
     Transform b = anim.framePoses[frame][boneIndex];
 
-    // 引継ぎ書の指示にある「スケール1.0（等倍）を維持した純粋な手の動きの行列」を作成するため、
-    // ボーン自体のスケール(b.scale)を除外して合成します。
+    // ボーン自体のスケール(b.scale)を掛けてしまうと、武器が巨大化したり歪んだりするため除外する。
+    // 回転と移動だけを適用した純粋な手の動きの行列を生成。
     Matrix mat = MatrixMultiply(
         QuaternionToMatrix(b.rotation),
         MatrixTranslate(b.translation.x, b.translation.y, b.translation.z)
@@ -42,6 +43,7 @@ static Matrix GetPlayerBoneGlobalMatrix(Model model, ModelAnimation anim, int fr
 
     return mat;
 }
+
 Player::Player(Vector3 sp) : position(sp), baseSpeed(0.18f), radius(0.45f), attackTimer(0), isAttacking(false),
 lastAimDir({ 1,0,0 }), hp(100), maxHp(100), attackPower(12), defense(5), level(1), exp(0),
 expToNext(100), skillPoints(0), gold(0)
@@ -67,6 +69,7 @@ expToNext(100), skillPoints(0), gold(0)
     modelRotation = 0.0f;
     isDead = false;
 
+    // 初期装備として「木の剣(id=0)」だけを持たせる
     ItemData s1 = DataManager::GetItemConfigCopy(0);
     if (s1.id != -1) { equippedData[0] = s1; equippedWeapons[0] = (WeaponType)s1.weaponSubtype; }
     currentWeapon = equippedWeapons[0];
@@ -77,7 +80,7 @@ expToNext(100), skillPoints(0), gold(0)
 
 std::string Player::GetFullItemName(const ItemData& item) {
     if (item.id == -1) return "EMPTY";
-    Modifier mod = DataManager::GetModifier(item.modifierId);
+    Modifier mod = DataManager::GetModifier(item.modifierId); // エンチャント(接頭辞)を取得
     return mod.name.empty() ? item.name : mod.name + " " + item.name;
 }
 
@@ -86,6 +89,7 @@ float Player::GetItemTotalAtkBonus(const ItemData& item) {
     return item.atkBonus + DataManager::GetModifier(item.modifierId).atk;
 }
 
+// アイテムのID帯とエンチャントの有無によって、レアリティ色を自動決定する
 Color Player::GetItemRarityColor(const ItemData& item) {
     if (item.id == -1) return DARKGRAY;
     if (item.type == "MATERIAL") return LIGHTGRAY;
@@ -96,13 +100,14 @@ Color Player::GetItemRarityColor(const ItemData& item) {
     else if (item.id >= 300 && item.id < 400) tier = 3;
     else if (item.id >= 400 && item.id < 500) tier = 4;
     else if (item.id >= 500) tier = 5;
-    if (item.modifierId != 0 && tier < 5) tier++;
+    if (item.modifierId != 0 && tier < 5) tier++; // エンチャント付きはレアリティが1段階上がる
     switch (tier) {
     case 1: return WHITE; case 2: return GREEN; case 3: return SKYBLUE;
     case 4: return PURPLE; case 5: return GOLD; default: return WHITE;
     }
 }
 
+// 装備とスキルの効果を再計算して、最終的なHPや攻撃力を割り出す
 void Player::RecalculateStats() {
     float bHp = 100.0f + (level - 1) * 20.0f;
     float bAtk = 12.0f + (level - 1) * 2.0f;
@@ -112,15 +117,12 @@ void Player::RecalculateStats() {
     healBonus = 0.0f;
 
     for (const auto& node : skillTree) if (node.unlocked) {
-        bAtk += node.atkAdd;
-        bDef += node.defAdd;
-        bHp += node.hpAdd;
-        cooldownReduction += node.cdRedAdd;
-        healBonus += node.healAdd;
+        bAtk += node.atkAdd; bDef += node.defAdd; bHp += node.hpAdd;
+        cooldownReduction += node.cdRedAdd; healBonus += node.healAdd;
     }
 
-    if (zoukyouTimer > 0) bAtk *= 1.5f;
-    if (kongoTimer > 0) bDef += 20.0f;
+    if (zoukyouTimer > 0) bAtk *= 1.5f; // アクティブスキル「増強」中は攻撃力1.5倍
+    if (kongoTimer > 0) bDef += 20.0f;  // アクティブスキル「金剛」中は防御力固定値アップ
 
     for (int i = 0; i < 5; i++) if (equippedArmor[i].id != -1) {
         Modifier m = DataManager::GetModifier(equippedArmor[i].modifierId);
@@ -133,6 +135,7 @@ void Player::RecalculateStats() {
 
 void Player::InitSkillTree() {
     skillTree.clear();
+    // 座標(uiPos)を指定して、UI上にツリー形式で表示できるようにしている
     skillTree.push_back({ 0, T("SKILL_NAME_START", "START"), {600, 400}, {}, true, 0, 0,0,0,0,0, T("SKILL_DESC_START", "Skill Tree Start"), SKILL_PASSIVE });
     skillTree.push_back({ 1, T("SKILL_NAME_ATK1", "ATK I"),  {600, 300}, {0}, false, 1, 3.0f, 0, 0, 0, 0, T("SKILL_DESC_ATK1", "ATK +3"), SKILL_PASSIVE });
     skillTree.push_back({ 2, T("SKILL_NAME_ATK2", "ATK II"), {600, 200}, {1}, false, 2, 5.0f, 0, 0, 0, 0, T("SKILL_DESC_ATK2", "ATK +5"), SKILL_PASSIVE });
@@ -154,9 +157,11 @@ void Player::InitSkillTree() {
     skillTree.push_back({ 14, T("SKILL_NAME_HEAL2", "HEAL II"),{410, 262},{13}, false, 2, 0, 0, 0, 0, 20.0f, T("SKILL_DESC_HEAL2", "Healing +20"), SKILL_PASSIVE });
     skillTree.push_back({ 15, T("HEAL", "HEAL"), {315, 193},{14}, false, 3, 0, 0, 0, 0, 0, T("SKILL_DESC_HEAL", "Active: Restore HP instantly"), SKILL_ACTIVE_HEAL, 25.0f });
 
+    // ダッシュは前提スキルなしで取得可能
     skillTree.push_back({ 16, T("DASH", "DASH"), {700, 400}, {0}, false, 1, 0, 0, 0, 0, 0, T("SKILL_DESC_DASH", "Active: Quick dodge"), SKILL_ACTIVE_DASH, 3.0f });
 }
 
+// そのスキルの手前（前提）スキルがアンロックされているかチェックする
 bool Player::IsSkillAvailable(int id) {
     for (auto& n : skillTree) if (n.id == id) { if (n.unlocked) return false; if (n.reqIds.empty()) return true; for (int r : n.reqIds) for (auto& rn : skillTree) if (rn.id == r && rn.unlocked) return true; }
     return false;
@@ -167,7 +172,6 @@ void Player::UnlockSkill(int id) {
 }
 
 bool Player::IsSkillUnlocked(SkillType t) { for (auto& n : skillTree) if (n.type == t && n.unlocked) return true; return false; }
-
 float Player::GetSkillCooldown(SkillType t) {
     if (t == SKILL_ACTIVE_DASH) return dashCooldownTimer;
     if (t == SKILL_ACTIVE_SMASH) return smashCooldownTimer;
@@ -177,13 +181,12 @@ float Player::GetSkillCooldown(SkillType t) {
     if (t == SKILL_ACTIVE_HEAL) return healCooldownTimer;
     return 0.0f;
 }
-
 float Player::GetSkillMaxCooldown(SkillType t) { for (auto& n : skillTree) if (n.type == t) return n.maxCooldown; return 1.0f; }
 
 void Player::AddExp(int a, EffectManager& fx) { exp += a; while (exp >= expToNext) LevelUp(fx); }
 void Player::LevelUp(EffectManager& fx) {
     level++; exp -= expToNext; expToNext = (int)(expToNext * 1.5f); skillPoints += 3;
-    fx.SpawnDamageText(position, 999); AudioManager::PlaySE(SE_LEVELUP);
+    fx.SpawnDamageText(position, 999); AudioManager::PlaySE(SE_LEVELUP); // ダメージテキスト999はLEVELUP専用フラグ
     RecalculateStats(); hp = maxHp;
     UI::AddSystemLog(T("LOG_LEVEL_UP", "LEVEL UP!"), YELLOW);
 }
@@ -203,7 +206,6 @@ void Player::EquipWeapon(int invIdx, int slot) {
     inventoryEquip.erase(inventoryEquip.begin() + invIdx); if (activeSlot == slot) currentWeapon = equippedWeapons[slot];
     AudioManager::PlaySE(SE_CLICK); RecalculateStats();
 }
-
 void Player::UnequipWeapon(int slot) { if (equippedData[slot].id == -1) return; inventoryEquip.push_back(equippedData[slot]); equippedData[slot] = ItemData(); equippedWeapons[slot] = NONE; if (activeSlot == slot) currentWeapon = NONE; AudioManager::PlaySE(SE_CLICK); RecalculateStats(); }
 void Player::EquipArmor(int invIdx, int slot) { if (invIdx < 0 || invIdx >= (int)inventoryEquip.size()) return; if (equippedArmor[slot].id != -1) inventoryEquip.push_back(equippedArmor[slot]); equippedArmor[slot] = inventoryEquip[invIdx]; inventoryEquip.erase(inventoryEquip.begin() + invIdx); AudioManager::PlaySE(SE_CLICK); RecalculateStats(); }
 void Player::UnequipArmor(int slot) { if (equippedArmor[slot].id == -1) return; inventoryEquip.push_back(equippedArmor[slot]); equippedArmor[slot] = ItemData(); AudioManager::PlaySE(SE_CLICK); RecalculateStats(); }
@@ -212,22 +214,27 @@ void Player::UpdateHuntQuest(int eId) { for (auto& q : activeQuests) if (!q.isCo
 bool Player::CheckGatherQuest(int itemId, int count) { int sum = 0; for (auto& i : inventoryItems) if (i.id == itemId) sum += i.count; return sum >= count; }
 void Player::CompleteQuest(int qId) { for (auto it = activeQuests.begin(); it != activeQuests.end(); ++it) if (it->questId == qId) { QuestData d = DataManager::GetQuestData(qId); gold += d.rewardGold; if (d.rewardItemId != -1) { ItemData r = DataManager::GetItemConfigCopy(d.rewardItemId); r.count = d.rewardItemCount; AddToInventory(r); } clearedQuests.push_back(qId); activeQuests.erase(it); AudioManager::PlaySE(SE_REFORGE); return; } }
 
+// 通常攻撃の実行処理
 void Player::PerformAttack(Vector3 ad, std::vector<Enemy>& enemies, Dungeon& d, EffectManager& fx) {
     AudioManager::PlaySE(SE_ATTACK);
     Vector3 origin = Vector3Add(position, { 0, 0.8f, 0 });
+
+    // 杖の場合はプロジェクタイル(弾)を飛ばす
     if (currentWeapon == WAND) fx.SpawnProjectile(origin, ad, 15.0f, 1, true);
     else {
         EffectType type = (currentWeapon == SPEAR) ? FX_THRUST : (currentWeapon == AXE ? FX_SMASH : FX_SLASH);
         fx.SpawnEffect(origin, ad, type, SKYBLUE);
+        // 剣・槍・斧の場合は、範囲内にいる敵すべてにダメージ判定(貫通)
         for (auto& e : enemies) if (Vector3Distance(e.position, position) < 4.5f) {
             int dmg = (int)(attackPower + GetItemTotalAtkBonus(equippedData[activeSlot]));
             e.hp -= dmg; e.ApplyKnockback(ad, 1.0f, d); fx.SpawnDamageText(e.position, dmg);
             e.hudTimer = 5.0f;
-            isStealth = false;
+            isStealth = false; // 攻撃すると隠密状態が解除される
         }
     }
 }
 
+// 強撃(SMASH)スキルの実行処理
 void Player::PerformSmash(Vector3 ad, std::vector<Enemy>& enemies, Dungeon& d, EffectManager& fx) {
     AudioManager::PlaySE(SE_SKILL);
     fx.SpawnEffect(Vector3Add(position, { 0, 0.8f, 0 }), ad, FX_SMASH, RED);
@@ -238,6 +245,7 @@ void Player::PerformSmash(Vector3 ad, std::vector<Enemy>& enemies, Dungeon& d, E
     }
 }
 
+// 毎フレームのプレイヤー移動、スキル処理、アニメーション遷移を管理する
 void Player::Update(Camera3D& cam, Dungeon& d, std::vector<Enemy>& enemies, EffectManager& fx, bool stop) {
     if (stop) return;
     float dt = GetFrameTime();
@@ -254,6 +262,7 @@ void Player::Update(Camera3D& cam, Dungeon& d, std::vector<Enemy>& enemies, Effe
     if (kongoTimer > 0) { kongoTimer -= dt; if (kongoTimer <= 0) RecalculateStats(); }
     if (zoukyouTimer > 0) { zoukyouTimer -= dt; if (zoukyouTimer <= 0) RecalculateStats(); }
 
+    // カメラの向きを基準にしてWASD移動のベクトルを計算する
     Vector3 cf = Vector3Normalize(Vector3Subtract(cam.target, cam.position)); cf.y = 0; cf = Vector3Normalize(cf);
     Vector3 cr = { -cf.z, 0, cf.x }, md = { 0,0,0 };
 
@@ -279,10 +288,11 @@ void Player::Update(Camera3D& cam, Dungeon& d, std::vector<Enemy>& enemies, Effe
         modelRotation = atan2f(md.x, md.z) * RAD2DEG;
     }
 
+    // --- エイム方向の計算 ---
     bool usingGamepadAim = false;
     Vector2 mouseDelta = GetMouseDelta();
     if (fabs(mouseDelta.x) > 1.0f || fabs(mouseDelta.y) > 1.0f || IsMouseButtonPressed(0) || IsMouseButtonPressed(1)) {
-        usingGamepadAim = false;
+        usingGamepadAim = false; // マウスが動いた場合はマウス優先
     }
 
     if (IsGamepadAvailable(0)) {
@@ -292,11 +302,12 @@ void Player::Update(Camera3D& cam, Dungeon& d, std::vector<Enemy>& enemies, Effe
         float ly = GetGamepadAxisMovement(0, GAMEPAD_AXIS_LEFT_Y);
         bool padAttack = IsGamepadButtonDown(0, DataManager::keyConfig.padAttack);
         if (fabs(rx) > 0.2f || fabs(ry) > 0.2f || fabs(lx) > 0.2f || fabs(ly) > 0.2f || padAttack) {
-            usingGamepadAim = true;
+            usingGamepadAim = true; // パッドが動いた場合はパッド優先
         }
     }
 
     if (!usingGamepadAim) {
+        // マウス位置からレイを飛ばし、地面との交点をエイム方向とする
         Ray ray = GetMouseRay(GetMousePosition(), cam);
         if (ray.direction.y != 0) {
             float t = (position.y - ray.position.y) / ray.direction.y;
@@ -309,10 +320,12 @@ void Player::Update(Camera3D& cam, Dungeon& d, std::vector<Enemy>& enemies, Effe
             float rx = GetGamepadAxisMovement(0, GAMEPAD_AXIS_RIGHT_X);
             float ry = GetGamepadAxisMovement(0, GAMEPAD_AXIS_RIGHT_Y);
             if (fabs(rx) > 0.2f || fabs(ry) > 0.2f) {
+                // 右スティックが倒されていれば、その方向をエイム方向とする
                 Vector3 aim = Vector3Add(Vector3Scale(cr, rx), Vector3Scale(cf, -ry));
                 lastAimDir = Vector3Normalize(aim);
             }
             else {
+                // 右スティックが倒されていない場合は、移動方向を向く
                 if (isMoving) {
                     lastAimDir = Vector3Normalize(md);
                 }
@@ -325,6 +338,7 @@ void Player::Update(Camera3D& cam, Dungeon& d, std::vector<Enemy>& enemies, Effe
         }
     }
 
+    // 攻撃処理
     if (attackTimer > 0) attackTimer -= dt;
     bool attackInput = IsMouseButtonPressed(0) || IsGamepadButtonPressed(0, DataManager::keyConfig.padAttack);
     if (attackInput && attackTimer <= 0 && currentWeapon != NONE) {
@@ -333,8 +347,9 @@ void Player::Update(Camera3D& cam, Dungeon& d, std::vector<Enemy>& enemies, Effe
     }
 
     float cdMultiplier = 1.0f - cooldownReduction;
-    if (cdMultiplier < 0.2f) cdMultiplier = 0.2f;
+    if (cdMultiplier < 0.2f) cdMultiplier = 0.2f; // クールダウン短縮の限界は80%まで
 
+    // --- スキルの入力チェックと発動 ---
     bool btnDash = IsKeyPressed(DataManager::keyConfig.dash) || IsGamepadButtonPressed(0, DataManager::keyConfig.padDash);
     bool btnSmash = IsKeyPressed(DataManager::keyConfig.smash) || IsGamepadButtonPressed(0, DataManager::keyConfig.padSmash);
     bool btnKongo = IsKeyPressed(DataManager::keyConfig.kongo) || IsGamepadButtonPressed(0, DataManager::keyConfig.padKongo);
@@ -365,8 +380,9 @@ void Player::Update(Camera3D& cam, Dungeon& d, std::vector<Enemy>& enemies, Effe
 
     if (btnSwap) { activeSlot = 1 - activeSlot; currentWeapon = equippedWeapons[activeSlot]; }
 
-    if (attackTimer > 0) modelRotation = atan2f(lastAimDir.x, lastAimDir.z) * RAD2DEG;
+    if (attackTimer > 0) modelRotation = atan2f(lastAimDir.x, lastAimDir.z) * RAD2DEG; // 攻撃中はエイム方向を向く
 
+    // --- アニメーションの遷移制御 ---
     int targetAnim = 4;
     if (hp <= 0) targetAnim = 3;
     else if (attackTimer > 0) targetAnim = (currentWeapon == SWORD ? 0 : (currentWeapon == AXE ? 1 : (currentWeapon == WAND ? 2 : 0)));
@@ -376,16 +392,17 @@ void Player::Update(Camera3D& cam, Dungeon& d, std::vector<Enemy>& enemies, Effe
     if (targetAnim != currentAnimIndex) {
         bool isLoopGroup = (targetAnim >= 4);
         bool wasLoopGroup = (currentAnimIndex >= 4);
-        if (!(isLoopGroup && wasLoopGroup)) animTime = 0;
+        if (!(isLoopGroup && wasLoopGroup)) animTime = 0; // 攻撃や死亡など、一回きりのアニメーションの場合は0フレーム目から再生
         currentAnimIndex = targetAnim;
     }
 
     float pSpd = 30.0f;
-    if (currentAnimIndex == 5) pSpd = 30.0f * (curSpd / 0.18f);
+    if (currentAnimIndex == 5) pSpd = 30.0f * (curSpd / 0.18f); // 走る速さに合わせて足の動きを速くする
     else if (currentAnimIndex == 6) pSpd = 30.0f * (curSpd / 0.45f);
     animTime += dt * pSpd;
 }
 
+// プレイヤー本体と、手に持った武器を描画する
 void Player::Draw(bool debug) {
     if (DataManager::loadedModels.count("Player") == 0) return;
     GameModel& gm = DataManager::loadedModels["Player"];
@@ -395,17 +412,20 @@ void Player::Draw(bool debug) {
     int frame = (currentAnimIndex <= 3) ? (int)fminf(animTime, (float)anim.frameCount - 1) : (int)fmodf(animTime, (float)anim.frameCount);
 
     UpdateModelAnimation(gm.model, anim, frame);
+    // RaylibのIQMパーサーは不要なスケールをバインドしてしまうことがあるためリセットする
     for (int i = 0; i < gm.model.boneCount; i++) gm.model.bindPose[i].scale = { 1.0f, 1.0f, 1.0f };
 
     float scale = 0.01f;
-    float yOffset = -0.4f;
+    float yOffset = -0.4f; // 少し下げて足が地面に接するようにする
     Vector3 drawPos = { position.x, position.y + yOffset, position.z };
 
     gm.model.transform = MatrixMultiply(MatrixRotateX(-90 * DEG2RAD), MatrixRotateY(modelRotation * DEG2RAD));
     DrawModel(gm.model, drawPos, scale, (isStealth ? Fade(BLUE, 0.4f) : WHITE));
 
+    // --- 武器のアタッチメント(持たせる)処理 ---
     if (currentWeapon != NONE && !isDead) {
         int handIdx = -1;
+        // 右手のボーンを探す
         for (int i = 0; i < gm.model.boneCount; i++) {
             std::string bName = gm.model.bones[i].name;
             for (auto& c : bName) c = (char)tolower(c);
@@ -419,24 +439,30 @@ void Player::Draw(bool debug) {
         }
 
         if (handIdx != -1) {
+            // アニメーション中の手の動き(純粋な移動と回転のみ)を取得
             Matrix boneMat = GetPlayerBoneGlobalMatrix(gm.model, anim, frame, handIdx);
 
+            // プレイヤー自体のワールド座標・スケール行列
             Matrix playerWorld = MatrixMultiply(
                 MatrixMultiply(MatrixScale(scale, scale, scale), gm.model.transform),
                 MatrixTranslate(drawPos.x, drawPos.y, drawPos.z)
             );
 
+            // 武器のスケール(デバッグメニューで調整した値)
             Matrix weaponScale = MatrixScale(customWeaponScale, customWeaponScale, customWeaponScale);
 
+            // 武器を持たせる角度と位置の微調整(デバッグメニューで調整した値)
             Matrix offsetMatrix = MatrixMultiply(
                 MatrixRotateXYZ({ customWeaponOffsetRot.x * DEG2RAD, customWeaponOffsetRot.y * DEG2RAD, customWeaponOffsetRot.z * DEG2RAD }),
                 MatrixTranslate(customWeaponOffsetPos.x, customWeaponOffsetPos.y, customWeaponOffsetPos.z)
             );
 
+            // 武器の最終的なワールド行列を計算
             Matrix finalTransform = MatrixMultiply(weaponScale, offsetMatrix);
             finalTransform = MatrixMultiply(finalTransform, boneMat);
             finalTransform = MatrixMultiply(finalTransform, playerWorld);
 
+            // 描画する武器モデルを決定
             int equipId = equippedData[activeSlot].id;
             std::string baseKey = (currentWeapon == SWORD) ? "Wpn_Sword" : (currentWeapon == AXE ? "Wpn_Axe" : (currentWeapon == WAND ? "Wpn_Wand" : "Wpn_Spear"));
             std::string finalKey = baseKey;
@@ -446,17 +472,19 @@ void Player::Draw(bool debug) {
                 finalKey = customName;
             }
             else {
+                // 伝説の武器(ID400番台)の場合は専用のLegendモデルを呼ぶ
                 if (equipId >= 400 && equipId < 500) { if (DataManager::loadedModels.count(baseKey + "_Legend")) finalKey = baseKey + "_Legend"; }
                 if (DataManager::loadedModels.count("Wpn_" + std::to_string(equipId))) finalKey = "Wpn_" + std::to_string(equipId);
             }
 
             if (DataManager::loadedModels.count(finalKey)) {
                 Model& wm = DataManager::loadedModels[finalKey].model;
-                wm.transform = finalTransform;
-                DrawModel(wm, { 0,0,0 }, 1.0f, WHITE);
-                wm.transform = MatrixIdentity();
+                wm.transform = finalTransform; // 計算した行列を適用
+                DrawModel(wm, { 0,0,0 }, 1.0f, WHITE); // 武器を描画
+                wm.transform = MatrixIdentity(); // 終わったらリセット
             }
             else {
+                // モデルが見つからなければ赤い棒を描画
                 Model& wm = DataManager::fallbackWeaponModel;
                 wm.transform = finalTransform;
                 DrawModel(wm, { 0,0,0 }, 1.0f, RED);
@@ -464,19 +492,19 @@ void Player::Draw(bool debug) {
                 wm.transform = MatrixIdentity();
             }
 
-            // ★常にテスト用の青い球とXYZ軸の線を描画する処理を復活
-            Vector3 handPos = { finalTransform.m12, finalTransform.m13, finalTransform.m14 };
-            DrawSphere(handPos, 0.2f, Fade(BLUE, 0.8f));
+            //// デバッグ用に、右手の位置(青い球)とXYZ軸の線を描画する
+            //Vector3 handPos = { finalTransform.m12, finalTransform.m13, finalTransform.m14 };
+            //DrawSphere(handPos, 0.2f, Fade(BLUE, 0.8f));
 
-            Vector3 right = { finalTransform.m0, finalTransform.m1, finalTransform.m2 };
-            Vector3 up = { finalTransform.m4, finalTransform.m5, finalTransform.m6 };
-            Vector3 forward = { finalTransform.m8, finalTransform.m9, finalTransform.m10 };
+            //Vector3 right = { finalTransform.m0, finalTransform.m1, finalTransform.m2 };
+            //Vector3 up = { finalTransform.m4, finalTransform.m5, finalTransform.m6 };
+            //Vector3 forward = { finalTransform.m8, finalTransform.m9, finalTransform.m10 };
 
-            right = Vector3Normalize(right); up = Vector3Normalize(up); forward = Vector3Normalize(forward);
+            //right = Vector3Normalize(right); up = Vector3Normalize(up); forward = Vector3Normalize(forward);
 
-            DrawLine3D(handPos, Vector3Add(handPos, Vector3Scale(right, 2.0f)), RED);   // X
-            DrawLine3D(handPos, Vector3Add(handPos, Vector3Scale(up, 2.0f)), GREEN);    // Y
-            DrawLine3D(handPos, Vector3Add(handPos, Vector3Scale(forward, 2.0f)), BLUE); // Z
+            //DrawLine3D(handPos, Vector3Add(handPos, Vector3Scale(right, 2.0f)), RED);   // X軸
+            //DrawLine3D(handPos, Vector3Add(handPos, Vector3Scale(up, 2.0f)), GREEN);    // Y軸
+            //DrawLine3D(handPos, Vector3Add(handPos, Vector3Scale(forward, 2.0f)), BLUE); // Z軸
         }
     }
     gm.model.transform = MatrixIdentity();
