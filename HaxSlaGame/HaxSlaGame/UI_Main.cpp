@@ -12,22 +12,18 @@
 // ユーティリティ関数
 // ==========================================
 
-// 翻訳テキストを取得するヘルパー関数
-// jsonファイル(ui_text.json)にキーが存在すればその翻訳を返し、なければデフォルトの文字列を返す
 static std::string T(const std::string& key, const std::string& def) {
     if (DataManager::uiStrings.count(key)) return DataManager::uiStrings[key];
     return def;
 }
 
-// キーボードのキー定数(int)を画面表示用の文字列に変換する
 static std::string getKeyStr(int key) {
     if (key == KEY_LEFT_SHIFT || key == KEY_RIGHT_SHIFT) return "Shift";
     if (key == KEY_SPACE) return "Space";
-    if (key >= 32 && key <= 126) return std::string(1, (char)key); // 印字可能な文字ならそのままキャスト
+    if (key >= 32 && key <= 126) return std::string(1, (char)key);
     return "Key";
 }
 
-// ゲームパッドのボタン定数を画面表示用の文字列に変換する
 std::string UI::GetPadBtnStr(int btn) {
     switch (btn) {
     case GAMEPAD_BUTTON_LEFT_FACE_UP: return "D-Up";
@@ -57,71 +53,61 @@ int UI::itemPage = 0;
 int UI::equipPage = 0;
 int UI::storageInvPage = 0;
 int UI::storageBoxPage = 0;
-int UI::itemSubTab = 0; // アイテムインベントリのタブ(0:消費アイテム, 1:素材)
-int UI::reforgeItemIdx = -1; // リフォージ対象として選択中のアイテムインデックス
-int UI::warpScroll = 0; // ワープ画面のスクロール位置
-int UI::craftingScroll = 0; // クラフト画面のスクロール位置
-int UI::selectedDungeonTab = 0; // ワープ画面で選択中のダンジョン
-int UI::questScroll = 0; // クエスト画面のスクロール位置
+int UI::itemSubTab = 0;
+int UI::reforgeItemIdx = -1;
+int UI::warpScroll = 0;
+int UI::craftingScroll = 0;
+int UI::selectedDungeonTab = 0;
+int UI::questScroll = 0;
 
-Vector2 UI::skillOffset = { 0.0f, 0.0f }; // スキルツリー画面のドラッグ移動量
-Vector2 UI::mapOffset = { 0.0f, 0.0f };   // 全体マップ画面のドラッグ移動量
+Vector2 UI::skillOffset = { 0.0f, 0.0f };
+Vector2 UI::mapOffset = { 0.0f, 0.0f };
 
-bool UI::showDetail = false; // アイテム詳細画面(サブウィンドウ)を開いているか
-ItemData UI::focusingItem;   // 詳細画面で現在表示しているアイテムのデータ
-float UI::detailOpenTimer = 0.0f; // 詳細画面を開いてからの経過時間(誤クリック防止用)
-int UI::deleteConfirmSlot = 0; // セーブデータ削除の確認中スロット(0なら確認していない)
+bool UI::showDetail = false;
+ItemData UI::focusingItem;
+float UI::detailOpenTimer = 0.0f;
+int UI::deleteConfirmSlot = 0;
 
-std::vector<SystemLogMessage> UI::systemLogs; // 画面左下のシステムメッセージ履歴
-std::vector<Rectangle> UI::interactables; // 現在画面に表示されているボタン等のクリック可能領域
+std::vector<SystemLogMessage> UI::systemLogs;
+std::vector<Rectangle> UI::interactables;
 
 // ==========================================
 // ゲームパッドによるUIナビゲーション (スナップ移動)
 // ==========================================
 
-// 毎フレーム、描画を始める前にクリック可能領域のリストを空にする
 void UI::ClearInteractables() {
     interactables.clear();
 }
 
-// ボタンが描画されたとき、その座標とサイズをリストに登録する
 void UI::RegisterInteractable(Rectangle r) {
     interactables.push_back(r);
 }
 
-// 十字キーが押された際、カーソルを一番近いボタンへワープさせる
 void UI::UpdatePadNavigation() {
-    if (!IsGamepadAvailable(0)) return; // パッドが接続されていなければ無視
+    if (!IsGamepadAvailable(0)) return;
 
-    // 押された十字キーから移動ベクトルを算出
     Vector2 moveDir = { 0, 0 };
     if (IsGamepadButtonPressed(0, GAMEPAD_BUTTON_LEFT_FACE_UP)) moveDir.y = -1;
     if (IsGamepadButtonPressed(0, GAMEPAD_BUTTON_LEFT_FACE_DOWN)) moveDir.y = 1;
     if (IsGamepadButtonPressed(0, GAMEPAD_BUTTON_LEFT_FACE_LEFT)) moveDir.x = -1;
     if (IsGamepadButtonPressed(0, GAMEPAD_BUTTON_LEFT_FACE_RIGHT)) moveDir.x = 1;
 
-    // キーが入力された場合のみ判定
     if (moveDir.x != 0 || moveDir.y != 0) {
         Vector2 currentPos = GetMousePosition();
         int bestIdx = -1;
         float bestDist = 9999999.0f;
 
-        // 全ボタンの中から「入力方向に最も近い」ものを探す
         for (size_t i = 0; i < interactables.size(); i++) {
             Vector2 targetCenter = { interactables[i].x + interactables[i].width / 2.0f, interactables[i].y + interactables[i].height / 2.0f };
             Vector2 diff = Vector2Subtract(targetCenter, currentPos);
 
-            // 内積を利用して「指定した方向に向かっているか」をチェック
             float dot = (diff.x * moveDir.x + diff.y * moveDir.y);
 
-            // 距離が近すぎる(現在乗っているボタン自身など)場合は除外するため、閾値(5.0f)を設ける
             if (dot > 5.0f) {
                 float proj = dot;
-                // 正面の方向からはどれくらいズレているか(ペナルティ)
                 float ortho = fabs(diff.x * moveDir.y - diff.y * moveDir.x);
-                float score = proj + ortho * 4.0f; // ズレているほどスコアが悪くなるよう重み付け
+                float score = proj + ortho * 4.0f;
 
-                // よりスコアが良い(近い＆真正面に近い)ボタンを記録
                 if (score < bestDist) {
                     bestDist = score;
                     bestIdx = i;
@@ -129,7 +115,6 @@ void UI::UpdatePadNavigation() {
             }
         }
 
-        // 最適なボタンが見つかったら、マウスカーソルをそこに強制移動させる
         if (bestIdx != -1) {
             Vector2 center = { interactables[bestIdx].x + interactables[bestIdx].width / 2.0f, interactables[bestIdx].y + interactables[bestIdx].height / 2.0f };
             SetMousePosition((int)center.x, (int)center.y);
@@ -141,7 +126,6 @@ void UI::UpdatePadNavigation() {
 // 汎用UIコンポーネントの描画
 // ==========================================
 
-// アイテム詳細ウィンドウを開く際の共通処理
 void UI::OpenDetail(const ItemData& item) {
     focusingItem = item;
     showDetail = true;
@@ -149,26 +133,24 @@ void UI::OpenDetail(const ItemData& item) {
     AudioManager::PlaySE(SE_CLICK);
 }
 
-// ボタンを描画し、クリックされたら true を返す
-bool UI::DrawButton(Rectangle r, const char* label, Font font, Color col) {
-    UI::RegisterInteractable(r); // パッド操作用に座標を登録
+// ★修正: 第5引数に forceInteractable を追加
+bool UI::DrawButton(Rectangle r, const char* label, Font font, Color col, bool forceInteractable) {
+    UI::RegisterInteractable(r);
 
-    bool locked = showDetail; // 詳細画面が出ている間は背景のボタンを押せなくする
+    // ★修正: forceInteractable が true の場合は、詳細画面(showDetail)が表示中でもロックしない
+    bool locked = showDetail && !forceInteractable;
     bool clicked = false;
-    bool hover = !locked && CheckCollisionPointRec(GetMousePosition(), r); // マウスが乗っているか
+    bool hover = !locked && CheckCollisionPointRec(GetMousePosition(), r);
 
-    // ホバー時やロック時の色の計算
     Color drawCol = locked ? ColorBrightness(col, -0.4f) : col;
     if (hover) drawCol = ColorBrightness(col, 0.2f);
 
     DrawRectangleRec(r, drawCol);
     DrawRectangleLinesEx(r, 2, locked ? GRAY : RAYWHITE);
 
-    // ラベル(文字)をボタンの中央に配置して描画
     Vector2 tSize = MeasureTextEx(font, label, 18, 1);
     DrawTextEx(font, label, { r.x + r.width / 2 - tSize.x / 2, r.y + r.height / 2 - tSize.y / 2 }, 18, 1, locked ? LIGHTGRAY : WHITE);
 
-    // 入力判定 (左クリック または パッドの決定ボタン)
     bool clickInput = IsMouseButtonPressed(0) || IsGamepadButtonPressed(0, GAMEPAD_BUTTON_RIGHT_FACE_DOWN);
     if (hover && clickInput) {
         clicked = true;
@@ -177,7 +159,6 @@ bool UI::DrawButton(Rectangle r, const char* label, Font font, Color col) {
     return clicked;
 }
 
-// アイテムの性能(エンチャント含む)を表示する詳細ウィンドウ
 void UI::DrawDetailWindow(Font font) {
     if (!showDetail) return;
     detailOpenTimer += GetFrameTime();
@@ -185,27 +166,22 @@ void UI::DrawDetailWindow(Font font) {
     int sw = GetScreenWidth();
     int sh = GetScreenHeight();
 
-    // 背景を暗くする
     DrawRectangle(0, 0, sw, sh, Fade(BLACK, 0.7f));
 
-    // ウィンドウ自体のサイズと配置(画面中央)
     int w = 450; int h = 550;
     int x = (sw - w) / 2; int y = (sh - h) / 2;
     DrawRectangle(x, y, w, h, Fade(DARKBLUE, 0.95f));
     DrawRectangleLinesEx({ (float)x, (float)y, (float)w, (float)h }, 3, GOLD);
 
-    // アイテム名の描画 (レアリティ色適用)
     Color rarityColor = Player::GetItemRarityColor(focusingItem);
     DrawTextEx(font, Player::GetFullItemName(focusingItem).c_str(), { (float)x + 25, (float)y + 25 }, 28, 1, rarityColor);
 
-    // アイテムの種類のテキスト変換
     std::string typeStr = focusingItem.type;
     if (typeStr == "EQUIP") typeStr = T("WEAPON", "Weapon");
     else if (typeStr == "ARMOR") typeStr = T("ARMOR_TYPE", "Armor");
     else if (typeStr == "CONSUMABLE") typeStr = T("CONSUMABLE", "Consumable");
     else if (typeStr == "MATERIAL") typeStr = T("MATERIAL", "Material");
 
-    // 武器種や防具部位を末尾に追加
     if (focusingItem.type == "EQUIP") {
         std::string wTypes[] = { T("SWORD", "Sword"), T("SPEAR", "Spear"), T("AXE", "Axe"), T("WAND", "Wand"), T("NONE", "None") };
         if (focusingItem.weaponSubtype >= 0 && focusingItem.weaponSubtype <= 3) typeStr += std::string(" (") + wTypes[focusingItem.weaponSubtype] + ")";
@@ -216,14 +192,12 @@ void UI::DrawDetailWindow(Font font) {
     }
     DrawTextEx(font, typeStr.c_str(), { (float)x + 25, (float)y + 60 }, 20, 1, LIGHTGRAY);
 
-    // 基礎ステータスとエンチャントのステータスを合算
     Modifier mod = DataManager::GetModifier(focusingItem.modifierId);
     float totalAtk = focusingItem.atkBonus + mod.atk;
     float totalDef = focusingItem.defBonus + mod.def;
     float totalHp = focusingItem.hpBonus + mod.hp;
     float totalSpd = focusingItem.speedBonus + mod.spd;
 
-    // ステータスをリスト形式で並べて描画
     int statsY = y + 110; int lineH = 35;
     if (totalAtk != 0) { DrawTextEx(font, TextFormat(T("STAT_ATK", "ATK : %+.1f").c_str(), totalAtk), { (float)x + 40, (float)statsY }, 22, 1, RED); if (mod.atk != 0) DrawTextEx(font, TextFormat(T("STAT_MOD", "(Mod %+.1f)").c_str(), mod.atk), { (float)x + 250, (float)statsY }, 18, 1, ORANGE); statsY += lineH; }
     if (totalDef != 0) { DrawTextEx(font, TextFormat(T("STAT_DEF", "DEF : %+.1f").c_str(), totalDef), { (float)x + 40, (float)statsY }, 22, 1, BLUE); if (mod.def != 0) DrawTextEx(font, TextFormat(T("STAT_MOD", "(Mod %+.1f)").c_str(), mod.def), { (float)x + 250, (float)statsY }, 18, 1, ORANGE); statsY += lineH; }
@@ -231,7 +205,6 @@ void UI::DrawDetailWindow(Font font) {
     if (totalSpd != 0) { DrawTextEx(font, TextFormat(T("STAT_SPD", "SPD : %+.2f").c_str(), totalSpd), { (float)x + 40, (float)statsY }, 22, 1, SKYBLUE); if (mod.spd != 0) DrawTextEx(font, TextFormat(T("STAT_MOD_SPD", "(Mod %+.2f)").c_str(), mod.spd), { (float)x + 250, (float)statsY }, 18, 1, ORANGE); statsY += lineH; }
     if (focusingItem.heal > 0) { DrawTextEx(font, TextFormat(T("STAT_HEAL", "Heal : %.0f").c_str(), focusingItem.heal), { (float)x + 40, (float)statsY }, 22, 1, PINK); statsY += lineH; }
 
-    // エンチャントの名称を枠で囲って表示
     if (mod.id != 0) {
         statsY += 20;
         DrawRectangleLines(x + 20, statsY - 5, w - 40, 70, ORANGE);
@@ -239,39 +212,37 @@ void UI::DrawDetailWindow(Font font) {
         DrawTextEx(font, mod.name.c_str(), { (float)x + 50, (float)statsY + 30 }, 22, 1, YELLOW);
     }
 
-    // ウィンドウ下部の「閉じる」ボタン
     Rectangle closeBtn = { (float)x + w / 2 - 80, (float)y + h - 70, 160, 50 };
-    bool inputEnabled = (detailOpenTimer >= 0.3f); // 開いてすぐの連打による誤作動を防ぐ
+    bool inputEnabled = (detailOpenTimer >= 0.3f);
 
-    if (UI::DrawButton(closeBtn, T("CLOSE", "Close").c_str(), font, inputEnabled ? MAROON : Fade(MAROON, 0.5f))) {
+    // ★修正: 閉じるボタンに forceInteractable = true を渡す
+    if (UI::DrawButton(closeBtn, T("CLOSE", "Close").c_str(), font, inputEnabled ? MAROON : Fade(MAROON, 0.5f), true)) {
         if (inputEnabled) {
             showDetail = false;
-            AudioManager::PlaySE(SE_CLICK);
         }
     }
 }
 
-// 汎用の「はい/いいえ」ダイアログ
 int UI::DrawPrompt(const char* label, int sw, int sh, Font font) {
     std::string msg = T(label, label);
     int bw = 450, bh = 180;
-    int bx = sw / 2 - bw / 2, by = sh / 2 - bh / 2; // 中央配置
+    int bx = sw / 2 - bw / 2, by = sh / 2 - bh / 2;
 
     DrawRectangle(bx, by, bw, bh, Fade(BLACK, 0.9f));
     DrawRectangleLines(bx, by, bw, bh, GOLD);
 
-    // 中央揃えでテキストを描画
     Vector2 tS = MeasureTextEx(font, msg.c_str(), 24, 1);
     DrawTextEx(font, msg.c_str(), { (float)sw / 2 - tS.x / 2, (float)by + 40 }, 24, 1, WHITE);
 
     Rectangle bY = { (float)sw / 2 - 140, (float)by + 100, 120, 50 };
     Rectangle bN = { (float)sw / 2 + 20, (float)by + 100, 120, 50 };
 
-    int res = 0; // 0=未選択, 1=YES, 2=NO
+    int res = 0;
     if (UI::DrawButton(bY, T("YES", "YES").c_str(), font, GREEN)) res = 1;
     if (UI::DrawButton(bN, T("NO", "NO").c_str(), font, RED)) res = 2;
     return res;
 }
+
 
 // ==========================================
 // 各種メイン画面の描画

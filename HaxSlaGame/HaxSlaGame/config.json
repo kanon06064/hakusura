@@ -2,7 +2,7 @@
     "bgmVolume": 0.006666666828095913,
     "dash": 340,
     "heal": 53,
-    "isFullscreen": true,
+    "isFullscreen": false,
     "kongo": 50,
     "mouseSensitivity": 0.14900000393390656,
     "moveBackward": 83,
