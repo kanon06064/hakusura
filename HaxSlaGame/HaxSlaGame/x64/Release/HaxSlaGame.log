@@ -1,7 +1,117 @@
-﻿  Player.cpp
+﻿  AudioManager.cpp
+  DataManager.cpp
+  Dungeon.cpp
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.cpp(130,124): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.cpp(130,94): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.cpp(130,64): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.cpp(130,34): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.cpp(131,124): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.cpp(131,94): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.cpp(131,64): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.cpp(131,34): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.cpp(142,124): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.cpp(142,94): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.cpp(142,64): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.cpp(142,34): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.cpp(185,33): warning C4244: '引数': 'int' から 'float' への変換です。データが失われる可能性があります。
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.cpp(185,29): warning C4244: '引数': 'int' から 'float' への変換です。データが失われる可能性があります。
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.cpp(185,58): warning C4244: '引数': 'int' から 'float' への変換です。データが失われる可能性があります。
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.cpp(185,54): warning C4244: '引数': 'int' から 'float' への変換です。データが失われる可能性があります。
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.cpp(186,33): warning C4244: '引数': 'int' から 'float' への変換です。データが失われる可能性があります。
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.cpp(186,29): warning C4244: '引数': 'int' から 'float' への変換です。データが失われる可能性があります。
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.cpp(186,58): warning C4244: '引数': 'int' から 'float' への変換です。データが失われる可能性があります。
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.cpp(186,54): warning C4244: '引数': 'int' から 'float' への変換です。データが失われる可能性があります。
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.cpp(261,23): warning C4244: '初期化中': 'double' から 'float' への変換です。データが失われる可能性があります。
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.cpp(263,29): warning C4244: '初期化中': 'double' から 'float' への変換です。データが失われる可能性があります。
+  EffectManager.cpp
+  Enemy.cpp
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI.h(1,1): warning C4819: ファイルは、現在のコード ページ (932) で表示できない文字を含んでいます。データの損失を防ぐために、ファイルを Unicode 形式で保存してください。
+  (ソース ファイル 'Enemy.cpp' をコンパイルしています)
+  
+  Game_Draw.cpp
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI.h(1,1): warning C4819: ファイルは、現在のコード ページ (932) で表示できない文字を含んでいます。データの損失を防ぐために、ファイルを Unicode 形式で保存してください。
+  (ソース ファイル 'Game_Draw.cpp' をコンパイルしています)
+  
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\Game_Draw.cpp(105,47): warning C4244: '引数': 'double' から 'float' への変換です。データが失われる可能性があります。
+  Game_Main.cpp
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI.h(1,1): warning C4819: ファイルは、現在のコード ページ (932) で表示できない文字を含んでいます。データの損失を防ぐために、ファイルを Unicode 形式で保存してください。
+  (ソース ファイル 'Game_Main.cpp' をコンパイルしています)
+  
+  imgui.cpp
+  imgui_demo.cpp
+  imgui_draw.cpp
+  imgui_tables.cpp
+  imgui_widgets.cpp
+  rlImGui.cpp
+  main.cpp
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI.h(1,1): warning C4819: ファイルは、現在のコード ページ (932) で表示できない文字を含んでいます。データの損失を防ぐために、ファイルを Unicode 形式で保存してください。
+  (ソース ファイル 'main.cpp' をコンパイルしています)
+  
+  Player.cpp
 C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI.h(1,1): warning C4819: ファイルは、現在のコード ページ (932) で表示できない文字を含んでいます。データの損失を防ぐために、ファイルを Unicode 形式で保存してください。
   (ソース ファイル 'Player.cpp' をコンパイルしています)
   
+  UI_Facilities.cpp
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI.h(1,1): warning C4819: ファイルは、現在のコード ページ (932) で表示できない文字を含んでいます。データの損失を防ぐために、ファイルを Unicode 形式で保存してください。
+  (ソース ファイル 'UI_Facilities.cpp' をコンパイルしています)
+  
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI_Facilities.cpp(275,39): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI_Facilities.cpp(275,23): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI_Facilities.cpp(298,32): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI_Facilities.cpp(319,31): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI_Facilities.cpp(319,19): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI_Facilities.cpp(320,36): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI_Facilities.cpp(320,24): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
+  UI_Main.cpp
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI.h(1,1): warning C4819: ファイルは、現在のコード ページ (932) で表示できない文字を含んでいます。データの損失を防ぐために、ファイルを Unicode 形式で保存してください。
+  (ソース ファイル 'UI_Main.cpp' をコンパイルしています)
+  
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI_Main.cpp(108,29): warning C4244: '初期化中': 'double' から 'float' への変換です。データが失われる可能性があります。
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI_Main.cpp(113,31): warning C4267: '=': 'size_t' から 'int' に変換しました。データが失われているかもしれません。
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI_Main.cpp(390,72): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI_Main.cpp(390,64): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI_Main.cpp(390,51): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI_Main.cpp(390,36): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI_Main.cpp(397,97): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI_Main.cpp(397,93): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI_Main.cpp(397,65): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI_Main.cpp(397,32): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI_Main.cpp(563,73): warning C4244: '引数': 'int' から 'float' への変換です。データが失われる可能性があります。
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI_Main.cpp(570,87): warning C4244: '引数': 'int' から 'float' への変換です。データが失われる可能性があります。
+  UI_Menu.cpp
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI.h(1,1): warning C4819: ファイルは、現在のコード ページ (932) で表示できない文字を含んでいます。データの損失を防ぐために、ファイルを Unicode 形式で保存してください。
+  (ソース ファイル 'UI_Menu.cpp' をコンパイルしています)
+  
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI_Menu.cpp(189,47): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI_Menu.cpp(189,34): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI_Menu.cpp(190,52): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI_Menu.cpp(190,39): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI_Menu.cpp(250,90): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI_Menu.cpp(250,63): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI_Menu.cpp(250,38): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI_Menu.cpp(250,28): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI_Menu.cpp(255,76): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI_Menu.cpp(255,68): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI_Menu.cpp(255,55): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI_Menu.cpp(255,40): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI_Menu.cpp(259,65): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI_Menu.cpp(259,25): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI_Menu.cpp(287,89): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI_Menu.cpp(287,56): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI_Menu.cpp(287,39): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI_Menu.cpp(287,29): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI_Menu.cpp(304,84): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI_Menu.cpp(304,53): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI_Menu.cpp(304,37): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI_Menu.cpp(304,28): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI_Menu.cpp(323,80): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI_Menu.cpp(323,62): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI_Menu.cpp(323,43): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI_Menu.cpp(323,31): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI_Menu.cpp(337,80): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI_Menu.cpp(337,62): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI_Menu.cpp(337,43): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
+C:\haku\hakusura\HaxSlaGame\HaxSlaGame\UI_Menu.cpp(337,31): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
   コード生成しています。
   0 of 6068 functions ( 0.0%) were compiled, the rest were copied from previous compilation.
     0 functions were new in current compilation
