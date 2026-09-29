@@ -135,30 +135,52 @@ void Player::RecalculateStats() {
 
 void Player::InitSkillTree() {
 	skillTree.clear();
-	// 座標(uiPos)を指定して、UI上にツリー形式で表示できるようにしている
-	skillTree.push_back({ 0, T("SKILL_NAME_START", "START"), {600, 400}, {}, true, 0, 0,0,0,0,0, T("SKILL_DESC_START", "Skill Tree Start"), SKILL_PASSIVE });
-	skillTree.push_back({ 1, T("SKILL_NAME_ATK1", "ATK I"),  {600, 300}, {0}, false, 1, 3.0f, 0, 0, 0, 0, T("SKILL_DESC_ATK1", "ATK +3"), SKILL_PASSIVE });
-	skillTree.push_back({ 2, T("SKILL_NAME_ATK2", "ATK II"), {600, 200}, {1}, false, 2, 5.0f, 0, 0, 0, 0, T("SKILL_DESC_ATK2", "ATK +5"), SKILL_PASSIVE });
-	skillTree.push_back({ 3, T("SMASH", "SMASH"), {600, 100}, {2}, false, 3, 0, 0, 0, 0, 0, T("SKILL_DESC_SMASH", "Active: Deal heavy damage & knockback"), SKILL_ACTIVE_SMASH, 8.0f });
 
-	skillTree.push_back({ 4, T("SKILL_NAME_DEF1", "DEF I"),  {695, 331}, {0}, false, 1, 0, 2.0f, 0, 0, 0, T("SKILL_DESC_DEF1", "DEF +2"), SKILL_PASSIVE });
-	skillTree.push_back({ 5, T("SKILL_NAME_DEF2", "DEF II"), {790, 262}, {4}, false, 2, 0, 3.0f, 0, 0, 0, T("SKILL_DESC_DEF2", "DEF +3"), SKILL_PASSIVE });
-	skillTree.push_back({ 6, T("KONGO", "KONGO"), {885, 193}, {5}, false, 3, 0, 0, 0, 0, 0, T("SKILL_DESC_KONGO", "Active: Boost DEF temporarily"), SKILL_ACTIVE_KONGO, 15.0f });
+	// =========================================================================
+	// 【中心】起点 (ID: 0)
+	// =========================================================================
+	skillTree.push_back({ 0, T("SKILL_NAME_START", "START"), {600, 400}, {}, true, 0, 0, 0, 0, 0, 0, T("SKILL_DESC_START", "Skill Tree Start"), SKILL_PASSIVE });
 
-	skillTree.push_back({ 7, T("SKILL_NAME_HP1", "HP I"),   {659, 481}, {0}, false, 1, 0, 0, 20.0f, 0, 0, T("SKILL_DESC_HP1", "HP +20"), SKILL_PASSIVE });
-	skillTree.push_back({ 8, T("SKILL_NAME_HP2", "HP II"),  {718, 562}, {7}, false, 2, 0, 0, 30.0f, 0, 0, T("SKILL_DESC_HP2", "HP +30"), SKILL_PASSIVE });
-	skillTree.push_back({ 9, T("ZOUKYOU", "ZOUKYOU"), {777, 643},{8}, false, 3, 0, 0, 0, 0, 0, T("SKILL_DESC_ZOUKYOU", "Active: Boost ATK temporarily"), SKILL_ACTIVE_ZOUKYOU, 20.0f });
+	// =========================================================================
+	// 【12時方向（真上）】 攻撃（ATK）系統
+	// =========================================================================
+	skillTree.push_back({ 1, T("SKILL_NAME_ATK1", "ATK I"),   {600, 290}, {0}, false, 1, 3.0f, 0, 0, 0, 0, T("SKILL_DESC_ATK1", "ATK +3"), SKILL_PASSIVE });
+	skillTree.push_back({ 2, T("SKILL_NAME_ATK2", "ATK II"),  {600, 190}, {1}, false, 2, 5.0f, 0, 0, 0, 0, T("SKILL_DESC_ATK2", "ATK +5"), SKILL_PASSIVE });
+	skillTree.push_back({ 3, T("SMASH", "SMASH"),             {600, 90},  {2}, false, 3, 0,    0, 0, 0, 0, T("SKILL_DESC_SMASH", "Active: Deal heavy damage & knockback"), SKILL_ACTIVE_SMASH, 8.0f });
 
-	skillTree.push_back({ 10, T("SKILL_NAME_CD1", "CD I"),  {541, 481}, {0}, false, 1, 0, 0, 0, 0.05f, 0, T("SKILL_DESC_CD1", "Cooldown -5%"), SKILL_PASSIVE });
-	skillTree.push_back({ 11, T("SKILL_NAME_CD2", "CD II"), {482, 562}, {10}, false, 2, 0, 0, 0, 0.10f, 0, T("SKILL_DESC_CD2", "Cooldown -10%"), SKILL_PASSIVE });
-	skillTree.push_back({ 12, T("STEALTH", "STEALTH"), {423, 643},{11}, false, 3, 0, 0, 0, 0, 0, T("SKILL_DESC_STEALTH", "Active: Become undetectable"), SKILL_ACTIVE_STEALTH, 15.0f });
+	// =========================================================================
+	// 【2時方向（右上）】 防御（DEF）系統
+	// =========================================================================
+	skillTree.push_back({ 4, T("SKILL_NAME_DEF1", "DEF I"),   {695, 345}, {0}, false, 1, 0, 2.0f, 0, 0, 0, T("SKILL_DESC_DEF1", "DEF +2"), SKILL_PASSIVE });
+	skillTree.push_back({ 5, T("SKILL_NAME_DEF2", "DEF II"),  {782, 295}, {4}, false, 2, 0, 3.0f, 0, 0, 0, T("SKILL_DESC_DEF2", "DEF +3"), SKILL_PASSIVE });
+	skillTree.push_back({ 6, T("KONGO", "KONGO"),             {868, 245}, {5}, false, 3, 0, 0,    0, 0, 0, T("SKILL_DESC_KONGO", "Active: Boost DEF temporarily"), SKILL_ACTIVE_KONGO, 15.0f });
 
-	skillTree.push_back({ 13, T("SKILL_NAME_HEAL1", "HEAL I"), {505, 331}, {0}, false, 1, 0, 0, 0, 0, 10.0f, T("SKILL_DESC_HEAL1", "Healing +10"), SKILL_PASSIVE });
-	skillTree.push_back({ 14, T("SKILL_NAME_HEAL2", "HEAL II"),{410, 262},{13}, false, 2, 0, 0, 0, 0, 20.0f, T("SKILL_DESC_HEAL2", "Healing +20"), SKILL_PASSIVE });
-	skillTree.push_back({ 15, T("HEAL", "HEAL"), {315, 193},{14}, false, 3, 0, 0, 0, 0, 0, T("SKILL_DESC_HEAL", "Active: Restore HP instantly"), SKILL_ACTIVE_HEAL, 25.0f });
+	// =========================================================================
+	// 【4時方向（右下）】 体力・バフ（HP / ZOUKYOU）系統
+	// =========================================================================
+	skillTree.push_back({ 7, T("SKILL_NAME_HP1", "HP I"),     {695, 455}, {0}, false, 1, 0, 0, 20.0f, 0, 0, T("SKILL_DESC_HP1", "HP +20"), SKILL_PASSIVE });
+	skillTree.push_back({ 8, T("SKILL_NAME_HP2", "HP II"),    {782, 505}, {7}, false, 2, 0, 0, 30.0f, 0, 0, T("SKILL_DESC_HP2", "HP +30"), SKILL_PASSIVE });
+	skillTree.push_back({ 9, T("ZOUKYOU", "ZOUKYOU"),         {868, 555}, {8}, false, 3, 0, 0, 0,     0, 0, T("SKILL_DESC_ZOUKYOU", "Active: Boost ATK temporarily"), SKILL_ACTIVE_ZOUKYOU, 20.0f });
 
-	// ダッシュは前提スキルなしで取得可能
-	skillTree.push_back({ 16, T("DASH", "DASH"), {700, 400}, {0}, false, 1, 0, 0, 0, 0, 0, T("SKILL_DESC_DASH", "Active: Quick dodge"), SKILL_ACTIVE_DASH, 3.0f });
+	// =========================================================================
+	// ★【6時方向（真下）】 回避・機動（DASH）系統
+	// =========================================================================
+	// 起点から真下にまっすぐ伸びる独立したアクティブノード
+	skillTree.push_back({ 16, T("DASH", "DASH"),              {600, 520}, {0}, false, 1, 0, 0, 0,     0, 0, T("SKILL_DESC_DASH", "Active: Quick dodge"), SKILL_ACTIVE_DASH, 3.0f });
+
+	// =========================================================================
+	// 【8時方向（左下）】 クールダウン短縮・潜行（CD / STEALTH）系統
+	// =========================================================================
+	skillTree.push_back({ 10, T("SKILL_NAME_CD1", "CD I"),    {505, 455}, {0},  false, 1, 0, 0, 0, 0.05f, 0, T("SKILL_DESC_CD1", "Cooldown -5%"), SKILL_PASSIVE });
+	skillTree.push_back({ 11, T("SKILL_NAME_CD2", "CD II"),   {418, 505}, {10}, false, 2, 0, 0, 0, 0.10f, 0, T("SKILL_DESC_CD2", "Cooldown -10%"), SKILL_PASSIVE });
+	skillTree.push_back({ 12, T("STEALTH", "STEALTH"),        {332, 555}, {11}, false, 3, 0, 0, 0, 0,     0, T("SKILL_DESC_STEALTH", "Active: Become undetectable"), SKILL_ACTIVE_STEALTH, 15.0f });
+
+	// =========================================================================
+	// 【10時方向（左上）】 回復（HEAL）系統
+	// =========================================================================
+	skillTree.push_back({ 13, T("SKILL_NAME_HEAL1", "HEAL I"),{505, 345}, {0},  false, 1, 0, 0, 0, 0, 10.0f, T("SKILL_DESC_HEAL1", "Healing +10"), SKILL_PASSIVE });
+	skillTree.push_back({ 14, T("SKILL_NAME_HEAL2", "HEAL II"),{418, 295},{13}, false, 2, 0, 0, 0, 0, 20.0f, T("SKILL_DESC_HEAL2", "Healing +20"), SKILL_PASSIVE });
+	skillTree.push_back({ 15, T("HEAL", "HEAL"),              {332, 245},{14}, false, 3, 0, 0, 0, 0, 0,     T("SKILL_DESC_HEAL", "Active: Restore HP instantly"), SKILL_ACTIVE_HEAL, 25.0f });
 }
 
 // そのスキルの手前（前提）スキルがアンロックされているかチェックする
@@ -238,6 +260,7 @@ void Player::PerformAttack(Vector3 ad, std::vector<Enemy>& enemies, Dungeon& d, 
 void Player::PerformSmash(Vector3 ad, std::vector<Enemy>& enemies, Dungeon& d, EffectManager& fx) {
 	AudioManager::PlaySE(SE_SKILL);
 	fx.SpawnEffect(Vector3Add(position, { 0, 0.8f, 0 }), ad, FX_SMASH, RED);
+	fx.ShakeScreen(0.25f, 0.5f);
 	for (auto& e : enemies) if (Vector3Distance(e.position, position) < 5.0f) {
 		int dmg = (int)(attackPower * 2.5f); e.hp -= dmg; e.ApplyKnockback(ad, 3.0f, d); fx.SpawnDamageText(e.position, dmg);
 		e.hudTimer = 5.0f;
@@ -266,7 +289,7 @@ void Player::Update(Camera3D& cam, Dungeon& d, std::vector<Enemy>& enemies, Effe
 	Vector3 cr = { -cf.z, 0, cf.x }, md = { 0,0,0 };
 
 	bool isMoving = false;
-	// ★修正: curSpdをifブロックの前に宣言し、baseSpeedで初期化
+	//  curSpdをifブロックの前に宣言し、baseSpeedで初期化
 	float curSpd = baseSpeed;
 
 	if (attackTimer <= 0) {

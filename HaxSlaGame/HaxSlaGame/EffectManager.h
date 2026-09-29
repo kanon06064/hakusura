@@ -12,6 +12,19 @@ public:
     std::vector<VisualEffect> effects;     // 斬撃などの一瞬だけ残るエフェクト
     std::vector<DamageText> damageTexts;   // 「15」などのダメージ表記テキスト
 
+	float shakeTimer = 0.0f; // 画面揺れの残り時間
+	float shakeIntensity = 0.0f; // 画面揺れの強さ
+    // 画面揺れを発生させる
+	void ShakeScreen(float duration, float intensity)
+    {
+        if (intensity >= shakeIntensity || shakeTimer <= 0.0f) {
+            shakeTimer = duration;
+            shakeIntensity = intensity;
+        }
+    }
+    Vector3 GetShakeOffset() const;
+    
+   
     void Update(float dt, Dungeon& d);
     void Draw(); // 3D空間にエフェクトを描画
     void Draw2D(Font font, Camera3D cam); // スクリーン空間(2D)にテキストを描画

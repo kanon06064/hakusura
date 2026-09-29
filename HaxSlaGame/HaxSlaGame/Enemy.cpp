@@ -157,6 +157,12 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
                             lastAttackDir = bossTargetDir;
                             MoveSmart(Vector3Add(position, Vector3Scale(bossTargetDir, 2.0f)), d);
                         }
+                        if (bossComboStep >= 3) {
+                            fx.ShakeScreen(0.3f, 0.6f);
+                        }
+                        else {
+                            fx.ShakeScreen(0.15f, 0.35f);
+                        }
                     }
                 }
                 else if (bossAttackType == 2) {
@@ -189,6 +195,7 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
                             float rawDmg = 15.0f + level * 2; float dmg = fmaxf(1.0f, rawDmg - p.defense); p.hp -= dmg;
                             fx.SpawnDamageText(p.position, (int)dmg); fx.SpawnEffect(p.position, { 0,0,0 }, FX_HIT, RED);
                             UI::AddSystemLog(TextFormat(DataManager::uiStrings["LOG_BOSS_DASH"].c_str(), (int)dmg), RED);
+                            fx.ShakeScreen(0.35f, 0.7f);
                             bossAttackType = 0; attackTimer = 2.0f;
                         }
                         if (hitWall || bossActionTimer <= 0.0f) { bossAttackType = 0; attackTimer = 2.0f; }
@@ -201,6 +208,7 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
                         for (int i = 0; i < 12; i++) {
                             float angle = i * 30.0f * DEG2RAD; Vector3 dir = { cosf(angle), 0.0f, sinf(angle) };
                             fx.SpawnEffect(Vector3Add(position, { 0, 0.5f, 0 }), dir, FX_SMASH, PURPLE);
+                            fx.ShakeScreen(0.4f, 0.7f);
                         }
                         float aoeRadius = 7.0f;
                         if (Vector3Distance(position, p.position) < aoeRadius) {
@@ -246,6 +254,12 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
                     else if (eType == E_AXE) effectType = FX_SMASH;
 
                     fx.SpawnEffect(spawnPos, lastAttackDir, effectType, GOLD);
+                    if (eType == E_AXE) {
+                        fx.ShakeScreen(0.2f, 0.45f); // •€‚Íd‚ß‚ÌˆêŒ‚
+                    }
+                    else {
+                        fx.ShakeScreen(0.15f, 0.3f);  // Œ•‚â‘„‚Ì•W€”í’e
+                    }
 
                     float rawDmg = 10.0f + level * 2;
                     float dmg = fmaxf(1.0f, rawDmg - p.defense);

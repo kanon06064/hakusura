@@ -34,6 +34,14 @@ void EffectManager::SpawnDamageText(Vector3 pos, int dmg) {
 }
 
 void EffectManager::Update(float dt, Dungeon& d) {
+
+    if (shakeTimer > 0.0f) {
+        shakeTimer -= dt;
+        if (shakeTimer <= 0.0f) {
+            shakeTimer = 0.0f;
+            shakeIntensity = 0.0f;
+        }
+    }
     // íeÇÃà⁄ìÆèàóùÇ∆ï«Ç∆ÇÃè’ìÀîªíË
     for (auto& p : projectiles) {
         if (!p.active) continue;
@@ -57,7 +65,9 @@ void EffectManager::Update(float dt, Dungeon& d) {
     projectiles.erase(std::remove_if(projectiles.begin(), projectiles.end(), [](const Projectile& p) { return !p.active; }), projectiles.end());
     effects.erase(std::remove_if(effects.begin(), effects.end(), [](const VisualEffect& e) { return e.life <= 0; }), effects.end());
     damageTexts.erase(std::remove_if(damageTexts.begin(), damageTexts.end(), [](const DamageText& t) { return t.life <= 0; }), damageTexts.end());
-}
+
+
+    }
 
 void EffectManager::CheckProjectileCollisions(std::vector<Enemy>& enemies, Player& p, Dungeon& d) {
     for (auto& proj : projectiles) {
@@ -76,6 +86,7 @@ void EffectManager::CheckProjectileCollisions(std::vector<Enemy>& enemies, Playe
 
                     SpawnDamageText(e.position, dmg);
                     SpawnEffect(proj.pos, { 0,0,0 }, FX_HIT, GOLD);
+                    
 
                     proj.active = false; // ìñÇΩÇ¡ÇΩÇÃÇ≈íeÇè¡Ç∑
                     break; // ä—í ÇµÇ»Ç¢
@@ -92,6 +103,7 @@ void EffectManager::CheckProjectileCollisions(std::vector<Enemy>& enemies, Playe
 
                 SpawnDamageText(p.position, (int)dmg);
                 SpawnEffect(proj.pos, { 0,0,0 }, FX_HIT, RED);
+                ShakeScreen(0.15f, 0.3f);
 
                 proj.active = false;
             }
@@ -151,4 +163,16 @@ void EffectManager::Draw2D(Font font, Camera3D cam) {
             DrawTextEx(font, TextFormat("%d", dt.amount), { s.x, s.y }, 24, 1, Fade(c, dt.life));
         }
     }
+}
+
+Vector3 EffectManager::GetShakeOffset() const {
+    if (shakeTimer <= 0.0f || shakeIntensity <= 0.0f) {
+        return { 0.0f, 0.0f, 0.0f };
+    }
+    // éûä‘åoâﬂÇ≈óhÇÍÇèôÅXÇ…è¨Ç≥Ç≠Ç∑ÇÈ
+    float currentMag = shakeIntensity;
+    float rx = ((float)GetRandomValue(-100, 100) / 100.0f) * currentMag;
+    float ry = ((float)GetRandomValue(-100, 100) / 100.0f) * currentMag;
+    float rz = ((float)GetRandomValue(-100, 100) / 100.0f) * currentMag;
+    return { rx, ry, rz };
 }

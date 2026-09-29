@@ -357,6 +357,11 @@ void Game::Update() {
     camOffset.z = newHorizontal * cosf(yaw);
     camera.position = Vector3Add(camera.target, camOffset);
 
+    //カメラとターゲットの両方に揺れオフセットを加算
+    Vector3 shake = fxManager.GetShakeOffset();
+    camera.target = Vector3Add(camera.target, shake);
+    camera.position = Vector3Add(camera.position, shake);
+
     // --- プレイヤーとエフェクトの更新 ---
     player->Update(camera, dungeon, enemies, fxManager, stopPlayer);
     fxManager.Update(dt, dungeon);
