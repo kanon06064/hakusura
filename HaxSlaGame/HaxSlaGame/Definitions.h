@@ -58,7 +58,7 @@ struct KeyConfig {
 
 // --- インゲームの各種データを保持する構造体 ---
 struct Projectile { Vector3 pos = { 0.0f, 0.0f, 0.0f }; Vector3 vel = { 0.0f, 0.0f, 0.0f }; float radius = 0.0f; bool active = false; int type = 0; bool isPlayer = false; };
-struct VisualEffect { Vector3 pos = { 0.0f, 0.0f, 0.0f }; Vector3 dir = { 0.0f, 0.0f, 0.0f }; EffectType type = FX_SLASH; float life = 0.0f; float maxLife = 0.0f; Color color = WHITE; };
+struct VisualEffect { Vector3 pos = { 0.0f, 0.0f, 0.0f }; Vector3 dir = { 0.0f, 0.0f, 0.0f }; EffectType type = FX_SLASH; float life = 0.0f; float maxLife = 0.0f; Color color = WHITE; float scale = 1.0f; };
 struct DamageText { Vector3 pos = { 0.0f, 0.0f, 0.0f }; int amount = 0; float life = 0.0f; };
 struct GameLog { std::string message = ""; float life = 0.0f; Color color = WHITE; };
 struct Modifier { int id = 0; std::string name = ""; float atk = 0.0f; float def = 0.0f; float hp = 0.0f; float spd = 0.0f; }; // 装備品のエンチャント(接頭辞)データ

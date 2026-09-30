@@ -68,22 +68,14 @@ void Game::Draw() {
     }
     else {
         ClearBackground(BLACK); BeginMode3D(camera);
-        dungeon.Draw();
 
-        bool hideStairs = false;
-        if (!isPortfolioMode && floor > 0 && floor % 10 == 0 && !bossDefeated) hideStairs = true;
-        if (isPortfolioMode && (floor == 2 || floor == 3) && !bossDefeated) hideStairs = true;
+        // ★ 修正: ボスフロア判定を行い、ボス撃破前なら出口（階段・クリアポータル）を描画しない
+        bool isBossFloor = (!isPortfolioMode && floor > 0 && floor % 10 == 0) || (isPortfolioMode && (floor == 2 || floor == 3));
+        bool showExit = !isBossFloor || bossDefeated;
 
-        if (hideStairs) {
-            // 通常の階段隠し
-            if (dungeon.stairsDownPos.x != -999) {
-                DrawCube(dungeon.stairsDownPos, 2.5f, 3.0f, 2.5f, BLACK);
-            }
-            // ★追加: ボス部屋の真ん中（ボススポーン地点付近）にあるポータルも隠す
-            if (dungeon.portalPos.x != -999 && Vector3Distance(dungeon.portalPos, dungeon.bossSpawnPos) < 2.0f) {
-                DrawCube(dungeon.portalPos, 2.5f, 3.0f, 2.5f, BLACK);
-            }
-        }
+        dungeon.Draw(showExit);
+
+        // ※ かつて存在していた「黒いキューブを描画して隠す（DrawCube BLACK）」処理は完全削除
 
         fxManager.Draw();
 
@@ -152,7 +144,7 @@ void Game::Draw() {
 
             if (state == STATE_HOME && hoveredEntranceIndex != -1) m = "ENTER_DUNGEON";
             else if (state == STATE_DUNGEON) {
-                if (!isPortfolioMode && floor == maxF && dist2D(player->position, dungeon.portalPos) < 2.0f) m = "RETURN_HOME"; // 最下層用のポータル判定
+                if (!isPortfolioMode && floor == maxF && dist2D(player->position, dungeon.portalPos) < 2.0f) m = "RETURN_HOME";
                 else if (dungeon.stairsDownPos.x != -999 && dist2D(player->position, dungeon.stairsDownPos) < 2.0f) m = "GO_DEEPER";
                 else if (dungeon.stairsUpPos.x != -999 && dist2D(player->position, dungeon.stairsUpPos) < 2.0f) m = "RETURN_HOME";
                 else if (dungeon.portalPos.x != -999 && dist2D(player->position, dungeon.portalPos) < 2.0f) m = "RETURN_HOME";

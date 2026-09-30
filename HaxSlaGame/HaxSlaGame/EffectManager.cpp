@@ -1,4 +1,4 @@
-#include "EffectManager.h"
+ï»¿#include "EffectManager.h"
 #include "Dungeon.h"
 #include "Enemy.h"
 #include "Player.h"
@@ -9,28 +9,29 @@
 void EffectManager::SpawnProjectile(Vector3 pos, Vector3 dir, float speed, int type, bool isPlayer) {
     Projectile p;
     p.pos = pos;
-    if (p.pos.y < 0.5f) p.pos.y = 1.2f; // ’n–ÊƒXƒŒƒXƒŒ‚É‚È‚ç‚È‚¢‚æ‚¤‚‚³‚ğ’²®
-    p.vel = Vector3Scale(Vector3Normalize(dir), speed); // ‘¬“xƒxƒNƒgƒ‹‚ğŒvZ
-    p.radius = (type == 1) ? 0.6f : 0.2f; // –‚–@‚Ìí—Ş‚É‚æ‚Á‚Ä“–‚½‚è”»’è‚ÌƒTƒCƒY‚ğ•Ï‚¦‚é
+    if (p.pos.y < 0.5f) p.pos.y = 1.2f; // åœ°é¢ã‚¹ãƒ¬ã‚¹ãƒ¬ã«ãªã‚‰ãªã„ã‚ˆã†é«˜ã•ã‚’èª¿æ•´
+    p.vel = Vector3Scale(Vector3Normalize(dir), speed); // é€Ÿåº¦ãƒ™ã‚¯ãƒˆãƒ«ã‚’è¨ˆç®—
+    p.radius = (type == 1) ? 0.6f : 0.2f; // é­”æ³•ã®ç¨®é¡ã«ã‚ˆã£ã¦å½“ãŸã‚Šåˆ¤å®šã®ã‚µã‚¤ã‚ºã‚’å¤‰ãˆã‚‹
     p.active = true;
     p.type = type;
-    p.isPlayer = isPlayer; // ƒvƒŒƒCƒ„[‚ªŒ‚‚Á‚½’e‚©A“G‚ªŒ‚‚Á‚½’e‚©
+    p.isPlayer = isPlayer; // ãƒ—ãƒ¬ã‚¤ãƒ¤ãƒ¼ãŒæ’ƒã£ãŸå¼¾ã‹ã€æ•µãŒæ’ƒã£ãŸå¼¾ã‹
     projectiles.push_back(p);
 }
 
-void EffectManager::SpawnEffect(Vector3 pos, Vector3 dir, EffectType type, Color col) {
+void EffectManager::SpawnEffect(Vector3 pos, Vector3 dir, EffectType type, Color col, float scale) {
     VisualEffect eff;
     eff.pos = pos;
     eff.dir = dir;
     eff.type = type;
     eff.color = col;
-    eff.life = 0.3f;    // 0.3•b‚ÅÁ–Å‚·‚é
+    eff.life = 0.3f;
     eff.maxLife = 0.3f;
+    eff.scale = scale; 
     effects.push_back(eff);
 }
 
 void EffectManager::SpawnDamageText(Vector3 pos, int dmg) {
-    damageTexts.push_back({ Vector3Add(pos, {0, 1.5f, 0}), dmg, 1.0f }); // 1•bŠÔ•\¦
+    damageTexts.push_back({ Vector3Add(pos, {0, 1.5f, 0}), dmg, 1.0f }); // 1ç§’é–“è¡¨ç¤º
 }
 
 void EffectManager::Update(float dt, Dungeon& d) {
@@ -42,11 +43,11 @@ void EffectManager::Update(float dt, Dungeon& d) {
             shakeIntensity = 0.0f;
         }
     }
-    // ’e‚ÌˆÚ“®ˆ—‚Æ•Ç‚Æ‚ÌÕ“Ë”»’è
+    // å¼¾ã®ç§»å‹•å‡¦ç†ã¨å£ã¨ã®è¡çªåˆ¤å®š
     for (auto& p : projectiles) {
         if (!p.active) continue;
         p.pos = Vector3Add(p.pos, Vector3Scale(p.vel, dt));
-        // •Ç‚É‚Ô‚Â‚©‚é‚©Aƒ}ƒbƒvŠO‚Éo‚½‚çÁ–Å‚³‚¹‚é
+        // å£ã«ã¶ã¤ã‹ã‚‹ã‹ã€ãƒãƒƒãƒ—å¤–ã«å‡ºãŸã‚‰æ¶ˆæ»…ã•ã›ã‚‹
         if (d.IsWall(p.pos.x, p.pos.z)) p.active = false;
         if (p.pos.x < 0 || p.pos.x > MAX_MAP_WIDTH * TILE_SIZE ||
             p.pos.z < 0 || p.pos.z > MAX_MAP_HEIGHT * TILE_SIZE) {
@@ -54,14 +55,14 @@ void EffectManager::Update(float dt, Dungeon& d) {
         }
     }
 
-    // ƒGƒtƒFƒNƒg‚Ìõ–½‚ğŒ¸‚ç‚·
+    // ã‚¨ãƒ•ã‚§ã‚¯ãƒˆã®å¯¿å‘½ã‚’æ¸›ã‚‰ã™
     for (auto& e : effects) e.life -= dt;
     for (auto& t : damageTexts) {
         t.life -= dt;
-        t.pos.y += 0.5f * dt; // ƒ_ƒ[ƒWƒeƒLƒXƒg‚Í‚ä‚Á‚­‚èã‚É“o‚Á‚Ä‚¢‚­
+        t.pos.y += 0.5f * dt; // ãƒ€ãƒ¡ãƒ¼ã‚¸ãƒ†ã‚­ã‚¹ãƒˆã¯ã‚†ã£ãã‚Šä¸Šã«ç™»ã£ã¦ã„ã
     }
 
-    // õ–½‚ªs‚«‚½(active=false‚É‚È‚Á‚½)‚à‚Ì‚ğƒŠƒXƒg‚©‚çíœ‚·‚é
+    // å¯¿å‘½ãŒå°½ããŸ(active=falseã«ãªã£ãŸ)ã‚‚ã®ã‚’ãƒªã‚¹ãƒˆã‹ã‚‰å‰Šé™¤ã™ã‚‹
     projectiles.erase(std::remove_if(projectiles.begin(), projectiles.end(), [](const Projectile& p) { return !p.active; }), projectiles.end());
     effects.erase(std::remove_if(effects.begin(), effects.end(), [](const VisualEffect& e) { return e.life <= 0; }), effects.end());
     damageTexts.erase(std::remove_if(damageTexts.begin(), damageTexts.end(), [](const DamageText& t) { return t.life <= 0; }), damageTexts.end());
@@ -74,30 +75,30 @@ void EffectManager::CheckProjectileCollisions(std::vector<Enemy>& enemies, Playe
         if (!proj.active) continue;
 
         if (proj.isPlayer) {
-            // ƒvƒŒƒCƒ„[‚ªŒ‚‚Á‚½’e‚ª“G‚É“–‚½‚Á‚½‚©”»’è
+            // ãƒ—ãƒ¬ã‚¤ãƒ¤ãƒ¼ãŒæ’ƒã£ãŸå¼¾ãŒæ•µã«å½“ãŸã£ãŸã‹åˆ¤å®š
             for (auto& e : enemies) {
                 if (Vector3Distance(proj.pos, e.position) < (proj.radius + e.radius + 0.3f)) {
-                    // ƒ_ƒ[ƒWŒvZ: Šî–{ATK + •Ší‚ÌATK + —”(0~5)
+                    // ãƒ€ãƒ¡ãƒ¼ã‚¸è¨ˆç®—: åŸºæœ¬ATK + æ­¦å™¨ã®ATK + ä¹±æ•°(0~5)
                     float totalBonus = Player::GetItemTotalAtkBonus(p.equippedData[p.activeSlot]);
                     int dmg = (int)(p.attackPower + totalBonus) + GetRandomValue(0, 5);
                     e.hp -= (float)dmg;
-                    e.hudTimer = 5.0f; // “G‚ÌHPƒo[‚ğ•\¦‚³‚¹‚é
-                    e.ApplyKnockback(Vector3Normalize(proj.vel), 0.5f, d); // ’e‚Ì”ò‚ñ‚¾•ûŒü‚ÉƒmƒbƒNƒoƒbƒN
+                    e.hudTimer = 5.0f; // æ•µã®HPãƒãƒ¼ã‚’è¡¨ç¤ºã•ã›ã‚‹
+                    e.ApplyKnockback(Vector3Normalize(proj.vel), 0.5f, d); // å¼¾ã®é£›ã‚“ã æ–¹å‘ã«ãƒãƒƒã‚¯ãƒãƒƒã‚¯
 
                     SpawnDamageText(e.position, dmg);
                     SpawnEffect(proj.pos, { 0,0,0 }, FX_HIT, GOLD);
                     
 
-                    proj.active = false; // “–‚½‚Á‚½‚Ì‚Å’e‚ğÁ‚·
-                    break; // ŠÑ’Ê‚µ‚È‚¢
+                    proj.active = false; // å½“ãŸã£ãŸã®ã§å¼¾ã‚’æ¶ˆã™
+                    break; // è²«é€šã—ãªã„
                 }
             }
         }
         else {
-            // “G‚ªŒ‚‚Á‚½’e‚ªƒvƒŒƒCƒ„[‚É“–‚½‚Á‚½‚©”»’è
+            // æ•µãŒæ’ƒã£ãŸå¼¾ãŒãƒ—ãƒ¬ã‚¤ãƒ¤ãƒ¼ã«å½“ãŸã£ãŸã‹åˆ¤å®š
             if (Vector3Distance(proj.pos, p.position) < (proj.radius + p.radius + 0.2f)) {
                 float rawDmg = 12.0f;
-                // –hŒä—Í‚É‚æ‚éƒ_ƒ[ƒWŒ¸Š (Å’á‚Å‚à1ƒ_ƒ[ƒW‚Íó‚¯‚é)
+                // é˜²å¾¡åŠ›ã«ã‚ˆã‚‹ãƒ€ãƒ¡ãƒ¼ã‚¸æ¸›è¡° (æœ€ä½ã§ã‚‚1ãƒ€ãƒ¡ãƒ¼ã‚¸ã¯å—ã‘ã‚‹)
                 float dmg = fmaxf(1.0f, rawDmg - p.defense);
                 p.hp -= dmg;
 
@@ -112,54 +113,132 @@ void EffectManager::CheckProjectileCollisions(std::vector<Enemy>& enemies, Playe
 }
 
 void EffectManager::Draw() {
+    // =========================================================================
+    // 1. é­”æ³•å¼¾ãƒ»çŸ¢ï¼ˆãƒ—ãƒ­ã‚¸ã‚§ã‚¯ã‚¿ã‚¤ãƒ«ï¼šæ–ã‚„æ•µã®å¼¾ï¼‰
+    // =========================================================================
     for (const auto& p : projectiles) {
         Color c = (p.type == 0) ? YELLOW : PURPLE;
         if (!p.isPlayer) c = RED;
-        DrawSphere(p.pos, p.radius, c); // ’e–{‘Ì‚Ì•`‰æ
-        if (p.type == 0) DrawLine3D(p.pos, Vector3Subtract(p.pos, Vector3Scale(Vector3Normalize(p.vel), 0.5f)), WHITE); // ‹OÕ
+
+        // ã‚³ã‚¢ï¼ˆç™½ã„èŠ¯ï¼‰ï¼‹ ã‚ªãƒ¼ãƒ©ï¼ˆåŠé€æ˜ã®å¤–æ®»ï¼‰ã§ç™ºå…‰æ„Ÿã‚’æ¼”å‡º
+        DrawSphere(p.pos, p.radius * 0.7f, WHITE);
+        DrawSphere(p.pos, p.radius, c);
+        DrawSphere(p.pos, p.radius * 1.6f, Fade(c, 0.35f));
+
+        // é£›ç¿”è»Œè·¡ï¼ˆæ®‹å…‰ãƒ©ã‚¤ãƒ³ï¼‰
+        Vector3 tail = Vector3Subtract(p.pos, Vector3Scale(Vector3Normalize(p.vel), 0.7f));
+        DrawLine3D(p.pos, tail, Fade(WHITE, 0.8f));
     }
 
+    // =========================================================================
+    // 2. è¿‘æ¥ãƒ»ã‚¹ã‚­ãƒ«ã‚¨ãƒ•ã‚§ã‚¯ãƒˆï¼ˆæ­¦å™¨ç¨®ã”ã¨ã®å°‚ç”¨æç”»ï¼‰
+    // =========================================================================
     for (const auto& e : effects) {
-        float ratio = e.life / e.maxLife; // õ–½‚É‰‚¶‚Ä™X‚É“§–¾‚É‚·‚é
+        float ratio = e.life / e.maxLife; // 1.0 (ç™ºç”Ÿç›´å¾Œ) ã€œ 0.0 (æ¶ˆæ»…)
         Color c = Fade(e.color, ratio);
 
-        if (e.type == FX_SLASH) { // Œ•‚ÌaŒ‚ƒGƒtƒFƒNƒg(îó‚Ìü)
+        // ---------------------------------------------------------------------
+        // ã€å‰£ã€‘FX_SLASHï¼šå¼§ã‚’æã„ã¦è–™ãæ‰•ã†ä¸‰æ—¥æœˆå‹ã®å…‰ã®æ–¬æ’ƒå¸¯
+        // ---------------------------------------------------------------------
+        if (e.type == FX_SLASH) {
             float baseAngle = atan2f(e.dir.z, e.dir.x);
             Vector3 center = e.pos;
-            for (int i = -60; i <= 60; i += 10) {
-                float rad = baseAngle + (i * DEG2RAD);
-                Vector3 tip = { center.x + cosf(rad) * 4.0f, center.y, center.z + sinf(rad) * 4.0f };
-                DrawLine3D(center, tip, c);
+
+            float progress = 1.0f - (e.life / e.maxLife);
+            float pLead = progress * 1.5f;   if (pLead > 1.0f) pLead = 1.0f;
+            float pTrail = (progress - 0.22f) * 1.5f; if (pTrail < 0.0f) pTrail = 0.0f;
+
+            if (pLead > pTrail) {
+                float totalArc = 130.0f * DEG2RAD;
+                float leftAngle = baseAngle - (totalArc * 0.5f);
+                int segments = 16;
+
+                for (int i = 0; i < segments; i++) {
+                    float t1 = (float)i / segments;
+                    float t2 = (float)(i + 1) / segments;
+
+                    float segP1 = pTrail + (pLead - pTrail) * t1;
+                    float segP2 = pTrail + (pLead - pTrail) * t2;
+
+                    float a1 = leftAngle + (totalArc * segP1);
+                    float a2 = leftAngle + (totalArc * segP2);
+
+                    // â˜… å¤–å¾„ã®æœ€å¤§å€¤ã‚’æ­¦å™¨ã®å°„ç¨‹ e.scale ã«ã´ã£ãŸã‚Šåˆã‚ã›ã‚‹
+                    float maxR = e.scale;
+                    float innerR = 0.8f;
+                    float outerR1 = innerR + (maxR - innerR) * (0.3f + 0.7f * t1);
+                    float outerR2 = innerR + (maxR - innerR) * (0.3f + 0.7f * t2);
+
+                    Vector3 pIn1 = { center.x + cosf(a1) * innerR,  center.y, center.z + sinf(a1) * innerR };
+                    Vector3 pOut1 = { center.x + cosf(a1) * outerR1, center.y, center.z + sinf(a1) * outerR1 };
+                    Vector3 pIn2 = { center.x + cosf(a2) * innerR,  center.y, center.z + sinf(a2) * innerR };
+                    Vector3 pOut2 = { center.x + cosf(a2) * outerR2, center.y, center.z + sinf(a2) * outerR2 };
+
+                    float alpha1 = ratio * (t1 * 0.8f);
+                    float alpha2 = ratio * (t2 * 0.8f);
+
+                    DrawTriangle3D(pIn1, pOut1, pOut2, Fade(e.color, alpha2));
+                    DrawTriangle3D(pIn1, pOut2, pIn2, Fade(e.color, alpha1));
+                    DrawTriangle3D(pIn1, pOut2, pOut1, Fade(e.color, alpha2));
+                    DrawTriangle3D(pIn1, pIn2, pOut2, Fade(e.color, alpha1));
+
+                    DrawLine3D(pOut1, pOut2, Fade(WHITE, alpha2));
+                }
             }
         }
-        else if (e.type == FX_THRUST) { // ‘„‚Ì“Ë‚«ƒGƒtƒFƒNƒg(’¼ü)
+        // -------------------------------------------------------------
+        // ã€æ§ã€‘FX_THRUSTï¼šæŒ‡å®šã—ãŸå°„ç¨‹(e.scale)ã¾ã§ã´ã£ãŸã‚Šå…‰ç·šãŒä¼¸ã³ã‚‹
+        // -------------------------------------------------------------
+        else if (e.type == FX_THRUST) {
             Vector3 start = e.pos;
-            Vector3 end = Vector3Add(e.pos, Vector3Scale(e.dir, 5.0f));
-            DrawLine3D(start, end, c);
-            DrawSphere(end, 0.4f * ratio, c);
+            // â˜… e.scale ã®é•·ã•ã¾ã§çœŸã£ç›´ãä¼¸ã³ã‚‹
+            Vector3 end = Vector3Add(e.pos, Vector3Scale(e.dir, e.scale));
+
+            DrawCylinderEx(start, end, 0.12f * ratio, 0.04f * ratio, 8, Fade(WHITE, ratio * 0.9f));
+            DrawCylinderEx(start, end, 0.35f * ratio, 0.12f * ratio, 8, Fade(e.color, ratio * 0.45f));
+
+            DrawSphere(end, 0.3f * ratio, WHITE);
+            DrawSphere(end, 0.5f * ratio, Fade(e.color, ratio * 0.4f));
         }
-        else if (e.type == FX_SMASH) { // •€‚Ì‹­Œ‚ƒGƒtƒFƒNƒg(‰~Œ`)
-            DrawSphereWires(Vector3Add(e.pos, Vector3Scale(e.dir, 3.0f)), 3.0f, 8, 8, c);
+        // -------------------------------------------------------------
+        // ã€æ–§ã€‘FX_SMASHï¼šå‰æ–¹ã®ç€å¼¾åœ°ç‚¹ã¨è¡æ’ƒæ³¢ã®åŠå¾„ã‚’ e.scale ã«é€£å‹•
+        // -------------------------------------------------------------
+        else if (e.type == FX_SMASH) {
+            // å‰æ–¹ã¸ã®æŒ¯ã‚Šä¸‹ã‚ã—è·é›¢
+            Vector3 impactPos = Vector3Add(e.pos, Vector3Scale(e.dir, e.scale * 0.6f));
+            impactPos.y = 0.08f;
+
+            float expand = (1.0f - ratio);
+            // â˜… è¡æ’ƒæ³¢ã®æœ€å¤§åºƒãŒã‚Šã‚’ e.scale ã«åˆã‚ã›ã‚‹
+            float currentRadius = (e.scale * 0.4f) + expand * (e.scale * 0.6f);
+
+            DrawCylinder(impactPos, currentRadius, currentRadius, 0.03f, 28, Fade(e.color, ratio * 0.45f));
+            DrawCylinderWires(impactPos, currentRadius, currentRadius, 0.04f, 28, Fade(GOLD, ratio * 0.9f));
+            DrawCylinderWires(impactPos, currentRadius * 0.7f, currentRadius * 0.7f, 0.04f, 28, Fade(WHITE, ratio * 0.6f));
         }
-        else if (e.type == FX_HIT) {   // ƒqƒbƒg‚Ì‰Î‰ÔƒGƒtƒFƒNƒg
-            DrawSphereWires(e.pos, 0.5f + (1.0f - ratio), 6, 6, c);
+        // ---------------------------------------------------------------------
+        // ã€ãƒ’ãƒƒãƒˆæ™‚ã€‘FX_HITï¼šå‘½ä¸­ç¬é–“ã®å…‰ã®ã‚¹ãƒ‘ãƒ¼ã‚¯
+        // ---------------------------------------------------------------------
+        else if (e.type == FX_HIT) {
+            DrawSphere(e.pos, 0.2f * ratio, WHITE);
+            DrawSphere(e.pos, 0.4f * ratio, Fade(e.color, ratio * 0.5f));
         }
     }
 }
 
 void EffectManager::Draw2D(Font font, Camera3D cam) {
-    // ƒ_ƒ[ƒWƒeƒLƒXƒg‚Í3D‹óŠÔ‚ÌÀ•W‚ğƒXƒNƒŠ[ƒ“‚Ì2DÀ•W‚É•ÏŠ·‚µ‚Ä•`‰æ‚·‚é
+    // ãƒ€ãƒ¡ãƒ¼ã‚¸ãƒ†ã‚­ã‚¹ãƒˆã¯3Dç©ºé–“ã®åº§æ¨™ã‚’ã‚¹ã‚¯ãƒªãƒ¼ãƒ³ã®2Dåº§æ¨™ã«å¤‰æ›ã—ã¦æç”»ã™ã‚‹
     for (const auto& dt : damageTexts) {
         Vector2 s = GetWorldToScreen(dt.pos, cam);
-        // ‰æ–ÊŠO‚È‚ç•`‰æ‚µ‚È‚¢
+        // ç”»é¢å¤–ãªã‚‰æç”»ã—ãªã„
         if (s.x < 0 || s.y < 0 || s.x > GetScreenWidth() || s.y > GetScreenHeight()) continue;
 
-        if (dt.amount == 999) { // 999‚ÍƒŒƒxƒ‹ƒAƒbƒv‚Ì“Áêƒtƒ‰ƒO
+        if (dt.amount == 999) { // 999ã¯ãƒ¬ãƒ™ãƒ«ã‚¢ãƒƒãƒ—æ™‚ã®ç‰¹æ®Šãƒ•ãƒ©ã‚°
             DrawTextEx(font, "LEVEL UP!!", { s.x - 50, s.y - 30 }, 28, 1, YELLOW);
         }
         else {
             Color c = ORANGE;
-            if (dt.amount > 20) c = RED; // ‘åƒ_ƒ[ƒW‚ÍÔF‚É‚·‚é
+            if (dt.amount > 20) c = RED; // å¤§ãƒ€ãƒ¡ãƒ¼ã‚¸ã¯èµ¤è‰²ã«ã™ã‚‹
             DrawTextEx(font, TextFormat("%d", dt.amount), { s.x, s.y }, 24, 1, Fade(c, dt.life));
         }
     }
@@ -169,7 +248,7 @@ Vector3 EffectManager::GetShakeOffset() const {
     if (shakeTimer <= 0.0f || shakeIntensity <= 0.0f) {
         return { 0.0f, 0.0f, 0.0f };
     }
-    // ŠÔŒo‰ß‚Å—h‚ê‚ğ™X‚É¬‚³‚­‚·‚é
+    // æ™‚é–“çµŒéã§æºã‚Œã‚’å¾ã€…ã«å°ã•ãã™ã‚‹
     float currentMag = shakeIntensity;
     float rx = ((float)GetRandomValue(-100, 100) / 100.0f) * currentMag;
     float ry = ((float)GetRandomValue(-100, 100) / 100.0f) * currentMag;

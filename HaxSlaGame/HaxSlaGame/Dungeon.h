@@ -35,7 +35,8 @@ public:
 
     // マップを生成するメイン関数
     void Generate(bool homeMode, int floor, int dungeonId = 0, int unlockedDungeonId = 0);
-    void Draw(); // 3D空間にマップを描画する
+    // ★ 修正: ボス撃破前かどうかに応じて出口の表示/非表示を切り替える引数を追加
+    void Draw(bool showExit = true);
 
     // 当たり判定・視界判定用の関数群
     bool IsWall(float x, float z);

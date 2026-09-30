@@ -31,7 +31,7 @@ public:
 
     // エフェクトを発生させる関数群
     void SpawnProjectile(Vector3 pos, Vector3 dir, float speed, int type, bool isPlayer);
-    void SpawnEffect(Vector3 pos, Vector3 dir, EffectType type, Color col);
+    void SpawnEffect(Vector3 pos, Vector3 dir, EffectType type, Color col, float scale = 1.0f);
     void SpawnDamageText(Vector3 pos, int dmg);
 
     // プロジェクタイルの当たり判定を処理する

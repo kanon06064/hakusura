@@ -241,17 +241,55 @@ void Player::PerformAttack(Vector3 ad, std::vector<Enemy>& enemies, Dungeon& d, 
 	AudioManager::PlaySE(SE_ATTACK);
 	Vector3 origin = Vector3Add(position, { 0, 0.8f, 0 });
 
-	// 杖の場合はプロジェクタイル(弾)を飛ばす
-	if (currentWeapon == WAND) fx.SpawnProjectile(origin, ad, 15.0f, 1, true);
+	if (currentWeapon == WAND) {
+		fx.SpawnProjectile(origin, ad, 15.0f, 1, true);
+	}
 	else {
-		EffectType type = (currentWeapon == SPEAR) ? FX_THRUST : (currentWeapon == AXE ? FX_SMASH : FX_SLASH);
-		fx.SpawnEffect(origin, ad, type, SKYBLUE);
-		// 剣・槍・斧の場合は、範囲内にいる敵すべてにダメージ判定(貫通)
-		for (auto& e : enemies) if (Vector3Distance(e.position, position) < 4.5f) {
-			int dmg = (int)(attackPower + GetItemTotalAtkBonus(equippedData[activeSlot]));
-			e.hp -= dmg; e.ApplyKnockback(ad, 1.0f, d); fx.SpawnDamageText(e.position, dmg);
-			e.hudTimer = 5.0f;
-			isStealth = false; // 攻撃すると隠密状態が解除される
+		EffectType type = FX_SLASH;
+		Color fxCol = SKYBLUE;
+		float atkRange = 3.8f; // ★ 剣の射程：3.8m
+
+		if (currentWeapon == SPEAR) {
+			type = FX_THRUST;
+			fxCol = SKYBLUE;
+			atkRange = 5.5f;   // ★ 槍の射程：5.5m（長く伸びる！）
+		}
+		else if (currentWeapon == AXE) {
+			type = FX_SMASH;
+			fxCol = ORANGE;
+			atkRange = 3.2f;   // ★ 斧の射程：3.2m（手前で重く炸裂）
+		}
+
+		// ★ エフェクトに射程(atkRange)を渡す（見た目の長さがピッタリ一致）
+		fx.SpawnEffect(origin, ad, type, fxCol, atkRange);
+
+		// ★ 当たり判定：エフェクトの射程 + 敵の当たり判定半径 で判定
+		bool hitAny = false;
+		for (auto& e : enemies) {
+			// 距離チェック
+			float dist = Vector3Distance(e.position, position);
+			if (dist <= atkRange + e.radius) {
+				// 前方判定：プレイヤーの攻撃方向(ad)の正面側にいる敵にのみヒットさせる
+				Vector3 toEnemy = Vector3Normalize(Vector3Subtract(e.position, position));
+				float dot = Vector3DotProduct(ad, toEnemy);
+
+				// 槍は前方の狭い直線(dot > 0.6)、剣や斧は前方の広い範囲(dot > 0.0)
+				float requiredDot = (currentWeapon == SPEAR) ? 0.6f : 0.0f;
+
+				if (dot >= requiredDot) {
+					int dmg = (int)(attackPower + GetItemTotalAtkBonus(equippedData[activeSlot]));
+					e.hp -= dmg;
+					e.ApplyKnockback(ad, 1.0f, d);
+					fx.SpawnDamageText(e.position, dmg);
+					e.hudTimer = 5.0f;
+					isStealth = false;
+					hitAny = true;
+				}
+			}
+		}
+
+		if (hitAny && currentWeapon == AXE) {
+			fx.ShakeScreen(0.12f, 0.25f);
 		}
 	}
 }

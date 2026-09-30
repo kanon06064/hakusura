@@ -41,6 +41,13 @@ Enemy::Enemy(Vector3 sp, EnemyData d, int fl) {
 
     radius = 0.45f;
     attackTimer = 0.0f;
+    attackAnimTimer = 0.0f;
+
+    // 攻撃予兆（チャージ）タイマーの初期化
+    isChargingAttack = false;
+    attackChargeTimer = 0.0f;
+    attackChargeMax = 0.6f;
+
     hudTimer = 0.0f;
     lastAttackDir = { 1.0f, 0.0f, 0.0f };
     patrolTarget = sp;
@@ -102,8 +109,10 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
         return;
     }
 
-    if (hudTimer > 0) hudTimer -= GetFrameTime();
-    if (attackTimer > 0) attackTimer -= GetFrameTime();
+    float dt = GetFrameTime();
+    if (hudTimer > 0) hudTimer -= dt;
+    if (attackTimer > 0) attackTimer -= dt;
+    if (attackAnimTimer > 0) attackAnimTimer -= dt;
     animFrameCounter++;
 
     float dist = Vector3Distance(position, p.position);
@@ -112,6 +121,9 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
     float effectiveDetect = p.isStealth ? 1.5f : detectRange;
     if (state == STATE_CHASE || state == STATE_ATTACK) { if (p.isStealth) effectiveDetect = 3.0f; }
 
+    // =========================================================================
+    // ボスAI
+    // =========================================================================
     if (isBoss) {
         if (dist < effectiveDetect && canSee) { state = STATE_ATTACK; }
         else { state = STATE_PATROL; }
@@ -125,10 +137,10 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
                     bossTargetDir = Vector3Normalize(Vector3Subtract(p.position, position));
                     lastAttackDir = bossTargetDir;
 
-                    if (bossAttackType == 1) bossActionTimer = 0.5f;
-                    else if (bossAttackType == 2) bossActionTimer = 0.8f;
+                    if (bossAttackType == 1) bossActionTimer = 0.6f;
+                    else if (bossAttackType == 2) bossActionTimer = 0.9f;
                     else if (bossAttackType == 3) bossActionTimer = 1.0f;
-                    else if (bossAttackType == 4) bossActionTimer = 1.8f;
+                    else if (bossAttackType == 4) bossActionTimer = 2.0f;
                 }
                 else {
                     if (dist > 3.0f) MoveSmart(p.position, d);
@@ -136,7 +148,7 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
             }
             else {
                 if (bossAttackType == 1) {
-                    bossActionTimer -= GetFrameTime();
+                    bossActionTimer -= dt;
                     if (bossActionTimer <= 0.0f) {
                         animFrameCounter = 0; bossComboStep++; AudioManager::PlaySE(SE_ENEMY_ATTACK);
                         Vector3 spawnPos = Vector3Add(position, { 0, 0.8f, 0 });
@@ -148,25 +160,22 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
                             float dmg = fmaxf(1.0f, rawDmg - p.defense); p.hp -= dmg;
                             fx.SpawnDamageText(p.position, (int)dmg); fx.SpawnEffect(p.position, { 0,0,0 }, FX_HIT, RED);
                             UI::AddSystemLog(TextFormat(DataManager::uiStrings["LOG_BOSS_COMBO"].c_str(), (int)dmg), RED);
+
+                            if (bossComboStep >= 3) fx.ShakeScreen(0.3f, 0.6f);
+                            else fx.ShakeScreen(0.15f, 0.35f);
                         }
 
                         if (bossComboStep >= 3) { bossAttackType = 0; attackTimer = 1.5f; }
                         else {
-                            bossActionTimer = 0.5f;
+                            bossActionTimer = 0.6f;
                             bossTargetDir = Vector3Normalize(Vector3Subtract(p.position, position));
                             lastAttackDir = bossTargetDir;
                             MoveSmart(Vector3Add(position, Vector3Scale(bossTargetDir, 2.0f)), d);
                         }
-                        if (bossComboStep >= 3) {
-                            fx.ShakeScreen(0.3f, 0.6f);
-                        }
-                        else {
-                            fx.ShakeScreen(0.15f, 0.35f);
-                        }
                     }
                 }
                 else if (bossAttackType == 2) {
-                    bossActionTimer -= GetFrameTime();
+                    bossActionTimer -= dt;
                     if (bossActionTimer <= 0.0f) {
                         animFrameCounter = 0; AudioManager::PlaySE(SE_ENEMY_ATTACK);
                         Vector3 spawnPos = Vector3Add(position, { 0, 1.0f, 0 });
@@ -179,7 +188,7 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
                     }
                 }
                 else if (bossAttackType == 3) {
-                    bossActionTimer -= GetFrameTime();
+                    bossActionTimer -= dt;
                     if (bossComboStep == 0) {
                         if (bossActionTimer <= 0.0f) { bossComboStep = 1; bossActionTimer = 0.6f; animFrameCounter = 0; AudioManager::PlaySE(SE_ENEMY_ATTACK); }
                         else { if (GetRandomValue(0, 100) < 20) fx.SpawnEffect(Vector3Add(position, { 0,0.5f,0 }), { 0,1,0 }, FX_HIT, ORANGE); }
@@ -202,14 +211,15 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
                     }
                 }
                 else if (bossAttackType == 4) {
-                    bossActionTimer -= GetFrameTime();
+                    bossActionTimer -= dt;
                     if (bossActionTimer <= 0.0f) {
                         animFrameCounter = 0; AudioManager::PlaySE(SE_ENEMY_ATTACK);
                         for (int i = 0; i < 12; i++) {
                             float angle = i * 30.0f * DEG2RAD; Vector3 dir = { cosf(angle), 0.0f, sinf(angle) };
                             fx.SpawnEffect(Vector3Add(position, { 0, 0.5f, 0 }), dir, FX_SMASH, PURPLE);
-                            fx.ShakeScreen(0.4f, 0.7f);
                         }
+                        fx.ShakeScreen(0.4f, 0.7f);
+
                         float aoeRadius = 7.0f;
                         if (Vector3Distance(position, p.position) < aoeRadius) {
                             float rawDmg = 20.0f + level * 2; float dmg = fmaxf(1.0f, rawDmg - p.defense); p.hp -= dmg;
@@ -230,49 +240,82 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
             if (stuckCount > 60) { patrolTarget = d.GetRandomFloorPos(); stuckCount = 0; }
         }
     }
-    else
-    {
+    // =========================================================================
+    // 通常敵AI（攻撃予兆＋チャージシステム搭載）
+    // =========================================================================
+    else {
         if (dist < attackRange && canSee && dist < effectiveDetect) state = STATE_ATTACK;
         else if (dist < effectiveDetect && canSee) state = STATE_CHASE;
         else state = STATE_PATROL;
 
         if (state == STATE_CHASE || state == STATE_ATTACK) {
             stuckCount = 0;
-            if (eType != E_TRAP) { if (dist > attackRange * 0.7f) MoveSmart(p.position, d); }
+            // チャージ中でない時はプレイヤーを追う
+            if (!isChargingAttack && eType != E_TRAP) {
+                if (dist > attackRange * 0.7f) MoveSmart(p.position, d);
+            }
 
-            if (dist < attackRange && attackTimer <= 0) {
+            // 攻撃範囲に入ったら、即座に殴るのではなく「予兆（チャージ）を開始」する
+            if (dist < attackRange && attackTimer <= 0.0f && !isChargingAttack) {
+                isChargingAttack = true;
                 lastAttackDir = Vector3Normalize(Vector3Subtract(p.position, position));
-                Vector3 spawnPos = Vector3Add(position, { 0, 0.8f, 0 });
-                AudioManager::PlaySE(SE_ENEMY_ATTACK);
 
-                if (eType == E_ARCHER) { fx.SpawnProjectile(spawnPos, lastAttackDir, 18.0f, 0, false); attackTimer = 1.8f; }
-                else if (eType == E_MAGE) { fx.SpawnProjectile(spawnPos, lastAttackDir, 8.0f, 1, false); attackTimer = 2.2f; }
-                else if (eType == E_TRAP) { fx.SpawnProjectile(spawnPos, lastAttackDir, 12.0f, 0, false); attackTimer = 2.5f; }
-                else {
-                    EffectType effectType = FX_SLASH;
-                    if (eType == E_SPEAR) effectType = FX_THRUST;
-                    else if (eType == E_AXE) effectType = FX_SMASH;
+                // 武器種によってタメ時間を設定（重い武器ほど予兆が長い）
+                if (eType == E_AXE) attackChargeMax = 0.85f;
+                else if (eType == E_SPEAR) attackChargeMax = 0.65f;
+                else attackChargeMax = 0.5f;
 
-                    fx.SpawnEffect(spawnPos, lastAttackDir, effectType, GOLD);
-                    if (eType == E_AXE) {
-                        fx.ShakeScreen(0.2f, 0.45f); // 斧は重めの一撃
-                    }
+                attackChargeTimer = attackChargeMax;
+            }
+
+            // チャージ中の処理（タイマー進行 → 0になったら攻撃発動！）
+            if (isChargingAttack) {
+                attackChargeTimer -= dt;
+                // チャージ中はプレイヤーの方向を見据える
+                lastAttackDir = Vector3Normalize(Vector3Subtract(p.position, position));
+
+                if (attackChargeTimer <= 0.0f) {
+                    isChargingAttack = false;
+                    attackAnimTimer = 0.5f; // 攻撃モーション再生開始
+                    animFrameCounter = 0;
+
+                    Vector3 spawnPos = Vector3Add(position, { 0, 0.8f, 0 });
+                    AudioManager::PlaySE(SE_ENEMY_ATTACK);
+
+                    if (eType == E_ARCHER) { fx.SpawnProjectile(spawnPos, lastAttackDir, 18.0f, 0, false); attackTimer = 1.8f; }
+                    else if (eType == E_MAGE) { fx.SpawnProjectile(spawnPos, lastAttackDir, 8.0f, 1, false); attackTimer = 2.2f; }
+                    else if (eType == E_TRAP) { fx.SpawnProjectile(spawnPos, lastAttackDir, 12.0f, 0, false); attackTimer = 2.5f; }
                     else {
-                        fx.ShakeScreen(0.15f, 0.3f);  // 剣や槍の標準被弾
+                        EffectType effectType = FX_SLASH;
+                        if (eType == E_SPEAR) effectType = FX_THRUST;
+                        else if (eType == E_AXE) effectType = FX_SMASH;
+
+                        fx.SpawnEffect(spawnPos, lastAttackDir, effectType, GOLD);
+
+                        // 予兆（AoE）の範囲内にプレイヤーがまだ残っていればダメージ
+                        float aoeRadius = attackRange * 0.9f;
+                        Vector3 hitCenter = Vector3Add(position, Vector3Scale(lastAttackDir, attackRange * 0.5f));
+
+                        if (Vector3Distance(hitCenter, p.position) < aoeRadius) {
+                            float rawDmg = 10.0f + level * 2;
+                            float dmg = fmaxf(1.0f, rawDmg - p.defense);
+                            p.hp -= dmg;
+
+                            fx.SpawnDamageText(p.position, (int)dmg);
+                            fx.SpawnEffect(p.position, { 0,0,0 }, FX_HIT, RED);
+                            UI::AddSystemLog(TextFormat(DataManager::uiStrings["LOG_DMG_TAKEN"].c_str(), data.name.c_str(), (int)dmg), RED);
+
+                            if (eType == E_AXE) fx.ShakeScreen(0.2f, 0.45f);
+                            else fx.ShakeScreen(0.15f, 0.3f);
+                        }
+
+                        attackTimer = 1.5f; // 攻撃後のクールタイム
                     }
-
-                    float rawDmg = 10.0f + level * 2;
-                    float dmg = fmaxf(1.0f, rawDmg - p.defense);
-                    p.hp -= dmg;
-
-                    fx.SpawnDamageText(p.position, (int)dmg); fx.SpawnEffect(p.position, { 0,0,0 }, FX_HIT, RED);
-                    UI::AddSystemLog(TextFormat(DataManager::uiStrings["LOG_DMG_TAKEN"].c_str(), data.name.c_str(), (int)dmg), RED);
-
-                    attackTimer = 1.5f;
                 }
             }
         }
         else {
+            isChargingAttack = false; // プレイヤーを見失ったらチャージ解除
             if (Vector3Distance(position, patrolTarget) < 1.2f) { patrolTarget = d.GetRandomFloorPos(); stuckCount = 0; }
             bool hitWall = MoveSmart(patrolTarget, d);
             if (hitWall) { patrolTarget = d.GetRandomFloorPos(); stuckCount = 0; }
@@ -284,47 +327,107 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
 }
 
 void Enemy::Draw(bool debug, Camera3D cam, Font font, Vector3 playerPos) {
-    int currentAnimIndex = -1;
     bool hasModel = false;
 
     std::string key = data.modelName;
     if (!key.empty() && DataManager::loadedModels.count(key) > 0) {
-        hasModel = true; GameModel& gm = DataManager::loadedModels[key]; gm.model.transform = MatrixIdentity();
+        hasModel = true;
+        GameModel& gm = DataManager::loadedModels[key];
+        gm.model.transform = MatrixIdentity();
 
-        int animIndex = 2;
-        if (isDying) animIndex = 1;
-        else if (state == STATE_ATTACK) {
-            if (isBoss) {
-                if (bossAttackType == 1) animIndex = 0;
-                else if (bossAttackType == 2 || bossAttackType == 4) animIndex = 2;
-                else if (bossAttackType == 3) animIndex = (bossComboStep == 1) ? 3 : 2;
-                else { if (attackTimer > 1.0f) animIndex = 2; else animIndex = 3; }
-            }
-            else animIndex = 0;
+        // --- アニメーション番号の決定 ---
+        int animIndex = 2; // デフォルトは待機(Idle)
+        if (isDying) {
+            animIndex = 1; // 死亡
         }
-        else if (state == STATE_CHASE || state == STATE_PATROL) animIndex = 3;
-
-        if (animIndex >= gm.animCount) animIndex = 0;
-        currentAnimIndex = animIndex;
-
-        int frame = animFrameCounter; ModelAnimation anim = gm.anims[currentAnimIndex];
-        if (isDying) { if (frame >= anim.frameCount - 1) frame = anim.frameCount - 1; }
-        else { frame = frame % anim.frameCount; }
-
-        if (gm.animCount > 0) UpdateModelAnimation(gm.model, anim, frame);
-
-        float rotationAngle = 0.0f; Vector3 targetDir = { 0, 0, 1 };
-        if (!isDying) {
-            if (isBoss) {
-                if (bossAttackType != 0) targetDir = lastAttackDir;
-                else if (state == STATE_ATTACK || state == STATE_CHASE) targetDir = Vector3Subtract(playerPos, position);
-                else targetDir = Vector3Subtract(patrolTarget, position);
+        else if (isBoss) {
+            if (bossAttackType == 1) animIndex = 0; // コンボ斬撃モーション
+            else if (bossAttackType == 2 || bossAttackType == 4) animIndex = 2; // 魔法・AoEタメ中は待機ポーズ
+            else if (bossAttackType == 3) animIndex = (bossComboStep == 1) ? 3 : 2; // 突進突撃中は走り(3)
+            else {
+                // ★ 修正: bossAttackType == 0（攻撃間の移動・アプローチフェーズ）
+                float distToPlayer = Vector3Distance(position, playerPos);
+                if (state == STATE_PATROL) {
+                    animIndex = 3; // パトロール徘徊中は歩き/走り
+                }
+                else if (state == STATE_ATTACK && distToPlayer > 3.0f) {
+                    animIndex = 3; // プレイヤーに歩み寄ってくる時は走り！
+                }
+                else {
+                    animIndex = 2; // 3m以内の間合いで待機(Idle)
+                }
+            }
+        }
+        else {
+            if (attackAnimTimer > 0.0f) {
+                animIndex = 0; // 攻撃振り下ろしモーション
+            }
+            else if (isChargingAttack) {
+                animIndex = 2; // チャージ中は武器を構えて待機
+            }
+            else if (state == STATE_CHASE || state == STATE_PATROL) {
+                animIndex = 3; // 走り
             }
             else {
-                if (state == STATE_CHASE || state == STATE_ATTACK) targetDir = Vector3Subtract(playerPos, position);
-                else targetDir = Vector3Subtract(patrolTarget, position);
+                animIndex = 2; // クールタイム中の待機
             }
-            if (Vector3Length(targetDir) > 0.01f) rotationAngle = atan2f(targetDir.x, targetDir.z) * RAD2DEG;
+        }
+
+        if (animIndex >= gm.animCount) animIndex = 0;
+        int currentAnimIndex = animIndex;
+
+        // --- フレーム番号の決定（攻撃時間と完全同期） ---
+        ModelAnimation anim = gm.anims[currentAnimIndex];
+        int frame = 0;
+        if (isDying) {
+            frame = (animFrameCounter >= anim.frameCount - 1) ? anim.frameCount - 1 : animFrameCounter;
+        }
+        else if (!isBoss && attackAnimTimer > 0.0f) {
+            float attackProgress = 1.0f - (attackAnimTimer / 0.5f);
+            if (attackProgress < 0.0f) attackProgress = 0.0f;
+            if (attackProgress > 1.0f) attackProgress = 1.0f;
+            frame = (int)(attackProgress * (float)(anim.frameCount - 1));
+        }
+        else {
+            frame = (anim.frameCount > 0) ? (animFrameCounter % anim.frameCount) : 0;
+        }
+
+        if (gm.animCount > 0 && gm.anims != nullptr) {
+            UpdateModelAnimation(gm.model, anim, frame);
+        }
+
+        // --- 向き（回転角度）の計算 ---
+        float rotationAngle = 0.0f;
+        Vector3 targetDir = { 0, 0, 1 };
+        if (!isDying) {
+            if (isBoss) {
+                if (bossAttackType != 0) {
+                    targetDir = lastAttackDir;
+                }
+                else if (state == STATE_ATTACK || state == STATE_CHASE) {
+                    targetDir = Vector3Subtract(playerPos, position);
+                }
+                else {
+                    targetDir = Vector3Subtract(patrolTarget, position);
+                }
+            }
+            else {
+                // 通常敵：チャージ中は攻撃予告方向、索敵追跡中や攻撃ステート時はプレイヤー位置を正面に見据える
+                if (isChargingAttack) {
+                    targetDir = lastAttackDir;
+                }
+                else if (state == STATE_CHASE || state == STATE_ATTACK) {
+                    targetDir = Vector3Subtract(playerPos, position);
+                }
+                else {
+                    targetDir = Vector3Subtract(patrolTarget, position);
+                }
+            }
+
+            targetDir.y = 0.0f; // 水平化
+            if (Vector3Length(targetDir) > 0.01f) {
+                rotationAngle = atan2f(targetDir.x, targetDir.z) * RAD2DEG;
+            }
         }
 
         float scale = 0.01f;
@@ -337,6 +440,7 @@ void Enemy::Draw(bool debug, Camera3D cam, Font font, Vector3 playerPos) {
 
         DrawModel(gm.model, drawPos, scale, WHITE);
 
+        // --- 武器ボーン追従アタッチメント ---
         int handBoneIndex = -1; int weaponBoneIndex = -1;
         for (int i = 0; i < gm.model.boneCount; i++) {
             std::string bName(gm.model.bones[i].name); std::string lowerName = bName;
@@ -358,7 +462,6 @@ void Enemy::Draw(bool debug, Camera3D cam, Font font, Vector3 playerPos) {
                 GameModel& wGm = DataManager::loadedModels[data.weaponModelName];
                 wGm.model.transform = boneWorldTransform;
 
-                // ★修正: アニメーションポインタ(anims)がNULLでないこともチェックする
                 if (wGm.animCount > 0 && wGm.anims != nullptr) {
                     UpdateModelAnimation(wGm.model, wGm.anims[0], frame % wGm.anims[0].frameCount);
                 }
@@ -381,62 +484,132 @@ void Enemy::Draw(bool debug, Camera3D cam, Font font, Vector3 playerPos) {
         if (hasModel) DrawCubeWires(position, 2.0f, 2.0f, 2.0f, RED);
     }
 
+    // =========================================================================
+    // 通常敵のAoE予兆表示（間合いに入ったら枠線出現＋中身が満ちる）
+    // =========================================================================
+    if (!isDying && !isBoss && isChargingAttack && (eType == E_SWORD || eType == E_AXE || eType == E_SPEAR)) {
+        float progress = 1.0f - (attackChargeTimer / attackChargeMax);
+        if (progress < 0.0f) progress = 0.0f;
+        if (progress > 1.0f) progress = 1.0f;
+
+        float aoeRadius = attackRange * 0.9f;
+        Vector3 hitCenter = Vector3Add(position, Vector3Scale(lastAttackDir, attackRange * 0.5f));
+        hitCenter.y = 0.12f;
+
+        // 1. はっきり見える外枠の線
+        DrawCylinderWires(hitCenter, aoeRadius, aoeRadius, 0.04f, 32, Fade(RED, 0.95f));
+
+        // 2. 中身の色：時間経過で薄い赤から濃い赤へ満ちていく
+        float fillAlpha = 0.10f + (progress * 0.55f);
+        DrawCylinder(hitCenter, aoeRadius, aoeRadius, 0.03f, 32, Fade(RED, fillAlpha));
+
+        // 3. 攻撃までの時間を直感的に伝えるチャージゲージ（中心から外枠へ広がる円）
+        float gaugeRadius = aoeRadius * progress;
+        DrawCylinder(hitCenter, gaugeRadius, gaugeRadius, 0.05f, 32, Fade(ORANGE, 0.5f + progress * 0.4f));
+    }
+
+    // =========================================================================
+    // ボスのAoE予兆表示（全パターンで枠線＋進行度ゲージが満ちる）
+    // =========================================================================
     if (!isDying && isBoss && bossAttackType != 0) {
         float maxTime = 1.0f;
-        if (bossAttackType == 1) maxTime = 0.5f;
-        else if (bossAttackType == 2) maxTime = 0.8f;
+        if (bossAttackType == 1) maxTime = 0.6f;
+        else if (bossAttackType == 2) maxTime = 0.9f;
         else if (bossAttackType == 3) maxTime = 1.0f;
-        else if (bossAttackType == 4) maxTime = 1.8f;
+        else if (bossAttackType == 4) maxTime = 2.0f;
 
         bool showTelegraph = true;
         if (bossAttackType == 3 && bossComboStep == 1) showTelegraph = false;
 
         if (showTelegraph) {
             float progress = 1.0f - (bossActionTimer / maxTime);
-            if (progress < 0.0f) progress = 0.0f; if (progress > 1.0f) progress = 1.0f;
+            if (progress < 0.0f) progress = 0.0f;
+            if (progress > 1.0f) progress = 1.0f;
 
-            Color warnColor = Fade(RED, progress * 0.4f);
-            Color warnLineColor = Fade(MAROON, progress * 0.8f);
+            Color outlineColor = Fade(RED, 0.95f);
+            float baseAlpha = 0.12f + (progress * 0.45f);
+            if (progress > 0.8f && (animFrameCounter % 6 < 3)) baseAlpha += 0.2f;
+            Color fillColor = Fade(PURPLE, baseAlpha);
+            Color chargeColor = Fade(RED, 0.45f + progress * 0.45f);
 
-            if (bossAttackType == 1) {
-                Vector3 hitCenter = Vector3Add(position, Vector3Scale(bossTargetDir, 2.0f));
-                DrawCylinder({ hitCenter.x, 0.05f, hitCenter.z }, 2.5f, 2.5f, 0.05f, 32, warnColor);
-                DrawCylinderWires({ hitCenter.x, 0.05f, hitCenter.z }, 2.5f, 2.5f, 0.05f, 32, warnLineColor);
+            // 1. ボスの巨大全方位AoE（bossAttackType == 4）
+            if (bossAttackType == 4) {
+                float totalRadius = 7.0f;
+                Vector3 center = { position.x, 0.12f, position.z };
+
+                DrawCylinder(center, totalRadius, totalRadius, 0.04f, 36, fillColor);
+                DrawCylinder(center, totalRadius * progress, totalRadius * progress, 0.05f, 36, chargeColor);
+                DrawCylinderWires(center, totalRadius, totalRadius, 0.04f, 36, outlineColor);
+                DrawCylinderWires(center, totalRadius + 0.05f, totalRadius + 0.05f, 0.04f, 36, Fade(RED, 0.6f));
             }
+            // 2. ボスのコンボ斬撃（bossAttackType == 1）
+            else if (bossAttackType == 1) {
+                float comboRadius = 2.5f;
+                Vector3 hitCenter = Vector3Add(position, Vector3Scale(bossTargetDir, 2.0f));
+                hitCenter.y = 0.12f;
+
+                DrawCylinder(hitCenter, comboRadius, comboRadius, 0.04f, 32, Fade(RED, baseAlpha));
+                DrawCylinder(hitCenter, comboRadius * progress, comboRadius * progress, 0.05f, 32, Fade(ORANGE, 0.7f));
+                DrawCylinderWires(hitCenter, comboRadius, comboRadius, 0.04f, 32, outlineColor);
+            }
+            // 3. ボスの3方向弾幕レーン（bossAttackType == 2）
             else if (bossAttackType == 2) {
                 for (int i = -1; i <= 1; i++) {
                     float angle = i * 20.0f * DEG2RAD; float c = cosf(angle), s = sinf(angle);
                     Vector3 dir = { bossTargetDir.x * c - bossTargetDir.z * s, 0.0f, bossTargetDir.x * s + bossTargetDir.z * c };
-                    float len = 20.0f; float w = 1.5f; Vector3 side = { -dir.z, 0.0f, dir.x };
-                    Vector3 p1 = Vector3Add(position, Vector3Scale(side, w / 2.0f));
-                    Vector3 p2 = Vector3Add(position, Vector3Add(Vector3Scale(dir, len), Vector3Scale(side, w / 2.0f)));
-                    Vector3 p3 = Vector3Add(position, Vector3Add(Vector3Scale(dir, len), Vector3Scale(side, -w / 2.0f)));
-                    Vector3 p4 = Vector3Add(position, Vector3Scale(side, -w / 2.0f));
-                    p1.y = p2.y = p3.y = p4.y = 0.05f;
+                    float totalLen = 20.0f; float w = 1.5f;
+                    Vector3 side = { -dir.z, 0.0f, dir.x };
 
-                    DrawTriangle3D(p1, p4, p3, warnColor); DrawTriangle3D(p1, p3, p2, warnColor);
-                    DrawTriangle3D(p3, p4, p1, warnColor); DrawTriangle3D(p2, p3, p1, warnColor);
-                    DrawLine3D(p1, p2, warnLineColor); DrawLine3D(p2, p3, warnLineColor);
-                    DrawLine3D(p3, p4, warnLineColor); DrawLine3D(p4, p1, warnLineColor);
+                    Vector3 p1 = Vector3Add(position, Vector3Scale(side, w / 2.0f));
+                    Vector3 p2 = Vector3Add(position, Vector3Add(Vector3Scale(dir, totalLen), Vector3Scale(side, w / 2.0f)));
+                    Vector3 p3 = Vector3Add(position, Vector3Add(Vector3Scale(dir, totalLen), Vector3Scale(side, -w / 2.0f)));
+                    Vector3 p4 = Vector3Add(position, Vector3Scale(side, -w / 2.0f));
+                    p1.y = p2.y = p3.y = p4.y = 0.12f;
+
+                    // 背景の薄い塗り
+                    DrawTriangle3D(p1, p4, p3, fillColor); DrawTriangle3D(p1, p3, p2, fillColor);
+                    DrawTriangle3D(p3, p4, p1, fillColor); DrawTriangle3D(p2, p3, p1, fillColor);
+
+                    // 手前から奥へ伸びていくチャージゲージ
+                    float chargeLen = totalLen * progress;
+                    Vector3 cp2 = Vector3Add(position, Vector3Add(Vector3Scale(dir, chargeLen), Vector3Scale(side, w / 2.0f)));
+                    Vector3 cp3 = Vector3Add(position, Vector3Add(Vector3Scale(dir, chargeLen), Vector3Scale(side, -w / 2.0f)));
+                    cp2.y = cp3.y = 0.13f;
+                    DrawTriangle3D(p1, p4, cp3, chargeColor); DrawTriangle3D(p1, cp3, cp2, chargeColor);
+                    DrawTriangle3D(cp3, p4, p1, chargeColor); DrawTriangle3D(cp2, cp3, p1, chargeColor);
+
+                    // クッキリした外枠線
+                    DrawLine3D(p1, p2, outlineColor); DrawLine3D(p2, p3, outlineColor);
+                    DrawLine3D(p3, p4, outlineColor); DrawLine3D(p4, p1, outlineColor);
                 }
             }
+            // 4. ボスの突進矩形レーン（bossAttackType == 3）
             else if (bossAttackType == 3) {
-                float len = 10.0f + 2.75f; float w = 5.5f; Vector3 dir = Vector3Normalize(bossTargetDir);
+                float totalLen = 12.75f; float w = 5.5f;
+                Vector3 dir = Vector3Normalize(bossTargetDir);
                 Vector3 side = { -dir.z, 0.0f, dir.x };
-                Vector3 p1 = Vector3Add(position, Vector3Scale(side, w / 2.0f));
-                Vector3 p2 = Vector3Add(position, Vector3Add(Vector3Scale(dir, len), Vector3Scale(side, w / 2.0f)));
-                Vector3 p3 = Vector3Add(position, Vector3Add(Vector3Scale(dir, len), Vector3Scale(side, -w / 2.0f)));
-                Vector3 p4 = Vector3Add(position, Vector3Scale(side, -w / 2.0f));
-                p1.y = p2.y = p3.y = p4.y = 0.05f;
 
-                DrawTriangle3D(p1, p4, p3, warnColor); DrawTriangle3D(p1, p3, p2, warnColor);
-                DrawTriangle3D(p3, p4, p1, warnColor); DrawTriangle3D(p2, p3, p1, warnColor);
-                DrawLine3D(p1, p2, warnLineColor); DrawLine3D(p2, p3, warnLineColor);
-                DrawLine3D(p3, p4, warnLineColor); DrawLine3D(p4, p1, warnLineColor);
-            }
-            else if (bossAttackType == 4) {
-                DrawCylinder({ position.x, 0.05f, position.z }, 7.0f, 7.0f, 0.05f, 32, warnColor);
-                DrawCylinderWires({ position.x, 0.05f, position.z }, 7.0f, 7.0f, 0.05f, 32, warnLineColor);
+                Vector3 p1 = Vector3Add(position, Vector3Scale(side, w / 2.0f));
+                Vector3 p2 = Vector3Add(position, Vector3Add(Vector3Scale(dir, totalLen), Vector3Scale(side, w / 2.0f)));
+                Vector3 p3 = Vector3Add(position, Vector3Add(Vector3Scale(dir, totalLen), Vector3Scale(side, -w / 2.0f)));
+                Vector3 p4 = Vector3Add(position, Vector3Scale(side, -w / 2.0f));
+                p1.y = p2.y = p3.y = p4.y = 0.12f;
+
+                // 背景の薄い塗り
+                DrawTriangle3D(p1, p4, p3, fillColor); DrawTriangle3D(p1, p3, p2, fillColor);
+                DrawTriangle3D(p3, p4, p1, fillColor); DrawTriangle3D(p2, p3, p1, fillColor);
+
+                // 手前から奥へ伸びていくチャージ長方形
+                float chargeLen = totalLen * progress;
+                Vector3 cp2 = Vector3Add(position, Vector3Add(Vector3Scale(dir, chargeLen), Vector3Scale(side, w / 2.0f)));
+                Vector3 cp3 = Vector3Add(position, Vector3Add(Vector3Scale(dir, chargeLen), Vector3Scale(side, -w / 2.0f)));
+                cp2.y = cp3.y = 0.13f;
+                DrawTriangle3D(p1, p4, cp3, chargeColor); DrawTriangle3D(p1, cp3, cp2, chargeColor);
+                DrawTriangle3D(cp3, p4, p1, chargeColor); DrawTriangle3D(cp2, cp3, p1, chargeColor);
+
+                // クッキリした外枠線
+                DrawLine3D(p1, p2, outlineColor); DrawLine3D(p2, p3, outlineColor);
+                DrawLine3D(p3, p4, outlineColor); DrawLine3D(p4, p1, outlineColor);
             }
         }
     }

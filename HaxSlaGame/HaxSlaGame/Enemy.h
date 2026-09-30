@@ -20,8 +20,13 @@ public:
 
     // --- アニメーション管理 ---
     int animFrameCounter;
+    float attackAnimTimer;
     bool isDying;
     bool isDead;
+
+    bool isChargingAttack;
+    float attackChargeTimer;
+    float attackChargeMax;
 
     // --- ボス専用AIフラグ ---
     bool isBoss;

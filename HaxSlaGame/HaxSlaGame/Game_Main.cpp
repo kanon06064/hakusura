@@ -6,15 +6,13 @@
 #include <iostream>
 #include <time.h>
 #include <algorithm>
-#include <unordered_set> // ★追加: 文字抽出の最適化に使用
+#include <unordered_set>
 
-// 翻訳テキスト取得用ヘルパー関数
 static std::string T(const std::string& key, const std::string& def) {
     if (DataManager::uiStrings.count(key)) return DataManager::uiStrings[key];
     return def;
 }
 
-// コンストラクタ：ウィンドウの生成と初期設定
 Game::Game()
     : screenWidth(1280), screenHeight(720), player(nullptr), camera({ 0 }), state(STATE_TITLE),
     floor(0), currentDungeonId(0), unlockedDungeonId(0), currentSlot(0), hoveredEntranceIndex(-1),
@@ -24,10 +22,10 @@ Game::Game()
 {
     InitWindow(screenWidth, screenHeight, "3D Hack and Slash RPG Refactored");
 
-    rlImGuiSetup(true); // F1キーで開くデバッグUIのセットアップ
+    rlImGuiSetup(true);
     AudioManager::Init();
     SetTargetFPS(60);
-    DataManager::LoadAllData(); // JSON設定や3Dモデルのロード
+    DataManager::LoadAllData();
     maxFloors = { 0, 0, 0 };
 
     if (DataManager::keyConfig.isFullscreen && !IsWindowFullscreen()) {
@@ -36,16 +34,10 @@ Game::Game()
         ToggleFullscreen();
     }
 
-    // ========================================================
-    // ★ フォント読み込みの大幅な最適化 (クラッシュ・起動遅延の修正)
-    // ========================================================
     std::unordered_set<int> uniqueCodepoints;
-
-    // 基本的な英数字(ASCII)と全角英数字は無条件で追加
     for (int i = 32; i < 127; i++) uniqueCodepoints.insert(i);
     for (int i = 0xFF00; i <= 0xFFEF; i++) uniqueCodepoints.insert(i);
 
-    // 文字列からUTF-8の文字コードを取り出すヘルパーラムダ
     auto addString = [&](const std::string& str) {
         int i = 0;
         while (i < (int)str.length()) {
@@ -56,8 +48,6 @@ Game::Game()
         }
         };
 
-    // マスターデータ(JSON)内に含まれるすべての日本語テキストを走査し、
-    // 「実際にゲーム内で使われている漢字」だけを抽出する
     for (const auto& pair : DataManager::uiStrings) addString(pair.second);
     for (const auto& item : DataManager::itemConfigs) addString(item.name);
     for (const auto& enemy : DataManager::allEnemyData) addString(enemy.name);
@@ -67,7 +57,6 @@ Game::Game()
     std::vector<int> cps;
     for (int cp : uniqueCodepoints) cps.push_back(cp);
 
-    // 抽出した数文字分だけフォントを生成する（VRAMの枯渇を防ぎ、一瞬でロードが終わる）
     font = LoadFontEx("jp_font.ttf", 32, cps.data(), (int)cps.size());
     if (font.texture.id == 0) font = LoadFontEx("C:/Windows/Fonts/msgothic.ttc", 32, cps.data(), (int)cps.size());
     if (font.texture.id == 0) font = GetFontDefault(); else SetTextureFilter(font.texture, TEXTURE_FILTER_BILINEAR);
@@ -85,7 +74,6 @@ Game::~Game() {
     CloseWindow();
 }
 
-// ゲームの新規開始時の初期化
 void Game::InitGame() {
     floor = 0; currentDungeonId = 0; unlockedDungeonId = 0;
     maxFloors = { 0, 0, 0 }; hoveredEntranceIndex = -1;
@@ -98,10 +86,8 @@ void Game::InitGame() {
     Vector3 startPos = dungeon.GetStartPosition(); startPos.y = 0.5f;
     player = new Player(startPos);
 
-    // カメラの初期位置設定
     camera = { {player->position.x + 10.0f, 15.0f, player->position.z + 10.0f}, player->position, {0.0f, 1.0f, 0.0f}, 45.0f, 0 };
 
-    // 各種リストとフラグのクリア
     fxManager.projectiles.clear(); fxManager.effects.clear(); fxManager.damageTexts.clear();
     enemies.clear(); droppedItems.clear(); storageItems.clear(); storageEquip.clear();
     debugMode = false; showMenu = false; showStorage = false; showReforgeMenu = false;
@@ -111,23 +97,20 @@ void Game::InitGame() {
     AudioManager::PlayBGM(BGM_HOME);
 }
 
-// ポートフォリオ用モード(Lv99・最強装備で開始しボスと3連戦するモード)の初期化
 void Game::StartPortfolioMode() {
     InitGame();
     isPortfolioMode = true;
     currentSlot = 3;
 
     player->level = 99; player->gold = 999999; player->skillPoints = 9999;
-    for (auto& node : player->skillTree) node.unlocked = true; // 全スキル解放
+    for (auto& node : player->skillTree) node.unlocked = true;
 
-    // 全てのアイテムを限界まで取得
     for (const auto& item : DataManager::itemConfigs) {
         ItemData i = item;
-        if (i.type == "EQUIP" || i.type == "ARMOR") { i.modifierId = 7; player->inventoryEquip.push_back(i); } // 伝説エンチャント
+        if (i.type == "EQUIP" || i.type == "ARMOR") { i.modifierId = 7; player->inventoryEquip.push_back(i); }
         else { i.count = 99; player->inventoryItems.push_back(i); }
     }
 
-    // 伝説の装備(ID:400番台、540番台)を強制的に装備させる
     for (auto& eq : player->inventoryEquip) {
         if (eq.id == 403) { player->equippedData[0] = eq; player->equippedWeapons[0] = AXE; }
         if (eq.id == 405) { player->equippedData[1] = eq; player->equippedWeapons[1] = WAND; }
@@ -145,7 +128,6 @@ void Game::StartPortfolioMode() {
     logs.insert(logs.begin(), { T("LOG_RUSH_START", "RUSH MODE STARTED!"), 5.0f, ORANGE });
 }
 
-// デバッグルーム(全種類の敵を並べてテストする空間)の初期化
 void Game::InitDebugRoom() {
     floor = -1; state = STATE_DEBUG_ROOM; enemies.clear();
     camera.position = { 10.0f, 10.0f, 20.0f }; camera.target = { 10.0f, 0.0f, 0.0f }; camera.up = { 0.0f, 1.0f, 0.0f }; camera.fovy = 45.0f; camera.projection = CAMERA_PERSPECTIVE;
@@ -162,7 +144,6 @@ void Game::InitDebugRoom() {
 }
 void Game::StartDebugRoom() { if (player) delete player; player = new Player({ 0,0,0 }); InitDebugRoom(); }
 
-// 既存のセーブデータをロードしてゲームを開始
 void Game::LoadAndStart(int slot) {
     currentSlot = slot; InitGame();
     if (DataManager::LoadGame(slot, player, floor, currentDungeonId, unlockedDungeonId, maxFloors, storageItems, storageEquip, isPortfolioMode)) {
@@ -171,7 +152,6 @@ void Game::LoadAndStart(int slot) {
             state = STATE_DUNGEON;
             dungeon.Generate(false, floor, currentDungeonId, unlockedDungeonId);
 
-            // 最下層の場合は、ボス部屋の階段を「ホームへの帰還用ポータル」に差し替える
             int maxF = (currentDungeonId == 0) ? 30 : (currentDungeonId == 1) ? 50 : 100;
             if (isPortfolioMode) maxF = 3;
             if (floor == maxF) {
@@ -193,28 +173,25 @@ void Game::SaveCurrentSlot() {
     if (player) { DataManager::SaveGame(currentSlot, player, floor, currentDungeonId, unlockedDungeonId, maxFloors, storageItems, storageEquip, isPortfolioMode); AudioManager::PlaySE(SE_SAVE); }
 }
 
-// 指定した数だけランダムな敵をマップにスポーンさせる
 void Game::SpawnEnemies(int count) {
     if (state == STATE_HOME) return; enemies.clear();
 
-    // 敵の出現数が多すぎて処理落ちするのを防ぐため、最大25体に制限する(キャップ処理)
     int spawnCount = count;
     if (spawnCount > 25) spawnCount = 25;
 
     if (isPortfolioMode) {
-        if (floor == 1) { for (int i = 0; i < spawnCount; i++) { enemies.push_back(Enemy(dungeon.GetRandomFloorPos(), DataManager::GetRandomEnemyForFloor(30, 0), 30)); } } // ザコ敵の群れ
-        else if (floor == 2) { if (dungeon.bossSpawnPos.x != -999) { Enemy boss(dungeon.bossSpawnPos, DataManager::GetBossEnemy(30, 0), 50); boss.maxHp *= 3.0f; boss.hp = boss.maxHp; boss.radius = 1.5f; boss.isBoss = true; enemies.push_back(boss); } bossDefeated = false; } // 中ボス
-        else if (floor == 3) { if (dungeon.bossSpawnPos.x != -999) { Enemy boss(dungeon.bossSpawnPos, DataManager::GetBossEnemy(100, 2), 100); boss.maxHp *= 3.0f; boss.hp = boss.maxHp; boss.radius = 1.5f; boss.isBoss = true; enemies.push_back(boss); } bossDefeated = false; } // ラスボス
+        if (floor == 1) { for (int i = 0; i < spawnCount; i++) { enemies.push_back(Enemy(dungeon.GetRandomFloorPos(), DataManager::GetRandomEnemyForFloor(30, 0), 30)); } }
+        else if (floor == 2) { if (dungeon.bossSpawnPos.x != -999) { Enemy boss(dungeon.bossSpawnPos, DataManager::GetBossEnemy(30, 0), 50); boss.maxHp *= 3.0f; boss.hp = boss.maxHp; boss.radius = 1.5f; boss.isBoss = true; enemies.push_back(boss); } bossDefeated = false; }
+        else if (floor == 3) { if (dungeon.bossSpawnPos.x != -999) { Enemy boss(dungeon.bossSpawnPos, DataManager::GetBossEnemy(100, 2), 100); boss.maxHp *= 3.0f; boss.hp = boss.maxHp; boss.radius = 1.5f; boss.isBoss = true; enemies.push_back(boss); } bossDefeated = false; }
         return;
     }
 
-    if (floor > 0 && floor % 10 == 5) return; // 5階ごとの休憩フロアには敵を湧かせない
+    if (floor > 0 && floor % 10 == 5) return;
 
     int enemyLevel = floor;
     if (currentDungeonId == 1) enemyLevel += 30;
     if (currentDungeonId == 2) enemyLevel += 60;
 
-    // 10階ごとのボスフロア生成
     if (floor > 0 && floor % 10 == 0) {
         if (dungeon.bossSpawnPos.x != -999) {
             Enemy boss(dungeon.bossSpawnPos, DataManager::GetBossEnemy(floor, currentDungeonId), enemyLevel);
@@ -224,13 +201,11 @@ void Game::SpawnEnemies(int count) {
         bossDefeated = false; return;
     }
 
-    // 通常階層の敵スポーン
     for (int i = 0; i < spawnCount; i++) {
         enemies.push_back(Enemy(dungeon.GetRandomFloorPos(), DataManager::GetRandomEnemyForFloor(floor, currentDungeonId), enemyLevel));
     }
 }
 
-// ゲームのメインループ（ウィンドウが閉じられるまでここを回る）
 void Game::Run() { while (!WindowShouldClose()) { Update(); Draw(); } }
 
 void Game::UpdateDebugRoom() {
@@ -239,32 +214,27 @@ void Game::UpdateDebugRoom() {
     if (IsKeyPressed(KEY_ESCAPE) || IsKeyPressed(KEY_TAB) || IsGamepadButtonPressed(0, GAMEPAD_BUTTON_MIDDLE_RIGHT)) { state = STATE_TITLE; enemies.clear(); AudioManager::PlayBGM(BGM_TITLE); }
 }
 
-// 毎フレーム呼ばれる、ゲームロジックの更新処理
 void Game::Update() {
     screenWidth = GetScreenWidth();
     screenHeight = GetScreenHeight();
 
     AudioManager::Update();
 
-    // メニューやダイアログが開いている間は、プレイヤーや敵の動きを停止させる(ポーズ)
     bool stopPlayer = showMenu || showPrompt || showStorage || showReforgeMenu || showWarpMenu || showCraftMenu || showQuestMenu || state == STATE_TITLE;
     if (UI::showDetail) stopPlayer = true;
 
-    // UIのゲームパッド(十字キー)操作を更新
     if (stopPlayer) { UI::UpdatePadNavigation(); }
     UI::ClearInteractables();
 
-    // キャンセル操作(メニューを閉じるなど)の入力判定
     bool cancelInput = false;
     if (IsGamepadAvailable(0)) {
         if (stopPlayer || state == STATE_TITLE) {
-            if (IsGamepadButtonPressed(0, GAMEPAD_BUTTON_RIGHT_FACE_RIGHT)) cancelInput = true; // Bボタンでキャンセル
+            if (IsGamepadButtonPressed(0, GAMEPAD_BUTTON_RIGHT_FACE_RIGHT)) cancelInput = true;
         }
     }
 
-    if (IsKeyPressed(KEY_ESCAPE)) { cancelInput = true; } // ESCキーでキャンセル
+    if (IsKeyPressed(KEY_ESCAPE)) { cancelInput = true; }
 
-    // サブウィンドウ(アイテム詳細やダイアログ)だけはマウスの右クリックでも閉じられるようにする
     if (stopPlayer && IsMouseButtonPressed(MOUSE_BUTTON_RIGHT)) {
         if (UI::showDetail) { UI::showDetail = false; AudioManager::PlaySE(SE_CLICK); }
         else if (UI::deleteConfirmSlot > 0) { UI::deleteConfirmSlot = 0; AudioManager::PlaySE(SE_CLICK); }
@@ -273,7 +243,6 @@ void Game::Update() {
 
     if (cancelInput) {
         AudioManager::PlaySE(SE_CLICK);
-        // 上に被さっているUIから順番に閉じていく
         if (UI::showDetail) UI::showDetail = false;
         else if (UI::deleteConfirmSlot > 0) UI::deleteConfirmSlot = 0;
         else if (showPrompt) { showPrompt = false; sceneTimer = 1.0f; }
@@ -290,7 +259,6 @@ void Game::Update() {
 
     float dt = GetFrameTime();
 
-    // 死亡時やクリア時の画面では入力待ちをしてペナルティ/報酬処理へ
     if (state == STATE_GAMEOVER || state == STATE_GAMECLEAR) {
         if (IsMouseButtonPressed(0) || IsKeyPressed(KEY_SPACE) || IsGamepadButtonPressed(0, GAMEPAD_BUTTON_RIGHT_FACE_DOWN)) {
             ApplyDeathPenalty();
@@ -298,13 +266,12 @@ void Game::Update() {
         return;
     }
 
-    if (IsKeyPressed(KEY_F1)) debugMode = !debugMode; // F1でデバッグUI開閉
-    if (IsKeyPressed(KEY_TAB) || IsGamepadButtonPressed(0, GAMEPAD_BUTTON_MIDDLE_RIGHT)) { // TABやStartボタンでメインメニュー開閉
+    if (IsKeyPressed(KEY_F1)) debugMode = !debugMode;
+    if (IsKeyPressed(KEY_TAB) || IsGamepadButtonPressed(0, GAMEPAD_BUTTON_MIDDLE_RIGHT)) {
         if (!UI::showDetail) { showMenu = !showMenu; AudioManager::PlaySE(SE_CLICK); }
     }
-    if (debugMode) { if (IsKeyPressed(KEY_N)) NextFloor(); if (IsKeyPressed(KEY_R)) ReturnHome(); } // デバッグ用強制フロア移動
+    if (debugMode) { if (IsKeyPressed(KEY_N)) NextFloor(); if (IsKeyPressed(KEY_R)) ReturnHome(); }
 
-    // メニューを開いている時に左スティックを倒すと、マウスカーソルが疑似的に移動する
     if (IsGamepadAvailable(0) && stopPlayer) {
         float mx = GetGamepadAxisMovement(0, GAMEPAD_AXIS_LEFT_X);
         float my = GetGamepadAxisMovement(0, GAMEPAD_AXIS_LEFT_Y);
@@ -315,21 +282,19 @@ void Game::Update() {
         }
     }
 
-    // --- カメラの回転とズーム処理 ---
+    // --- カメラ計算 ---
     Vector3 camOffset = Vector3Subtract(camera.position, camera.target);
     float dist = Vector3Length(camOffset);
     float horizontalDist = sqrtf(camOffset.x * camOffset.x + camOffset.z * camOffset.z);
-    float pitch = atan2f(camOffset.y, horizontalDist); // 上下の角度
-    float yaw = atan2f(camOffset.x, camOffset.z);      // 左右の角度
+    float pitch = atan2f(camOffset.y, horizontalDist);
+    float yaw = atan2f(camOffset.x, camOffset.z);
 
     if (!stopPlayer) {
-        // マウスの右ドラッグで視点を回す（コンフィグの感度を掛ける）
         if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) {
             Vector2 delta = GetMouseDelta();
             yaw -= delta.x * 0.01f * DataManager::keyConfig.mouseSensitivity;
             pitch += delta.y * 0.01f * DataManager::keyConfig.mouseSensitivity;
         }
-        // ゲームパッドの右スティックで視点を回す（コンフィグの感度を掛ける）
         if (IsGamepadAvailable(0)) {
             float rx = GetGamepadAxisMovement(0, GAMEPAD_AXIS_RIGHT_X);
             float ry = GetGamepadAxisMovement(0, GAMEPAD_AXIS_RIGHT_Y);
@@ -338,18 +303,15 @@ void Game::Update() {
                 pitch -= ry * 0.05f * DataManager::keyConfig.padSensitivity;
             }
         }
-        // マウスホイールでズームイン・ズームアウト
         float wheel = GetMouseWheelMove();
         if (wheel != 0) { dist -= wheel * 2.0f; }
     }
 
-    // カメラの角度と距離を制限する(真上/真下に行き過ぎないようにする)
     float minPitch = 10.0f * DEG2RAD; float maxPitch = 80.0f * DEG2RAD;
     if (pitch < minPitch) pitch = minPitch; if (pitch > maxPitch) pitch = maxPitch;
     float minDist = 5.0f; float maxDist = 30.0f;
     if (dist < minDist) dist = minDist; if (dist > maxDist) dist = maxDist;
 
-    // プレイヤーの位置を追従し、計算した角度と距離でカメラの座標を決定する
     camera.target = player->position;
     float newHorizontal = dist * cosf(pitch);
     camOffset.y = dist * sinf(pitch);
@@ -357,29 +319,25 @@ void Game::Update() {
     camOffset.z = newHorizontal * cosf(yaw);
     camera.position = Vector3Add(camera.target, camOffset);
 
-    //カメラとターゲットの両方に揺れオフセットを加算
+    // ★ 修正: カメラシェイクの適用
     Vector3 shake = fxManager.GetShakeOffset();
     camera.target = Vector3Add(camera.target, shake);
     camera.position = Vector3Add(camera.position, shake);
 
-    // --- プレイヤーとエフェクトの更新 ---
     player->Update(camera, dungeon, enemies, fxManager, stopPlayer);
     fxManager.Update(dt, dungeon);
     fxManager.CheckProjectileCollisions(enemies, *player, dungeon);
-    dungeon.UpdateVisibility(player->position); // 未探索のマスを開ける
+    dungeon.UpdateVisibility(player->position);
 
     if (!stopPlayer) {
         if (player->hp <= 0 && state != STATE_HOME) { state = STATE_GAMEOVER; AudioManager::PlayBGM(BGM_NONE); }
 
-        // --- 敵の更新と死亡時の処理 ---
         for (int i = (int)enemies.size() - 1; i >= 0; i--) {
             enemies[i].Update(*player, dungeon, fxManager);
             if (enemies[i].hp <= 0 && !enemies[i].isDying) {
-                // 経験値・ゴールド獲得、クエスト進行
                 player->AddExp(enemies[i].expValue, fxManager); player->gold += enemies[i].data.gold;
                 player->UpdateHuntQuest(enemies[i].data.id);
 
-                // アイテムのドロップ判定
                 for (int id : enemies[i].data.drops) {
                     ItemData cfg = DataManager::GetItemConfigCopy(id);
                     if (cfg.id != -1) {
@@ -387,7 +345,6 @@ void Game::Update() {
                         if ((float)GetRandomValue(0, 10000) / 10000.0f <= chance) {
                             if (cfg.type == "EQUIP" || cfg.type == "ARMOR") cfg.modifierId = DataManager::GetRandomModifierId();
                             DroppedItem di; di.pos = enemies[i].position; di.pos.y += 0.5f; di.data = cfg;
-                            // アイテムが放物線を描いて飛び散る初速を設定
                             di.vel = { (float)GetRandomValue(-15, 15) * 0.01f, (float)GetRandomValue(30, 40) * 0.01f, (float)GetRandomValue(-15, 15) * 0.01f };
                             di.rotation = (float)GetRandomValue(0, 360);
                             droppedItems.push_back(di);
@@ -399,7 +356,6 @@ void Game::Update() {
             if (enemies[i].isDead) { enemies.erase(enemies.begin() + i); }
         }
 
-        // --- ドロップアイテムの物理挙動(重力と壁の反射) ---
         for (auto& item : droppedItems) {
             Vector3 nextX = item.pos; nextX.x += item.vel.x;
             if (!dungeon.CheckCollisionRadius(nextX, 0.2f)) { item.pos.x = nextX.x; }
@@ -408,37 +364,50 @@ void Game::Update() {
             if (!dungeon.CheckCollisionRadius(nextZ, 0.2f)) { item.pos.z = nextZ.z; }
             else { item.vel.z *= -0.8f; }
 
-            item.pos.y += item.vel.y; item.vel.y -= 2.0f * dt; // 重力
-            if (item.pos.y <= 0.2f) { // 地面に落ちたらバウンド
+            item.pos.y += item.vel.y; item.vel.y -= 2.0f * dt;
+            if (item.pos.y <= 0.2f) {
                 item.pos.y = 0.2f; item.vel.y *= -0.5f; item.vel.x *= 0.8f; item.vel.z *= 0.8f;
                 if (fabsf(item.vel.y) < 0.05f) item.vel.y = 0;
             }
-            item.rotation += 100.0f * dt * (fabsf(item.vel.x) + fabsf(item.vel.z)); // 飛んでいる間は回転する
+            item.rotation += 100.0f * dt * (fabsf(item.vel.x) + fabsf(item.vel.z));
         }
 
         // --- ボス討伐判定とダンジョンクリア判定 ---
         if (isPortfolioMode) {
             if ((floor == 2 || floor == 3) && enemies.empty() && !bossDefeated) {
-                bossDefeated = true; logs.insert(logs.begin(), { T("LOG_BOSS_DEFEAT", "BOSS DEFEATED!"), 5.0f, GOLD });
+                bossDefeated = true;
+                // ★ 修正: ボス撃破時の出現演出
+                AudioManager::PlaySE(SE_STAIRS);
+                fxManager.ShakeScreen(0.3f, 0.5f);
+                if (dungeon.bossSpawnPos.x != -999) {
+                    fxManager.SpawnEffect(dungeon.bossSpawnPos, { 0, 1, 0 }, FX_SMASH, GOLD, 4.0f);
+                }
+                logs.insert(logs.begin(), { T("LOG_BOSS_DEFEAT", "BOSS DEFEATED!"), 5.0f, GOLD });
                 if (floor == 3) { state = STATE_GAMECLEAR; AudioManager::PlayBGM(BGM_NONE); }
             }
         }
         else {
             if (floor > 0 && floor % 10 == 0 && enemies.empty() && !bossDefeated) {
                 bossDefeated = true;
+                // ★ 修正: ボス撃破時の出現演出
+                AudioManager::PlaySE(SE_STAIRS);
+                fxManager.ShakeScreen(0.3f, 0.5f);
+                if (dungeon.bossSpawnPos.x != -999) {
+                    fxManager.SpawnEffect(dungeon.bossSpawnPos, { 0, 1, 0 }, FX_SMASH, GOLD, 4.0f);
+                }
+
                 int maxF = (currentDungeonId == 0) ? 30 : (currentDungeonId == 1) ? 50 : 100;
-                if (floor == maxF) { // そのダンジョンの最下層だった場合
+                if (floor == maxF) {
                     if (currentDungeonId == unlockedDungeonId && unlockedDungeonId < 2) {
                         unlockedDungeonId++; UI::AddSystemLog(T("LOG_NEXT_DUNGEON", "NEXT DUNGEON UNLOCKED!"), LIME);
                     }
-                    if (currentDungeonId == 2) { state = STATE_GAMECLEAR; AudioManager::PlayBGM(BGM_NONE); } // 第3ダンジョンクリアなら全クリア
+                    if (currentDungeonId == 2) { state = STATE_GAMECLEAR; AudioManager::PlayBGM(BGM_NONE); }
                     else { UI::AddSystemLog(T("LOG_DUNGEON_CLEAR", "DUNGEON CLEARED!"), GOLD); }
                 }
                 else { UI::AddSystemLog(T("LOG_BOSS_DEFEAT", "BOSS DEFEATED!"), GOLD); }
             }
         }
 
-        // --- プレイヤーによるアイテム拾い判定 ---
         for (int i = (int)droppedItems.size() - 1; i >= 0; i--) {
             if (Vector3Distance(player->position, droppedItems[i].pos) < 1.0f) {
                 if (player->AddToInventory(droppedItems[i].data)) {
@@ -448,43 +417,48 @@ void Game::Update() {
             }
         }
 
-        // --- 各種オブジェクトや施設への接近判定(インタラクト) ---
         auto dist2D = [](Vector3 a, Vector3 b) { return Vector2Distance({ a.x, a.z }, { b.x, b.z }); };
         bool clickAction = IsMouseButtonPressed(0) || IsGamepadButtonPressed(0, GAMEPAD_BUTTON_RIGHT_FACE_DOWN);
 
         if (sceneTimer > 0) sceneTimer -= dt;
         else {
-            bool canUseStairs = true;
-            // ボスを倒すまでは階段を封印する
-            if (!isPortfolioMode && floor > 0 && floor % 10 == 0 && !bossDefeated) canUseStairs = false;
-            if (isPortfolioMode && (floor == 2 || floor == 3) && !bossDefeated) canUseStairs = false;
-
             if (state == STATE_HOME) {
                 hoveredEntranceIndex = -1;
                 for (int i = 0; i < 3; i++) {
                     if (dungeon.dungeonEntrances[i].x != -999 && dist2D(player->position, dungeon.dungeonEntrances[i]) < 2.0f) {
-                        hoveredEntranceIndex = i; showPrompt = true; // ダンジョンへの入り口に接近
+                        hoveredEntranceIndex = i; showPrompt = true;
                     }
                 }
             }
             if (state == STATE_DUNGEON) {
-                // 最下層の帰還ポータルに乗った時
-                if (!isPortfolioMode && floor == ((currentDungeonId == 0) ? 30 : (currentDungeonId == 1) ? 50 : 100) && dist2D(player->position, dungeon.portalPos) < 2.0f) showPrompt = true;
-                // 下り階段に乗った時
-                else if (canUseStairs && dungeon.stairsDownPos.x != -999 && dist2D(player->position, dungeon.stairsDownPos) < 2.0f) { showPrompt = true; }
-                // 登り階段(脱出)に乗った時
-                else if (dungeon.stairsUpPos.x != -999 && dist2D(player->position, dungeon.stairsUpPos) < 2.0f) showPrompt = true;
-                // ボスフロアの帰還ポータルに乗った時
-                else if (dungeon.portalPos.x != -999 && dist2D(player->position, dungeon.portalPos) < 2.0f) showPrompt = true;
+                // ★ 修正: ボス撃破前は中央のクリアポータルや下り階段を反応させない
+                bool isBossFloor = (!isPortfolioMode && floor > 0 && floor % 10 == 0) || (isPortfolioMode && (floor == 2 || floor == 3));
+                bool canUseExit = !isBossFloor || bossDefeated;
+                bool isBossCenterPortal = (dungeon.bossSpawnPos.x != -999 && Vector3Distance(dungeon.portalPos, dungeon.bossSpawnPos) < 5.0f);
+
+                // 下り階段（ボス階では撃破後のみ反応）
+                if (canUseExit && dungeon.stairsDownPos.x != -999 && dist2D(player->position, dungeon.stairsDownPos) < 2.0f) {
+                    showPrompt = true;
+                }
+                // ボス部屋中央のクリアポータル（ボス撃破後のみ反応！）
+                else if (isBossCenterPortal && canUseExit && dist2D(player->position, dungeon.portalPos) < 2.0f) {
+                    showPrompt = true;
+                }
+                // 入口安全地帯の帰還ポータル（いつでも使用可能）
+                else if (!isBossCenterPortal && dungeon.portalPos.x != -999 && dist2D(player->position, dungeon.portalPos) < 2.0f) {
+                    showPrompt = true;
+                }
+                // 登り階段（脱出：いつでも使用可能）
+                else if (dungeon.stairsUpPos.x != -999 && dist2D(player->position, dungeon.stairsUpPos) < 2.0f) {
+                    showPrompt = true;
+                }
             }
         }
 
-        // 回復の泉に触れている間、じわじわとHPが回復する
         if (dungeon.healStationPos.x != -999 && dist2D(player->position, dungeon.healStationPos) < 2.0f) {
             if (player->hp < player->maxHp) { player->hp += 50.0f * dt; if (player->hp > player->maxHp) player->hp = player->maxHp; if (GetRandomValue(0, 10) < 2) fxManager.SpawnEffect(Vector3Add(player->position, { 0,1,0 }), { 0,1,0 }, FX_HIT, GREEN); }
         }
 
-        // ホームの各施設を右クリックで開く
         if (state == STATE_HOME) {
             if (dungeon.storageBoxPos.x != -999 && dist2D(player->position, dungeon.storageBoxPos) < 2.0f && clickAction) { showStorage = true; AudioManager::PlaySE(SE_CLICK); }
             if (dungeon.reforgeStationPos.x != -999 && dist2D(player->position, dungeon.reforgeStationPos) < 2.0f && clickAction) { showReforgeMenu = true; AudioManager::PlaySE(SE_CLICK); }
@@ -494,7 +468,6 @@ void Game::Update() {
         }
     }
 
-    // システムメッセージ(ログ)の寿命管理
     for (int i = (int)logs.size() - 1; i >= 0; i--) { logs[i].life -= dt; if (logs[i].life <= 0) logs.erase(logs.begin() + i); }
 }
 
@@ -503,7 +476,7 @@ void Game::ApplyDeathPenalty() {
         state = STATE_TITLE; isPortfolioMode = false; AudioManager::PlayBGM(BGM_TITLE); return;
     }
     if (state == STATE_GAMEOVER) {
-        player->inventoryItems.clear(); logs.clear(); // デスペナルティで手持ちの素材を全ロスする
+        player->inventoryItems.clear(); logs.clear();
         UI::AddSystemLog(T("LOG_RETURN_HOME", "Returned to Home..."), WHITE);
         UI::AddSystemLog(T("LOG_LOST_MATS", "Lost materials."), RED);
     }
@@ -535,7 +508,6 @@ void Game::NextFloor() {
     state = STATE_DUNGEON; bossDefeated = false;
     dungeon.Generate(false, floor, currentDungeonId, unlockedDungeonId);
 
-    // 最下層の場合は、ボス部屋の下り階段を帰還用ポータルに差し替える
     int maxF = (currentDungeonId == 0) ? 30 : (currentDungeonId == 1) ? 50 : 100;
     if (floor == maxF) {
         dungeon.portalPos = dungeon.stairsDownPos;
@@ -548,7 +520,6 @@ void Game::NextFloor() {
     int enemyLevel = floor; if (currentDungeonId == 1) enemyLevel += 30; if (currentDungeonId == 2) enemyLevel += 60;
     SpawnEnemies(10 + floor); AudioManager::PlayBGM(BGM_DUNGEON);
 
-    // 休息階やボス階以外では、宝箱(Treasure Spot)にランダムなアイテムをスポーンさせる
     if (floor % 10 != 0 && floor % 10 != 5) {
         std::vector<int> candidateItemIds;
         EnemyData currentEnemy = DataManager::GetRandomEnemyForFloor(enemyLevel, currentDungeonId); for (int id : currentEnemy.drops) candidateItemIds.push_back(id);
