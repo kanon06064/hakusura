@@ -170,9 +170,65 @@ void Dungeon::DigCorridor(int x1, int y1, int x2, int y2) {
     for (int y = (int)fminf(y1, y2); y <= (int)fmaxf(y1, y2); y++) map[x2][y] = 0;
 }
 
+void Dungeon::CastVisibilityRay(int x0, int y0, int x1, int y1) {
+    int dx = abs(x1 - x0);
+    int dy = abs(y1 - y0);
+    int sx = (x0 < x1) ? 1 : -1;
+    int sy = (y0 < y1) ? 1 : -1;
+    int err = dx - dy;
+
+    int x = x0;
+    int y = y0;
+
+    while (true) {
+        // マップ範囲内なら探索済みにする
+        if (x >= 0 && x < currentWidth && y >= 0 && y < currentHeight) {
+            discovered[x][y] = true;
+
+            // ★ 壁（または外郭空間）にぶつかったら、壁自体を解放した上で視線を遮断！
+            // （プレイヤー自身がいる足元マス以外の壁でストップ）
+            if (map[x][y] != 0 && !(x == x0 && y == y0)) {
+                break; // 壁の向こう側には光が届かない
+            }
+        }
+        else {
+            break;
+        }
+
+        if (x == x1 && y == y1) break;
+
+        int e2 = 2 * err;
+        if (e2 > -dy) {
+            err -= dy;
+            x += sx;
+        }
+        if (e2 < dx) {
+            err += dx;
+            y += sy;
+        }
+    }
+}
+
+// ★ プレイヤーの現在位置をもとに、壁を貫通しないリアルな視界(Fog of War)を更新
 void Dungeon::UpdateVisibility(Vector3 p) {
-    if (isHome)return; int gx = (int)floorf((p.x + TILE_SIZE / 2) / TILE_SIZE); int gz = (int)floorf((p.z + TILE_SIZE / 2) / TILE_SIZE);
-    for (int y = gz - 5; y <= gz + 5; y++)for (int x = gx - 5; x <= gx + 5; x++) if (x >= 0 && x < currentWidth && y >= 0 && y < currentHeight) discovered[x][y] = true;
+    if (isHome) return;
+
+    int gx = (int)floorf((p.x + TILE_SIZE / 2.0f) / TILE_SIZE);
+    int gz = (int)floorf((p.z + TILE_SIZE / 2.0f) / TILE_SIZE);
+
+    const int R = 6; // 視界の広さ（半径6マス）
+
+    // 視界範囲の外周4辺に向けて放射状にレイ（視線）を飛ばす
+    // 上下の外周辺
+    for (int x = gx - R; x <= gx + R; x++) {
+        CastVisibilityRay(gx, gz, x, gz - R); // 上辺へ
+        CastVisibilityRay(gx, gz, x, gz + R); // 下辺へ
+    }
+    // 左右の外周辺
+    for (int y = gz - R; y <= gz + R; y++) {
+        CastVisibilityRay(gx, gz, gx - R, y); // 左辺へ
+        CastVisibilityRay(gx, gz, gx + R, y); // 右辺へ
+    }
 }
 
 // ★ 修正: showExit に応じてクリアゲートや下り階段の描画を制御

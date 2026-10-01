@@ -45,6 +45,9 @@ public:
     bool IsDiscovered(float x, float z);                  // プレイヤーが探索済みのマスか
     void UpdateVisibility(Vector3 playerPos);             // 視界(探索範囲)を広げる
 
+	void CastVisibilityRay(int x0, int y0, int x1, int y1); // 視界判定のためのレイキャスト
+
+
     Vector3 GetStartPosition();  // 階層開始時のプレイヤー位置を取得
     Vector3 GetRandomFloorPos(); // 敵やアイテムをスポーンさせるためのランダムな床座標を取得
 
