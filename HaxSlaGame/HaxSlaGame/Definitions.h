@@ -24,6 +24,7 @@ enum SkillType { SKILL_PASSIVE, SKILL_ACTIVE_DASH, SKILL_ACTIVE_SMASH, SKILL_ACT
 enum QuestType { QUEST_HUNT, QUEST_GATHER }; // クエスト種別（討伐・収集）
 enum SoundType { SE_ATTACK, SE_ENEMY_ATTACK, SE_CLICK, SE_SKILL, SE_STAIRS, SE_SAVE, SE_REFORGE, SE_LEVELUP, SE_HEAL }; // SEの種別
 enum MusicType { BGM_TITLE, BGM_HOME, BGM_DUNGEON, BGM_NONE }; // BGMの種別
+enum ElementType {ELEM_NONE = 0, ELEM_HELLFIRE = 1, ELEM_ROT = 2, ELEM_SOUL = 3, ELEM_ABYSS = 4}; // 無属性,業火（Hellfire）,腐蝕（Rot）,霊怨（Soul）,深淵（Abyss）
 
 // --- コンフィグ(設定)情報を保持する構造体 ---
 struct KeyConfig {
@@ -59,12 +60,12 @@ struct KeyConfig {
 // --- インゲームの各種データを保持する構造体 ---
 struct Projectile { Vector3 pos = { 0.0f, 0.0f, 0.0f }; Vector3 vel = { 0.0f, 0.0f, 0.0f }; float radius = 0.0f; bool active = false; int type = 0; bool isPlayer = false; };
 struct VisualEffect { Vector3 pos = { 0.0f, 0.0f, 0.0f }; Vector3 dir = { 0.0f, 0.0f, 0.0f }; EffectType type = FX_SLASH; float life = 0.0f; float maxLife = 0.0f; Color color = WHITE; float scale = 1.0f; };
-struct DamageText { Vector3 pos = { 0.0f, 0.0f, 0.0f }; int amount = 0; float life = 0.0f; };
+struct DamageText { Vector3 pos = { 0.0f, 0.0f, 0.0f }; int amount = 0; float life = 0.0f; bool isCrit = false; };
 struct GameLog { std::string message = ""; float life = 0.0f; Color color = WHITE; };
 struct Modifier { int id = 0; std::string name = ""; float atk = 0.0f; float def = 0.0f; float hp = 0.0f; float spd = 0.0f; }; // 装備品のエンチャント(接頭辞)データ
-struct ItemData { int id = -1; std::string name = ""; std::string type = ""; std::string modelName = ""; float heal = 0.0f; float atkBonus = 0.0f; float defBonus = 0.0f; float hpBonus = 0.0f; float speedBonus = 0.0f; float dropChance = 0.0f; int weaponSubtype = -1; int count = 1; int modifierId = 0; };
+struct ItemData { int id = -1; std::string name = ""; std::string type = ""; std::string modelName = ""; float heal = 0.0f; float atkBonus = 0.0f; float defBonus = 0.0f; float hpBonus = 0.0f; float speedBonus = 0.0f; float dropChance = 0.0f; int weaponSubtype = -1; int count = 1; int modifierId = 0; int element = ELEM_NONE;};
 struct DroppedItem { Vector3 pos = { 0.0f, 0.0f, 0.0f }; Vector3 vel = { 0.0f, 0.0f, 0.0f }; float rotation = 0.0f; ItemData data; }; // 物理演算で飛び散るドロップアイテム
-struct EnemyData { int id = 0; std::string name = ""; std::string modelName = ""; std::string weaponModelName = ""; int type = 0; float hp = 0.0f; float speed = 0.0f; float detect = 12.0f; float atkRange = 2.0f; int minFloor = 1; int exp = 20; std::vector<int> drops; int gold = 0; };
+struct EnemyData { int id = 0; std::string name = ""; std::string modelName = ""; std::string weaponModelName = ""; int type = 0; float hp = 0.0f; float speed = 0.0f; float detect = 12.0f; float atkRange = 2.0f; int minFloor = 1; int exp = 20; std::vector<int> drops; int gold = 0; int element = ELEM_NONE;};
 struct SkillNode { int id = 0; std::string name = ""; Vector2 uiPos = { 0.0f, 0.0f }; std::vector<int> reqIds; bool unlocked = false; int cost = 1; float atkAdd = 0.0f; float defAdd = 0.0f; float hpAdd = 0.0f; float cdRedAdd = 0.0f; float healAdd = 0.0f; std::string desc = ""; SkillType type = SKILL_PASSIVE; float maxCooldown = 0.0f; };
 struct QuestData { int id = 0; std::string title = ""; std::string description = ""; QuestType type = QUEST_HUNT; int targetId = 0; int targetCount = 0; int rewardGold = 0; int rewardItemId = -1; int rewardItemCount = 0; };
 struct PlayerQuest { int questId = 0; int currentCount = 0; bool isCompleted = false; };

@@ -30,8 +30,9 @@ void EffectManager::SpawnEffect(Vector3 pos, Vector3 dir, EffectType type, Color
     effects.push_back(eff);
 }
 
-void EffectManager::SpawnDamageText(Vector3 pos, int dmg) {
-    damageTexts.push_back({ Vector3Add(pos, {0, 1.5f, 0}), dmg, 1.0f }); // 1秒間表示
+void EffectManager::SpawnDamageText(Vector3 pos, int dmg, bool isCrit) {
+    // クリティカル時は表示時間を少し長め（1.2秒）にする
+    damageTexts.push_back({ Vector3Add(pos, {0, 1.5f, 0}), dmg, isCrit ? 1.2f : 1.0f, isCrit });
 }
 
 void EffectManager::Update(float dt, Dungeon& d) {
@@ -43,6 +44,12 @@ void EffectManager::Update(float dt, Dungeon& d) {
             shakeIntensity = 0.0f;
         }
     }
+
+    if (damageFlashTimer > 0.0f) {
+        damageFlashTimer -= dt;
+        if (damageFlashTimer < 0.0f) damageFlashTimer = 0.0f;
+    }
+
     // 弾の移動処理と壁との衝突判定
     for (auto& p : projectiles) {
         if (!p.active) continue;
@@ -78,19 +85,27 @@ void EffectManager::CheckProjectileCollisions(std::vector<Enemy>& enemies, Playe
             // プレイヤーが撃った弾が敵に当たったか判定
             for (auto& e : enemies) {
                 if (Vector3Distance(proj.pos, e.position) < (proj.radius + e.radius + 0.3f)) {
-                    // ダメージ計算: 基本ATK + 武器のATK + 乱数(0~5)
+                    // ★ 魔法弾も5%の確率でクリティカル
+                    bool isCrit = (GetRandomValue(1, 100) <= 5);
+
                     float totalBonus = Player::GetItemTotalAtkBonus(p.equippedData[p.activeSlot]);
                     int dmg = (int)(p.attackPower + totalBonus) + GetRandomValue(0, 5);
+                    if (isCrit) dmg = (int)(dmg * 1.75f);
+
                     e.hp -= (float)dmg;
-                    e.hudTimer = 5.0f; // 敵のHPバーを表示させる
-                    e.ApplyKnockback(Vector3Normalize(proj.vel), 0.5f, d); // 弾の飛んだ方向にノックバック
+                    e.hudTimer = 5.0f;
+                    e.ApplyKnockback(Vector3Normalize(proj.vel), isCrit ? 1.0f : 0.5f, d);
 
-                    SpawnDamageText(e.position, dmg);
-                    SpawnEffect(proj.pos, { 0,0,0 }, FX_HIT, GOLD);
-                    
+                    SpawnDamageText(e.position, dmg, isCrit);
+                    SpawnEffect(proj.pos, { 0,0,0 }, FX_HIT, isCrit ? GOLD : PURPLE);
 
-                    proj.active = false; // 当たったので弾を消す
-                    break; // 貫通しない
+                    if (isCrit) {
+                        TriggerHitStop(0.06f);
+                        ShakeScreen(0.15f, 0.3f);
+                    }
+
+                    proj.active = false;
+                    break;
                 }
             }
         }
@@ -105,6 +120,7 @@ void EffectManager::CheckProjectileCollisions(std::vector<Enemy>& enemies, Playe
                 SpawnDamageText(p.position, (int)dmg);
                 SpawnEffect(proj.pos, { 0,0,0 }, FX_HIT, RED);
                 ShakeScreen(0.15f, 0.3f);
+                TriggerDamageFlash(0.25f);
 
                 proj.active = false;
             }
@@ -149,7 +165,8 @@ void EffectManager::Draw() {
             float pTrail = (progress - 0.22f) * 1.5f; if (pTrail < 0.0f) pTrail = 0.0f;
 
             if (pLead > pTrail) {
-                float totalArc = 130.0f * DEG2RAD;
+                // ★ 角度幅を130度から105度に短縮してキレを出す
+                float totalArc = 105.0f * DEG2RAD;
                 float leftAngle = baseAngle - (totalArc * 0.5f);
                 int segments = 16;
 
@@ -163,26 +180,32 @@ void EffectManager::Draw() {
                     float a1 = leftAngle + (totalArc * segP1);
                     float a2 = leftAngle + (totalArc * segP2);
 
-                    // ★ 外径の最大値を武器の射程 e.scale にぴったり合わせる
                     float maxR = e.scale;
-                    float innerR = 0.8f;
-                    float outerR1 = innerR + (maxR - innerR) * (0.3f + 0.7f * t1);
-                    float outerR2 = innerR + (maxR - innerR) * (0.3f + 0.7f * t2);
+                    float innerR = 0.6f; // ★ 手元の余白を少し詰める
+
+                    float thick1 = (maxR - innerR) * sinf(t1 * 3.14159265f);
+                    float thick2 = (maxR - innerR) * sinf(t2 * 3.14159265f);
+
+                    float outerR1 = innerR + thick1;
+                    float outerR2 = innerR + thick2;
 
                     Vector3 pIn1 = { center.x + cosf(a1) * innerR,  center.y, center.z + sinf(a1) * innerR };
                     Vector3 pOut1 = { center.x + cosf(a1) * outerR1, center.y, center.z + sinf(a1) * outerR1 };
                     Vector3 pIn2 = { center.x + cosf(a2) * innerR,  center.y, center.z + sinf(a2) * innerR };
                     Vector3 pOut2 = { center.x + cosf(a2) * outerR2, center.y, center.z + sinf(a2) * outerR2 };
 
+                    // 先端（t=1.0）側ほど明るく、末尾（t=0.0）側ほどフェードアウト
                     float alpha1 = ratio * (t1 * 0.8f);
                     float alpha2 = ratio * (t2 * 0.8f);
 
+                    // 両面描画（見下ろしカメラでしっかり視認）
                     DrawTriangle3D(pIn1, pOut1, pOut2, Fade(e.color, alpha2));
                     DrawTriangle3D(pIn1, pOut2, pIn2, Fade(e.color, alpha1));
                     DrawTriangle3D(pIn1, pOut2, pOut1, Fade(e.color, alpha2));
                     DrawTriangle3D(pIn1, pIn2, pOut2, Fade(e.color, alpha1));
 
-                    DrawLine3D(pOut1, pOut2, Fade(WHITE, alpha2));
+                    // 刃先のエッジライン（外周の白い発光線）
+                    DrawLine3D(pOut1, pOut2, Fade(WHITE, alpha2 * 0.9f));
                 }
             }
         }
@@ -236,10 +259,21 @@ void EffectManager::Draw2D(Font font, Camera3D cam) {
         if (dt.amount == 999) { // 999はレベルアップ時の特殊フラグ
             DrawTextEx(font, "LEVEL UP!!", { s.x - 50, s.y - 30 }, 28, 1, YELLOW);
         }
+        else if (dt.isCrit) {
+            std::string critTxt = TextFormat("CRIT! %d", dt.amount);
+            Vector2 tSize = MeasureTextEx(font, critTxt.c_str(), 34, 1);
+            Vector2 drawPos = { s.x - tSize.x / 2.0f, s.y - 20.0f };
+
+            // 黒の縁取り（影）
+            DrawTextEx(font, critTxt.c_str(), { drawPos.x + 2, drawPos.y + 2 }, 34, 1, Fade(BLACK, dt.life));
+            // 鮮やかな金色/黄色で発光
+            DrawTextEx(font, critTxt.c_str(), drawPos, 34, 1, Fade(GOLD, dt.life));
+        }
         else {
             Color c = ORANGE;
-            if (dt.amount > 20) c = RED; // 大ダメージは赤色にする
-            DrawTextEx(font, TextFormat("%d", dt.amount), { s.x, s.y }, 24, 1, Fade(c, dt.life));
+            if (dt.amount > 25) c = RED;
+            std::string dmgTxt = TextFormat("%d", dt.amount);
+            DrawTextEx(font, dmgTxt.c_str(), { s.x - 10, s.y }, 22, 1, Fade(c, dt.life));
         }
     }
 }

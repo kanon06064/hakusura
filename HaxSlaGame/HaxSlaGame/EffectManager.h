@@ -22,8 +22,21 @@ public:
             shakeIntensity = intensity;
         }
     }
+
     Vector3 GetShakeOffset() const;
     
+    float hitStopTimer = 0.0f;
+    void TriggerHitStop(float duration) {
+        // より長いヒットストップが発生した時のみ上書き
+        if (duration > hitStopTimer) {
+            hitStopTimer = duration;
+        }
+    }
+
+    float damageFlashTimer = 0.0f;
+    void TriggerDamageFlash(float duration = 0.25f) {
+        damageFlashTimer = duration;
+    }
    
     void Update(float dt, Dungeon& d);
     void Draw(); // 3D空間にエフェクトを描画
@@ -32,7 +45,7 @@ public:
     // エフェクトを発生させる関数群
     void SpawnProjectile(Vector3 pos, Vector3 dir, float speed, int type, bool isPlayer);
     void SpawnEffect(Vector3 pos, Vector3 dir, EffectType type, Color col, float scale = 1.0f);
-    void SpawnDamageText(Vector3 pos, int dmg);
+    void SpawnDamageText(Vector3 pos, int dmg, bool isCrit = false);
 
     // プロジェクタイルの当たり判定を処理する
     void CheckProjectileCollisions(std::vector<Enemy>& enemies, Player& p, Dungeon& d);

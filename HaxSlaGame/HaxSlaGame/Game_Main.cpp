@@ -319,12 +319,22 @@ void Game::Update() {
     camOffset.z = newHorizontal * cosf(yaw);
     camera.position = Vector3Add(camera.target, camOffset);
 
-    // ★ 修正: カメラシェイクの適用
+    // カメラシェイクの適用
     Vector3 shake = fxManager.GetShakeOffset();
     camera.target = Vector3Add(camera.target, shake);
     camera.position = Vector3Add(camera.position, shake);
 
-    player->Update(camera, dungeon, enemies, fxManager, stopPlayer);
+    // ヒットストップ判定
+    bool isHitStop = false;
+    if (fxManager.hitStopTimer > 0.0f) {
+        fxManager.hitStopTimer -= dt;
+        isHitStop = true;
+    }
+
+    if (!isHitStop) {
+        player->Update(camera, dungeon, enemies, fxManager, stopPlayer);
+    }
+
     fxManager.Update(dt, dungeon);
     fxManager.CheckProjectileCollisions(enemies, *player, dungeon);
     dungeon.UpdateVisibility(player->position);
@@ -332,22 +342,53 @@ void Game::Update() {
     if (!stopPlayer) {
         if (player->hp <= 0 && state != STATE_HOME) { state = STATE_GAMEOVER; AudioManager::PlayBGM(BGM_NONE); }
 
+        // --- 敵の更新と死亡時のドロップ処理 ---
         for (int i = (int)enemies.size() - 1; i >= 0; i--) {
-            enemies[i].Update(*player, dungeon, fxManager);
+            if (!isHitStop) {
+                enemies[i].Update(*player, dungeon, fxManager);
+            }
+
             if (enemies[i].hp <= 0 && !enemies[i].isDying) {
-                player->AddExp(enemies[i].expValue, fxManager); player->gold += enemies[i].data.gold;
+                player->AddExp(enemies[i].expValue, fxManager);
+                player->gold += enemies[i].data.gold;
                 player->UpdateHuntQuest(enemies[i].data.id);
 
+                // アイテムドロップ抽選
                 for (int id : enemies[i].data.drops) {
                     ItemData cfg = DataManager::GetItemConfigCopy(id);
                     if (cfg.id != -1) {
                         float chance = cfg.dropChance;
                         if ((float)GetRandomValue(0, 10000) / 10000.0f <= chance) {
-                            if (cfg.type == "EQUIP" || cfg.type == "ARMOR") cfg.modifierId = DataManager::GetRandomModifierId();
-                            DroppedItem di; di.pos = enemies[i].position; di.pos.y += 0.5f; di.data = cfg;
-                            di.vel = { (float)GetRandomValue(-15, 15) * 0.01f, (float)GetRandomValue(30, 40) * 0.01f, (float)GetRandomValue(-15, 15) * 0.01f };
+                            if (cfg.type == "EQUIP" || cfg.type == "ARMOR") {
+                                cfg.modifierId = DataManager::GetRandomModifierId();
+                                // 35%の確率で属性が付与
+                                if (GetRandomValue(1, 100) <= 35) {
+                                    cfg.element = GetRandomValue(ELEM_HELLFIRE, ELEM_ABYSS);
+                                }
+                                else {
+                                    cfg.element = ELEM_NONE;
+                                }
+                            }
+
+                            DroppedItem di;
+                            di.pos = enemies[i].position;
+                            di.pos.y += 0.5f;
+                            di.data = cfg;
+                            di.vel = {
+                                (float)GetRandomValue(-15, 15) * 0.01f,
+                                (float)GetRandomValue(30, 40) * 0.01f,
+                                (float)GetRandomValue(-15, 15) * 0.01f
+                            };
                             di.rotation = (float)GetRandomValue(0, 360);
                             droppedItems.push_back(di);
+
+                            // エピック・伝説が落ちた瞬間の演出
+                            int dropTier = Player::GetItemTier(cfg);
+                            if (dropTier >= 4) {
+                                AudioManager::PlaySE(SE_REFORGE);
+                                fxManager.ShakeScreen(0.15f, 0.25f);
+                                UI::AddSystemLog("★ LEGENDARY ITEM DROPPED! ★", GOLD);
+                            }
                         }
                     }
                 }
@@ -356,27 +397,69 @@ void Game::Update() {
             if (enemies[i].isDead) { enemies.erase(enemies.begin() + i); }
         }
 
-        for (auto& item : droppedItems) {
-            Vector3 nextX = item.pos; nextX.x += item.vel.x;
-            if (!dungeon.CheckCollisionRadius(nextX, 0.2f)) { item.pos.x = nextX.x; }
-            else { item.vel.x *= -0.8f; }
-            Vector3 nextZ = item.pos; nextZ.z += item.vel.z;
-            if (!dungeon.CheckCollisionRadius(nextZ, 0.2f)) { item.pos.z = nextZ.z; }
-            else { item.vel.z *= -0.8f; }
+        // --- マグネット吸引 ＆ ドロップアイテム物理挙動 ---
+        if (!isHitStop) {
+            Vector3 playerChest = Vector3Add(player->position, { 0, 0.6f, 0 });
 
-            item.pos.y += item.vel.y; item.vel.y -= 2.0f * dt;
-            if (item.pos.y <= 0.2f) {
-                item.pos.y = 0.2f; item.vel.y *= -0.5f; item.vel.x *= 0.8f; item.vel.z *= 0.8f;
-                if (fabsf(item.vel.y) < 0.05f) item.vel.y = 0;
+            for (int i = (int)droppedItems.size() - 1; i >= 0; i--) {
+                auto& item = droppedItems[i];
+                float dist = Vector3Distance(player->position, item.pos);
+
+                // マグネット吸引（3.5m以内）
+                if (dist < 3.5f && item.pos.y <= 0.4f) {
+                    Vector3 toPlayer = Vector3Subtract(playerChest, item.pos);
+                    Vector3 pullDir = Vector3Normalize(toPlayer);
+                    float pullSpeed = 10.0f + (3.5f - dist) * 4.0f;
+                    item.pos = Vector3Add(item.pos, Vector3Scale(pullDir, pullSpeed * dt));
+                    item.rotation += 400.0f * dt;
+                }
+                else {
+                    Vector3 nextX = item.pos; nextX.x += item.vel.x;
+                    if (!dungeon.CheckCollisionRadius(nextX, 0.2f)) { item.pos.x = nextX.x; }
+                    else { item.vel.x *= -0.8f; }
+
+                    Vector3 nextZ = item.pos; nextZ.z += item.vel.z;
+                    if (!dungeon.CheckCollisionRadius(nextZ, 0.2f)) { item.pos.z = nextZ.z; }
+                    else { item.vel.z *= -0.8f; }
+
+                    item.pos.y += item.vel.y;
+                    item.vel.y -= 2.0f * dt;
+
+                    if (item.pos.y <= 0.2f) {
+                        item.pos.y = 0.2f;
+                        item.vel.y *= -0.5f;
+                        item.vel.x *= 0.8f;
+                        item.vel.z *= 0.8f;
+                        if (fabsf(item.vel.y) < 0.05f) item.vel.y = 0;
+                    }
+                    item.rotation += 100.0f * dt * (fabsf(item.vel.x) + fabsf(item.vel.z));
+                }
+
+                // アイテム回収判定
+                if (dist < 0.7f) {
+                    ItemData itemToPick = item.data;
+                    if (player->AddToInventory(itemToPick)) {
+                        UI::AddSystemLog(TextFormat(T("LOG_ITEM_FOUND", "Found: %s").c_str(), Player::GetFullItemName(itemToPick).c_str()), Player::GetItemRarityColor(itemToPick));
+                        fxManager.SpawnEffect(item.pos, { 0, 1, 0 }, FX_HIT, Player::GetItemRarityColor(itemToPick));
+
+                        int tier = Player::GetItemTier(itemToPick);
+                        if (tier >= 4) {
+                            AudioManager::PlaySE(SE_SAVE);
+                        }
+                        else {
+                            AudioManager::PlaySE(SE_CLICK);
+                        }
+
+                        droppedItems.erase(droppedItems.begin() + i);
+                    }
+                }
             }
-            item.rotation += 100.0f * dt * (fabsf(item.vel.x) + fabsf(item.vel.z));
         }
 
         // --- ボス討伐判定とダンジョンクリア判定 ---
         if (isPortfolioMode) {
             if ((floor == 2 || floor == 3) && enemies.empty() && !bossDefeated) {
                 bossDefeated = true;
-                // ★ 修正: ボス撃破時の出現演出
                 AudioManager::PlaySE(SE_STAIRS);
                 fxManager.ShakeScreen(0.3f, 0.5f);
                 if (dungeon.bossSpawnPos.x != -999) {
@@ -389,7 +472,6 @@ void Game::Update() {
         else {
             if (floor > 0 && floor % 10 == 0 && enemies.empty() && !bossDefeated) {
                 bossDefeated = true;
-                // ★ 修正: ボス撃破時の出現演出
                 AudioManager::PlaySE(SE_STAIRS);
                 fxManager.ShakeScreen(0.3f, 0.5f);
                 if (dungeon.bossSpawnPos.x != -999) {
@@ -408,15 +490,6 @@ void Game::Update() {
             }
         }
 
-        for (int i = (int)droppedItems.size() - 1; i >= 0; i--) {
-            if (Vector3Distance(player->position, droppedItems[i].pos) < 1.0f) {
-                if (player->AddToInventory(droppedItems[i].data)) {
-                    UI::AddSystemLog(TextFormat(T("LOG_ITEM_FOUND", "Found: %s").c_str(), Player::GetFullItemName(droppedItems[i].data).c_str()), Player::GetItemRarityColor(droppedItems[i].data));
-                    droppedItems.erase(droppedItems.begin() + i); AudioManager::PlaySE(SE_CLICK);
-                }
-            }
-        }
-
         auto dist2D = [](Vector3 a, Vector3 b) { return Vector2Distance({ a.x, a.z }, { b.x, b.z }); };
         bool clickAction = IsMouseButtonPressed(0) || IsGamepadButtonPressed(0, GAMEPAD_BUTTON_RIGHT_FACE_DOWN);
 
@@ -431,24 +504,19 @@ void Game::Update() {
                 }
             }
             if (state == STATE_DUNGEON) {
-                // ★ 修正: ボス撃破前は中央のクリアポータルや下り階段を反応させない
                 bool isBossFloor = (!isPortfolioMode && floor > 0 && floor % 10 == 0) || (isPortfolioMode && (floor == 2 || floor == 3));
                 bool canUseExit = !isBossFloor || bossDefeated;
                 bool isBossCenterPortal = (dungeon.bossSpawnPos.x != -999 && Vector3Distance(dungeon.portalPos, dungeon.bossSpawnPos) < 5.0f);
 
-                // 下り階段（ボス階では撃破後のみ反応）
                 if (canUseExit && dungeon.stairsDownPos.x != -999 && dist2D(player->position, dungeon.stairsDownPos) < 2.0f) {
                     showPrompt = true;
                 }
-                // ボス部屋中央のクリアポータル（ボス撃破後のみ反応！）
                 else if (isBossCenterPortal && canUseExit && dist2D(player->position, dungeon.portalPos) < 2.0f) {
                     showPrompt = true;
                 }
-                // 入口安全地帯の帰還ポータル（いつでも使用可能）
                 else if (!isBossCenterPortal && dungeon.portalPos.x != -999 && dist2D(player->position, dungeon.portalPos) < 2.0f) {
                     showPrompt = true;
                 }
-                // 登り階段（脱出：いつでも使用可能）
                 else if (dungeon.stairsUpPos.x != -999 && dist2D(player->position, dungeon.stairsUpPos) < 2.0f) {
                     showPrompt = true;
                 }
@@ -520,6 +588,7 @@ void Game::NextFloor() {
     int enemyLevel = floor; if (currentDungeonId == 1) enemyLevel += 30; if (currentDungeonId == 2) enemyLevel += 60;
     SpawnEnemies(10 + floor); AudioManager::PlayBGM(BGM_DUNGEON);
 
+    // 宝箱スポーン部
     if (floor % 10 != 0 && floor % 10 != 5) {
         std::vector<int> candidateItemIds;
         EnemyData currentEnemy = DataManager::GetRandomEnemyForFloor(enemyLevel, currentDungeonId); for (int id : currentEnemy.drops) candidateItemIds.push_back(id);
@@ -530,7 +599,15 @@ void Game::NextFloor() {
             if (item.id == -1 && !DataManager::itemConfigs.empty()) { int rndId = GetRandomValue(0, (int)DataManager::itemConfigs.size() - 1); item = DataManager::itemConfigs[rndId]; }
 
             if (item.id != -1) {
-                if (item.type == "EQUIP" || item.type == "ARMOR") item.modifierId = DataManager::GetRandomModifierId();
+                if (item.type == "EQUIP" || item.type == "ARMOR") {
+                    item.modifierId = DataManager::GetRandomModifierId();
+                    if (GetRandomValue(1, 100) <= 35) {
+                        item.element = GetRandomValue(ELEM_HELLFIRE, ELEM_ABYSS);
+                    }
+                    else {
+                        item.element = ELEM_NONE;
+                    }
+                }
                 DroppedItem di; di.pos = pos; di.pos.y = 0.2f; di.vel = { 0,0,0 }; di.rotation = (float)GetRandomValue(0, 360); di.data = item;
                 droppedItems.push_back(di);
             }

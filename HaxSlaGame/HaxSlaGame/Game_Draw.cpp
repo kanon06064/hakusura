@@ -1,4 +1,4 @@
-#include "Game.h"
+﻿#include "Game.h"
 #include "DataManager.h"
 #include "AudioManager.h"
 #include "raymath.h"
@@ -69,13 +69,13 @@ void Game::Draw() {
     else {
         ClearBackground(BLACK); BeginMode3D(camera);
 
-        // �� �C��: �{�X�t���A������s���A�{�X���j�O�Ȃ�o���i�K�i�E�N���A�|�[�^���j��`�悵�Ȃ�
+        // ★ 修正: ボスフロア判定を行い、ボス撃破前なら出口（階段・クリアポータル）を描画しない
         bool isBossFloor = (!isPortfolioMode && floor > 0 && floor % 10 == 0) || (isPortfolioMode && (floor == 2 || floor == 3));
         bool showExit = !isBossFloor || bossDefeated;
 
         dungeon.Draw(showExit);
 
-        // �� ���đ��݂��Ă����u�����L���[�u��`�悵�ĉB���iDrawCube BLACK�j�v�����͊��S�폜
+        // ※ かつて存在していた「黒いキューブを描画して隠す（DrawCube BLACK）」処理は完全削除
 
         fxManager.Draw();
 
@@ -83,179 +83,221 @@ void Game::Draw() {
             if (!debugMode && !dungeon.IsDiscovered(item.pos.x, item.pos.z)) continue;
 
             Color rarityCol = Player::GetItemRarityColor(item.data);
+            int tier = Player::GetItemTier(item.data);
 
+            // アイテム箱本体（回転しながら浮遊）
             rlPushMatrix();
             rlTranslatef(item.pos.x, item.pos.y, item.pos.z);
             rlRotatef(item.rotation, 0, 1, 0);
-
-            DrawCube({ 0,0,0 }, 0.5f, 0.4f, 0.5f, rarityCol);
-            DrawCubeWires({ 0,0,0 }, 0.5f, 0.4f, 0.5f, WHITE);
+            DrawCube({ 0,0,0 }, 0.45f, 0.35f, 0.45f, rarityCol);
+            DrawCubeWires({ 0,0,0 }, 0.45f, 0.35f, 0.45f, WHITE);
             rlPopMatrix();
 
-            if (item.data.type == "EQUIP" || item.data.type == "ARMOR") {
-                Color pillarCol = rarityCol;
-                float alpha = (sinf(GetTime() * 5.0f) * 0.5f + 0.5f) * 0.5f + 0.1f;
-                pillarCol.a = (unsigned char)(255 * alpha);
-                DrawCylinder(item.pos, 0.15f, 0.15f, 5.0f, 8, pillarCol);
-            }
-        }
+            // ★ 光の柱（Loot Beam）の描画
+            if (item.data.type == "EQUIP" || item.data.type == "ARMOR" || tier >= 3) {
+                float time = (float)GetTime();
+                float pulse = (sinf(time * 4.0f) * 0.5f + 0.5f); // 0.0 〜 1.0 の脈動
 
-        for (auto& e : enemies) if (debugMode || dungeon.IsDiscovered(e.position.x, e.position.z)) e.Draw(debugMode, camera, font, player->position);
-
-        player->Draw(debugMode);
-        EndMode3D();
-
-        fxManager.Draw2D(font, camera);
-        UI::DrawLogs(logs, *player, camera, font);
-        UI::DrawNearbyItems(*player, droppedItems, dungeon, camera, font);
-
-        int displayFloor = isPortfolioMode ? (floor + 1000) : floor;
-
-        UI::DrawHUD(*player, enemies, dungeon, camera, displayFloor, currentDungeonId, debugMode, font);
-        UI::UpdateSystemLogs(GetFrameTime());
-        UI::DrawSystemLogs(font);
-
-        if (showMenu) {
-            int menuEvent = UI::DrawMenu(*player, dungeon, currentTab, font);
-
-            if (menuEvent == 1) {
-                SaveCurrentSlot();
-                UI::AddSystemLog(T("LOG_GAME_SAVED", "GAME SAVED!"), GREEN);
-            }
-            else if (menuEvent == 2) {
-                state = STATE_TITLE;
-                isPortfolioMode = false;
-                showMenu = false;
-                AudioManager::PlayBGM(BGM_TITLE);
-            }
-        }
-
-        if (showStorage) UI::DrawStorage(*player, font, showStorage, storageItems, storageEquip);
-        if (showReforgeMenu) UI::DrawReforgeMenu(*player, font, showReforgeMenu);
-        if (showWarpMenu) UI::DrawWarpMenu(this, unlockedDungeonId, maxFloors, font, showWarpMenu);
-        if (showCraftMenu) UI::DrawCraftingMenu(*player, font, showCraftMenu);
-        if (showQuestMenu) UI::DrawQuestMenu(*player, font, showQuestMenu);
-
-        if (showPrompt) {
-            int maxF = (currentDungeonId == 0) ? 30 : (currentDungeonId == 1) ? 50 : 100;
-            const char* m = "UNKNOWN";
-
-            auto dist2D = [](Vector3 a, Vector3 b) { return Vector2Distance({ a.x, a.z }, { b.x, b.z }); };
-
-            if (state == STATE_HOME && hoveredEntranceIndex != -1) m = "ENTER_DUNGEON";
-            else if (state == STATE_DUNGEON) {
-                if (!isPortfolioMode && floor == maxF && dist2D(player->position, dungeon.portalPos) < 2.0f) m = "RETURN_HOME";
-                else if (dungeon.stairsDownPos.x != -999 && dist2D(player->position, dungeon.stairsDownPos) < 2.0f) m = "GO_DEEPER";
-                else if (dungeon.stairsUpPos.x != -999 && dist2D(player->position, dungeon.stairsUpPos) < 2.0f) m = "RETURN_HOME";
-                else if (dungeon.portalPos.x != -999 && dist2D(player->position, dungeon.portalPos) < 2.0f) m = "RETURN_HOME";
-            }
-
-            int res = UI::DrawPrompt(m, screenWidth, screenHeight, font);
-
-            if (IsGamepadAvailable(0)) {
-                if (IsGamepadButtonPressed(0, GAMEPAD_BUTTON_RIGHT_FACE_DOWN)) res = 1;
-                if (IsGamepadButtonPressed(0, GAMEPAD_BUTTON_RIGHT_FACE_RIGHT)) res = 2;
-            }
-
-            if (res == 1) {
-                if (state == STATE_HOME && hoveredEntranceIndex != -1) {
-                    currentDungeonId = hoveredEntranceIndex;
-                    floor = 0;
-                    NextFloor();
+                // レア度に応じて光の高さと太さを変える
+                float beamHeight = 5.0f;
+                float beamRadius = 0.18f;
+                if (tier >= 4) {
+                    beamHeight = 12.0f; // エピック・伝説は天高く伸びる！
+                    beamRadius = 0.28f;
                 }
-                else if (state == STATE_DUNGEON && dungeon.stairsDownPos.x != -999 && dist2D(player->position, dungeon.stairsDownPos) < 2.0f) {
-                    NextFloor();
-                }
-                else {
-                    ReturnHome();
-                }
-                AudioManager::PlaySE(SE_STAIRS);
-                showPrompt = false;
-                sceneTimer = 2.0f;
+
+                Vector3 beamBase = { item.pos.x, 0.05f, item.pos.z };
+                Vector3 beamTop = { item.pos.x, beamHeight, item.pos.z };
+
+                // 1. 白く輝く中心のコア光線
+                DrawCylinderEx(beamBase, beamTop, 0.06f, 0.03f, 8, Fade(WHITE, 0.8f));
+
+                // 2. 外側の半透明オーラ光柱
+                float auraAlpha = 0.25f + pulse * 0.35f;
+                DrawCylinderEx(beamBase, beamTop, beamRadius, beamRadius * 0.6f, 12, Fade(rarityCol, auraAlpha));
+
+                // 3. 地面に広がる光のリング（波紋）
+                float ringR = (beamRadius * 2.0f) + pulse * 0.3f;
+                DrawCylinder(beamBase, ringR, ringR, 0.02f, 20, Fade(rarityCol, 0.3f));
+                DrawCylinderWires(beamBase, ringR, ringR, 0.03f, 20, Fade(WHITE, 0.7f));
             }
-            else if (res == 2) { showPrompt = false; sceneTimer = 1.0f; }
         }
-    }
 
-    rlImGuiBegin();
-    if (debugMode && state != STATE_TITLE) {
-        ImGui::Begin("Developer Tools (F1 to toggle)");
-        ImGui::Text("FPS: %d", GetFPS());
-        ImGui::Separator();
 
-        if (DataManager::loadedModels.count("Player") > 0) {
-            GameModel& pm = DataManager::loadedModels["Player"];
-            ImGui::TextColored(ImVec4(1, 1, 0, 1), "Player Model Status:");
-            ImGui::Text("Format: %s", pm.animCount > 0 ? "IQM (Animated)" : "OBJ (Static Mesh)");
-            ImGui::Text("Bones: %d", pm.model.boneCount);
-            ImGui::Text("Animations: %d", pm.animCount);
+
+            for (auto& e : enemies) if (debugMode || dungeon.IsDiscovered(e.position.x, e.position.z)) e.Draw(debugMode, camera, font, player->position);
+
+            player->Draw(debugMode);
+            EndMode3D();
+
+            if (fxManager.damageFlashTimer > 0.0f) {
+                float alpha = (fxManager.damageFlashTimer / 0.35f);
+                if (alpha > 1.0f) alpha = 1.0f;
+
+                // 画面全体の薄い赤
+                DrawRectangle(0, 0, screenWidth, screenHeight, Fade(RED, alpha * 0.35f));
+
+                // 画面の四隅（枠）を強調して臨場感を出す
+                int border = 20;
+                DrawRectangle(0, 0, screenWidth, border, Fade(MAROON, alpha * 0.6f));
+                DrawRectangle(0, screenHeight - border, screenWidth, border, Fade(MAROON, alpha * 0.6f));
+                DrawRectangle(0, 0, border, screenHeight, Fade(MAROON, alpha * 0.6f));
+                DrawRectangle(screenWidth - border, 0, border, screenHeight, Fade(MAROON, alpha * 0.6f));
+            }
+
+
+            fxManager.Draw2D(font, camera);
+            UI::DrawLogs(logs, *player, camera, font);
+            UI::DrawNearbyItems(*player, droppedItems, dungeon, camera, font);
+
+            int displayFloor = isPortfolioMode ? (floor + 1000) : floor;
+
+            UI::DrawHUD(*player, enemies, dungeon, camera, displayFloor, currentDungeonId, debugMode, font);
+            UI::UpdateSystemLogs(GetFrameTime());
+            UI::DrawSystemLogs(font);
+
+            if (showMenu) {
+                int menuEvent = UI::DrawMenu(*player, dungeon, currentTab, font);
+
+                if (menuEvent == 1) {
+                    SaveCurrentSlot();
+                    UI::AddSystemLog(T("LOG_GAME_SAVED", "GAME SAVED!"), GREEN);
+                }
+                else if (menuEvent == 2) {
+                    state = STATE_TITLE;
+                    isPortfolioMode = false;
+                    showMenu = false;
+                    AudioManager::PlayBGM(BGM_TITLE);
+                }
+            }
+
+            if (showStorage) UI::DrawStorage(*player, font, showStorage, storageItems, storageEquip);
+            if (showReforgeMenu) UI::DrawReforgeMenu(*player, font, showReforgeMenu);
+            if (showWarpMenu) UI::DrawWarpMenu(this, unlockedDungeonId, maxFloors, font, showWarpMenu);
+            if (showCraftMenu) UI::DrawCraftingMenu(*player, font, showCraftMenu);
+            if (showQuestMenu) UI::DrawQuestMenu(*player, font, showQuestMenu);
+
+            if (showPrompt) {
+                int maxF = (currentDungeonId == 0) ? 30 : (currentDungeonId == 1) ? 50 : 100;
+                const char* m = "UNKNOWN";
+
+                auto dist2D = [](Vector3 a, Vector3 b) { return Vector2Distance({ a.x, a.z }, { b.x, b.z }); };
+
+                if (state == STATE_HOME && hoveredEntranceIndex != -1) m = "ENTER_DUNGEON";
+                else if (state == STATE_DUNGEON) {
+                    if (!isPortfolioMode && floor == maxF && dist2D(player->position, dungeon.portalPos) < 2.0f) m = "RETURN_HOME";
+                    else if (dungeon.stairsDownPos.x != -999 && dist2D(player->position, dungeon.stairsDownPos) < 2.0f) m = "GO_DEEPER";
+                    else if (dungeon.stairsUpPos.x != -999 && dist2D(player->position, dungeon.stairsUpPos) < 2.0f) m = "RETURN_HOME";
+                    else if (dungeon.portalPos.x != -999 && dist2D(player->position, dungeon.portalPos) < 2.0f) m = "RETURN_HOME";
+                }
+
+                int res = UI::DrawPrompt(m, screenWidth, screenHeight, font);
+
+                if (IsGamepadAvailable(0)) {
+                    if (IsGamepadButtonPressed(0, GAMEPAD_BUTTON_RIGHT_FACE_DOWN)) res = 1;
+                    if (IsGamepadButtonPressed(0, GAMEPAD_BUTTON_RIGHT_FACE_RIGHT)) res = 2;
+                }
+
+                if (res == 1) {
+                    if (state == STATE_HOME && hoveredEntranceIndex != -1) {
+                        currentDungeonId = hoveredEntranceIndex;
+                        floor = 0;
+                        NextFloor();
+                    }
+                    else if (state == STATE_DUNGEON && dungeon.stairsDownPos.x != -999 && dist2D(player->position, dungeon.stairsDownPos) < 2.0f) {
+                        NextFloor();
+                    }
+                    else {
+                        ReturnHome();
+                    }
+                    AudioManager::PlaySE(SE_STAIRS);
+                    showPrompt = false;
+                    sceneTimer = 2.0f;
+                }
+                else if (res == 2) { showPrompt = false; sceneTimer = 1.0f; }
+            }
+        }
+
+        rlImGuiBegin();
+        if (debugMode && state != STATE_TITLE) {
+            ImGui::Begin("Developer Tools (F1 to toggle)");
+            ImGui::Text("FPS: %d", GetFPS());
             ImGui::Separator();
-        }
 
-        if (player) {
-            ImGui::Text("Player POS: (%.1f, %.1f, %.1f)", player->position.x, player->position.y, player->position.z);
-            ImGui::Text("Dungeon: %d  Floor: %d", currentDungeonId, floor);
-            ImGui::Text("HP: %.0f / %.0f", player->hp, player->maxHp);
-            ImGui::Text("Level: %d  EXP: %d", player->level, player->exp);
-            ImGui::Separator();
+            if (DataManager::loadedModels.count("Player") > 0) {
+                GameModel& pm = DataManager::loadedModels["Player"];
+                ImGui::TextColored(ImVec4(1, 1, 0, 1), "Player Model Status:");
+                ImGui::Text("Format: %s", pm.animCount > 0 ? "IQM (Animated)" : "OBJ (Static Mesh)");
+                ImGui::Text("Bones: %d", pm.model.boneCount);
+                ImGui::Text("Animations: %d", pm.animCount);
+                ImGui::Separator();
+            }
 
-            ImGui::TextColored(ImVec4(1, 0.5f, 0, 1), "Weapon Offset Tweaker");
-            ImGui::DragFloat("Scale (Size)", &Player::customWeaponScale, 0.01f, 0.01f, 100.0f);
-            ImGui::DragFloat3("Position", &Player::customWeaponOffsetPos.x, 0.01f);
-            ImGui::DragFloat3("Rotation", &Player::customWeaponOffsetRot.x, 1.0f);
-            ImGui::Separator();
-        }
-
-        ImGui::Text("Enemies Count: %d", (int)enemies.size());
-        ImGui::BeginChild("EnemyList", ImVec2(0, 150), true);
-        for (size_t i = 0; i < enemies.size(); i++) {
-            ImGui::Text("[%d] %s  HP: %.1f/%.1f", (int)i, enemies[i].data.modelName.c_str(), enemies[i].hp, enemies[i].maxHp);
-        }
-        ImGui::EndChild();
-
-        if (ImGui::Button("Heal Player")) { if (player) player->hp = player->maxHp; }
-        ImGui::SameLine();
-        if (ImGui::Button("Kill All Enemies")) { for (auto& e : enemies) e.hp = 0; }
-
-        ImGui::Separator();
-        if (ImGui::Button("Level +99")) {
             if (player) {
-                player->level += 99;
-                player->skillPoints += 99 * 3;
-                player->RecalculateStats();
-                player->hp = player->maxHp;
+                ImGui::Text("Player POS: (%.1f, %.1f, %.1f)", player->position.x, player->position.y, player->position.z);
+                ImGui::Text("Dungeon: %d  Floor: %d", currentDungeonId, floor);
+                ImGui::Text("HP: %.0f / %.0f", player->hp, player->maxHp);
+                ImGui::Text("Level: %d  EXP: %d", player->level, player->exp);
+                ImGui::Separator();
+
+                ImGui::TextColored(ImVec4(1, 0.5f, 0, 1), "Weapon Offset Tweaker");
+                ImGui::DragFloat("Scale (Size)", &Player::customWeaponScale, 0.01f, 0.01f, 100.0f);
+                ImGui::DragFloat3("Position", &Player::customWeaponOffsetPos.x, 0.01f);
+                ImGui::DragFloat3("Rotation", &Player::customWeaponOffsetRot.x, 1.0f);
+                ImGui::Separator();
             }
-        }
-        ImGui::SameLine();
-        if (ImGui::Button("SP +999")) {
-            if (player) player->skillPoints += 999;
-        }
 
-        ImGui::Separator();
-        ImGui::TextColored(ImVec4(0, 1, 0, 1), "Item Spawner");
-        ImGui::BeginChild("ItemSpawner", ImVec2(0, 200), true);
-        for (auto& cfg : DataManager::itemConfigs) {
-            ImGui::PushID(cfg.id);
-
-            std::string engName = cfg.modelName;
-            if (engName.empty()) {
-                if (cfg.type == "MATERIAL") engName = "Material_" + std::to_string(cfg.id);
-                else if (cfg.type == "CONSUMABLE") engName = "Consumable_" + std::to_string(cfg.id);
-                else engName = "Item_" + std::to_string(cfg.id);
+            ImGui::Text("Enemies Count: %d", (int)enemies.size());
+            ImGui::BeginChild("EnemyList", ImVec2(0, 150), true);
+            for (size_t i = 0; i < enemies.size(); i++) {
+                ImGui::Text("[%d] %s  HP: %.1f/%.1f", (int)i, enemies[i].data.modelName.c_str(), enemies[i].hp, enemies[i].maxHp);
             }
-            ImGui::Text("[%s] %s", cfg.type.c_str(), engName.c_str());
+            ImGui::EndChild();
 
-            ImGui::SameLine(ImGui::GetWindowWidth() - 60);
-            if (ImGui::Button("Get")) {
-                if (player) player->AddToInventory(cfg);
+            if (ImGui::Button("Heal Player")) { if (player) player->hp = player->maxHp; }
+            ImGui::SameLine();
+            if (ImGui::Button("Kill All Enemies")) { for (auto& e : enemies) e.hp = 0; }
+
+            ImGui::Separator();
+            if (ImGui::Button("Level +99")) {
+                if (player) {
+                    player->level += 99;
+                    player->skillPoints += 99 * 3;
+                    player->RecalculateStats();
+                    player->hp = player->maxHp;
+                }
             }
-            ImGui::PopID();
-        }
-        ImGui::EndChild();
+            ImGui::SameLine();
+            if (ImGui::Button("SP +999")) {
+                if (player) player->skillPoints += 999;
+            }
 
-        ImGui::End();
+            ImGui::Separator();
+            ImGui::TextColored(ImVec4(0, 1, 0, 1), "Item Spawner");
+            ImGui::BeginChild("ItemSpawner", ImVec2(0, 200), true);
+            for (auto& cfg : DataManager::itemConfigs) {
+                ImGui::PushID(cfg.id);
+
+                std::string engName = cfg.modelName;
+                if (engName.empty()) {
+                    if (cfg.type == "MATERIAL") engName = "Material_" + std::to_string(cfg.id);
+                    else if (cfg.type == "CONSUMABLE") engName = "Consumable_" + std::to_string(cfg.id);
+                    else engName = "Item_" + std::to_string(cfg.id);
+                }
+                ImGui::Text("[%s] %s", cfg.type.c_str(), engName.c_str());
+
+                ImGui::SameLine(ImGui::GetWindowWidth() - 60);
+                if (ImGui::Button("Get")) {
+                    if (player) player->AddToInventory(cfg);
+                }
+                ImGui::PopID();
+            }
+            ImGui::EndChild();
+
+            ImGui::End();
+        }
+
+        rlImGuiEnd();
+
+        EndDrawing();
     }
-    rlImGuiEnd();
-
-    EndDrawing();
-}

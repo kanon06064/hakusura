@@ -10,7 +10,8 @@
     "exp": 10,
     "atkRange": 1.5,
     "gold": 5,
-    "drops": [ 2, 4 ]
+    "drops": [ 2, 4 ],
+    "element": 2
   },
   {
     "id": 1,
@@ -23,7 +24,8 @@
     "exp": 15,
     "atkRange": 1.5,
     "gold": 10,
-    "drops": [ 5, 1 ]
+    "drops": [ 5, 1 ],
+    "element": 3
   },
   {
     "id": 3,
@@ -36,7 +38,8 @@
     "exp": 25,
     "atkRange": 1.5,
     "gold": 20,
-    "drops": [ 24, 23 ]
+    "drops": [ 24, 23 ],
+    "element": 2
   },
   {
     "id": 4,
@@ -49,7 +52,8 @@
     "exp": 28,
     "atkRange": 1.5,
     "gold": 25,
-    "drops": [ 8, 4 ]
+    "drops": [ 8, 4 ],
+    "element": 2
   },
   {
     "id": 5,
@@ -62,7 +66,8 @@
     "exp": 35,
     "atkRange": 2.0,
     "gold": 30,
-    "drops": [ 22, 2 ]
+    "drops": [ 22, 2 ],
+    "element": 2
   },
   {
     "id": 6,
@@ -76,7 +81,8 @@
     "exp": 40,
     "atkRange": 2.2,
     "gold": 35,
-    "drops": [ 6, 7, 100 ]
+    "drops": [ 6, 7, 100 ],
+    "element": 3
   },
   {
     "id": 7,
@@ -90,7 +96,8 @@
     "exp": 60,
     "atkRange": 2.5,
     "gold": 50,
-    "drops": [ 13, 10, 103 ]
+    "drops": [ 13, 10, 103 ],
+    "element": 1
   },
   {
     "id": 8,
@@ -104,7 +111,8 @@
     "exp": 70,
     "atkRange": 3.0,
     "gold": 60,
-    "drops": [ 5, 102 ]
+    "drops": [ 5, 102 ],
+    "element": 1
   },
   {
     "id": 9,
@@ -117,7 +125,8 @@
     "exp": 80,
     "atkRange": 2.0,
     "gold": 70,
-    "drops": [ 7, 16 ]
+    "drops": [ 7, 16 ],
+    "element": 2
   },
   {
     "id": 10,
@@ -130,7 +139,8 @@
     "exp": 90,
     "atkRange": 2.0,
     "gold": 80,
-    "drops": [ 16, 20 ]
+    "drops": [ 16, 20 ],
+    "element": 2
   },
   {
     "id": 11,
@@ -144,7 +154,8 @@
     "exp": 100,
     "atkRange": 10.0,
     "gold": 100,
-    "drops": [ 1, 15, 9 ]
+    "drops": [ 1, 15, 9 ],
+    "element": 3
   },
   {
     "id": 12,
@@ -157,7 +168,8 @@
     "exp": 120,
     "atkRange": 2.0,
     "gold": 110,
-    "drops": [ 5, 14 ]
+    "drops": [ 5, 14 ],
+    "element": 1
   },
   {
     "id": 13,
@@ -170,14 +182,14 @@
     "exp": 150,
     "atkRange": 12.0,
     "gold": 150,
-    "drops": [ 15, 17, 12 ]
+    "drops": [ 15, 17, 12 ],
+    "element": 4
   },
   {
     "id": 15,
     "name": "ブラックナイト",
     "model": "BlackKnight",
     "weaponModel": "Axe",
-    "Bishop_Spear": null,
     "type": 2,
     "hp": 400,
     "speed": 0.08,
@@ -185,7 +197,8 @@
     "exp": 250,
     "atkRange": 3.0,
     "gold": 250,
-    "drops": [ 16, 20, 201 ]
+    "drops": [ 16, 20, 201 ],
+    "element": 1
   },
   {
     "id": 16,
@@ -199,7 +212,8 @@
     "exp": 280,
     "atkRange": 4.0,
     "gold": 300,
-    "drops": [ 16, 20, 302 ]
+    "drops": [ 16, 20, 302 ],
+    "element": 3
   },
   {
     "id": 17,
@@ -212,7 +226,8 @@
     "exp": 400,
     "atkRange": 4.0,
     "gold": 400,
-    "drops": [ 20, 21, 303 ]
+    "drops": [ 20, 21, 303 ],
+    "element": 1
   },
   {
     "id": 18,
@@ -225,7 +240,8 @@
     "exp": 450,
     "atkRange": 10.0,
     "gold": 450,
-    "drops": [ 14, 21, 18 ]
+    "drops": [ 14, 21, 18 ],
+    "element": 4
   },
   {
     "id": 20,
@@ -238,7 +254,8 @@
     "exp": 800,
     "atkRange": 3.0,
     "gold": 600,
-    "drops": [ 25, 14, 22 ]
+    "drops": [ 25, 14, 22 ],
+    "element": 2
   },
   {
     "id": 21,
@@ -251,7 +268,8 @@
     "exp": 2000,
     "atkRange": 5.0,
     "gold": 1000,
-    "drops": [ 20, 21, 401 ]
+    "drops": [ 20, 21, 401 ],
+    "element": 1
   },
   {
     "id": 22,
@@ -265,7 +283,8 @@
     "exp": 5000,
     "atkRange": 15.0,
     "gold": 5000,
-    "drops": [ 18, 19, 405 ]
+    "drops": [ 18, 19, 405 ],
+    "element": 4
   },
   {
     "id": 23,
@@ -278,6 +297,7 @@
     "exp": 300,
     "atkRange": 1.5,
     "gold": 1000,
-    "drops": [ 101, 102, 103, 104, 105 ]
+    "drops": [ 101, 102, 103, 104, 105 ],
+    "element": 4
   }
 ]

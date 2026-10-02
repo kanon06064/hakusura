@@ -1,4 +1,4 @@
-#include "Enemy.h"
+ï»¿#include "Enemy.h"
 #include "Player.h"
 #include "Dungeon.h"
 #include "EffectManager.h"
@@ -12,7 +12,7 @@
 #include <algorithm>
 #include <cctype>
 
-// “GƒLƒƒƒ‰ƒNƒ^[‚Ìƒ{[ƒ“s—ñ‚ğæ“¾‚·‚éŠÖ”
+// æ•µã‚­ãƒ£ãƒ©ã‚¯ã‚¿ãƒ¼ã®ãƒœãƒ¼ãƒ³è¡Œåˆ—ã‚’å–å¾—ã™ã‚‹é–¢æ•°
 Matrix GetBoneMatrix(Model model, ModelAnimation anim, int frame, int boneIndex) {
     if (boneIndex < 0 || boneIndex >= model.boneCount) return MatrixIdentity();
     Transform boneTransform = anim.framePoses[frame][boneIndex];
@@ -43,7 +43,7 @@ Enemy::Enemy(Vector3 sp, EnemyData d, int fl) {
     attackTimer = 0.0f;
     attackAnimTimer = 0.0f;
 
-    // UŒ‚—\’›iƒ`ƒƒ[ƒWjƒ^ƒCƒ}[‚Ì‰Šú‰»
+    // æ”»æ’ƒäºˆå…†ï¼ˆãƒãƒ£ãƒ¼ã‚¸ï¼‰ã‚¿ã‚¤ãƒãƒ¼ã®åˆæœŸåŒ–
     isChargingAttack = false;
     attackChargeTimer = 0.0f;
     attackChargeMax = 0.6f;
@@ -122,7 +122,7 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
     if (state == STATE_CHASE || state == STATE_ATTACK) { if (p.isStealth) effectiveDetect = 3.0f; }
 
     // =========================================================================
-    // ƒ{ƒXAI
+    // ãƒœã‚¹AI
     // =========================================================================
     if (isBoss) {
         if (dist < effectiveDetect && canSee) { state = STATE_ATTACK; }
@@ -137,7 +137,7 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
                     bossTargetDir = Vector3Normalize(Vector3Subtract(p.position, position));
                     lastAttackDir = bossTargetDir;
 
-                    if (bossAttackType == 1) bossActionTimer = 0.6f;
+                    if (bossAttackType == 1) bossActionTimer = 0.55f; 
                     else if (bossAttackType == 2) bossActionTimer = 0.9f;
                     else if (bossAttackType == 3) bossActionTimer = 1.0f;
                     else if (bossAttackType == 4) bossActionTimer = 2.0f;
@@ -160,6 +160,7 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
                             float dmg = fmaxf(1.0f, rawDmg - p.defense); p.hp -= dmg;
                             fx.SpawnDamageText(p.position, (int)dmg); fx.SpawnEffect(p.position, { 0,0,0 }, FX_HIT, RED);
                             UI::AddSystemLog(TextFormat(DataManager::uiStrings["LOG_BOSS_COMBO"].c_str(), (int)dmg), RED);
+                            fx.TriggerDamageFlash(0.25f);
 
                             if (bossComboStep >= 3) fx.ShakeScreen(0.3f, 0.6f);
                             else fx.ShakeScreen(0.15f, 0.35f);
@@ -167,7 +168,7 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
 
                         if (bossComboStep >= 3) { bossAttackType = 0; attackTimer = 1.5f; }
                         else {
-                            bossActionTimer = 0.6f;
+                            bossActionTimer = 0.55f;
                             bossTargetDir = Vector3Normalize(Vector3Subtract(p.position, position));
                             lastAttackDir = bossTargetDir;
                             MoveSmart(Vector3Add(position, Vector3Scale(bossTargetDir, 2.0f)), d);
@@ -204,6 +205,7 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
                             float rawDmg = 15.0f + level * 2; float dmg = fmaxf(1.0f, rawDmg - p.defense); p.hp -= dmg;
                             fx.SpawnDamageText(p.position, (int)dmg); fx.SpawnEffect(p.position, { 0,0,0 }, FX_HIT, RED);
                             UI::AddSystemLog(TextFormat(DataManager::uiStrings["LOG_BOSS_DASH"].c_str(), (int)dmg), RED);
+                            fx.TriggerDamageFlash(0.35f);
                             fx.ShakeScreen(0.35f, 0.7f);
                             bossAttackType = 0; attackTimer = 2.0f;
                         }
@@ -225,6 +227,7 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
                             float rawDmg = 20.0f + level * 2; float dmg = fmaxf(1.0f, rawDmg - p.defense); p.hp -= dmg;
                             fx.SpawnDamageText(p.position, (int)dmg); fx.SpawnEffect(p.position, { 0,0,0 }, FX_HIT, RED);
                             UI::AddSystemLog(TextFormat(DataManager::uiStrings["LOG_BOSS_AOE"].c_str(), (int)dmg), RED);
+                            fx.TriggerDamageFlash(0.35f);
                         }
                         bossAttackType = 0; attackTimer = 2.5f;
                     }
@@ -241,7 +244,7 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
         }
     }
     // =========================================================================
-    // ’Êí“GAIiUŒ‚—\’›{ƒ`ƒƒ[ƒWƒVƒXƒeƒ€“‹Új
+    // é€šå¸¸æ•µAIï¼ˆæ”»æ’ƒäºˆå…†ï¼‹ãƒãƒ£ãƒ¼ã‚¸ã‚·ã‚¹ãƒ†ãƒ æ­è¼‰ï¼‰
     // =========================================================================
     else {
         if (dist < attackRange && canSee && dist < effectiveDetect) state = STATE_ATTACK;
@@ -250,17 +253,17 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
 
         if (state == STATE_CHASE || state == STATE_ATTACK) {
             stuckCount = 0;
-            // ƒ`ƒƒ[ƒW’†‚Å‚È‚¢‚ÍƒvƒŒƒCƒ„[‚ğ’Ç‚¤
+            // ãƒãƒ£ãƒ¼ã‚¸ä¸­ã§ãªã„æ™‚ã¯ãƒ—ãƒ¬ã‚¤ãƒ¤ãƒ¼ã‚’è¿½ã†
             if (!isChargingAttack && eType != E_TRAP) {
                 if (dist > attackRange * 0.7f) MoveSmart(p.position, d);
             }
 
-            // UŒ‚”ÍˆÍ‚É“ü‚Á‚½‚çA‘¦À‚É‰£‚é‚Ì‚Å‚Í‚È‚­u—\’›iƒ`ƒƒ[ƒWj‚ğŠJnv‚·‚é
+            // æ”»æ’ƒç¯„å›²ã«å…¥ã£ãŸã‚‰ã€å³åº§ã«æ®´ã‚‹ã®ã§ã¯ãªãã€Œäºˆå…†ï¼ˆãƒãƒ£ãƒ¼ã‚¸ï¼‰ã‚’é–‹å§‹ã€ã™ã‚‹
             if (dist < attackRange && attackTimer <= 0.0f && !isChargingAttack) {
                 isChargingAttack = true;
                 lastAttackDir = Vector3Normalize(Vector3Subtract(p.position, position));
 
-                // •Šíí‚É‚æ‚Á‚Äƒ^ƒŠÔ‚ğİ’èid‚¢•Ší‚Ù‚Ç—\’›‚ª’·‚¢j
+                // æ­¦å™¨ç¨®ã«ã‚ˆã£ã¦ã‚¿ãƒ¡æ™‚é–“ã‚’è¨­å®šï¼ˆé‡ã„æ­¦å™¨ã»ã©äºˆå…†ãŒé•·ã„ï¼‰
                 if (eType == E_AXE) attackChargeMax = 0.85f;
                 else if (eType == E_SPEAR) attackChargeMax = 0.65f;
                 else attackChargeMax = 0.5f;
@@ -268,15 +271,15 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
                 attackChargeTimer = attackChargeMax;
             }
 
-            // ƒ`ƒƒ[ƒW’†‚Ìˆ—iƒ^ƒCƒ}[is ¨ 0‚É‚È‚Á‚½‚çUŒ‚”­“®Ij
+            // ãƒãƒ£ãƒ¼ã‚¸ä¸­ã®å‡¦ç†ï¼ˆã‚¿ã‚¤ãƒãƒ¼é€²è¡Œ â†’ 0ã«ãªã£ãŸã‚‰æ”»æ’ƒç™ºå‹•ï¼ï¼‰
             if (isChargingAttack) {
                 attackChargeTimer -= dt;
-                // ƒ`ƒƒ[ƒW’†‚ÍƒvƒŒƒCƒ„[‚Ì•ûŒü‚ğŒ©˜‚¦‚é
+                // ãƒãƒ£ãƒ¼ã‚¸ä¸­ã¯ãƒ—ãƒ¬ã‚¤ãƒ¤ãƒ¼ã®æ–¹å‘ã‚’è¦‹æ®ãˆã‚‹
                 lastAttackDir = Vector3Normalize(Vector3Subtract(p.position, position));
 
                 if (attackChargeTimer <= 0.0f) {
                     isChargingAttack = false;
-                    attackAnimTimer = 0.5f; // UŒ‚ƒ‚[ƒVƒ‡ƒ“Ä¶ŠJn
+                    attackAnimTimer = 0.5f; // æ”»æ’ƒãƒ¢ãƒ¼ã‚·ãƒ§ãƒ³å†ç”Ÿé–‹å§‹
                     animFrameCounter = 0;
 
                     Vector3 spawnPos = Vector3Add(position, { 0, 0.8f, 0 });
@@ -292,7 +295,7 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
 
                         fx.SpawnEffect(spawnPos, lastAttackDir, effectType, GOLD);
 
-                        // —\’›iAoEj‚Ì”ÍˆÍ“à‚ÉƒvƒŒƒCƒ„[‚ª‚Ü‚¾c‚Á‚Ä‚¢‚ê‚Îƒ_ƒ[ƒW
+                        // äºˆå…†ï¼ˆAoEï¼‰ã®ç¯„å›²å†…ã«ãƒ—ãƒ¬ã‚¤ãƒ¤ãƒ¼ãŒã¾ã æ®‹ã£ã¦ã„ã‚Œã°ãƒ€ãƒ¡ãƒ¼ã‚¸
                         float aoeRadius = attackRange * 0.9f;
                         Vector3 hitCenter = Vector3Add(position, Vector3Scale(lastAttackDir, attackRange * 0.5f));
 
@@ -304,18 +307,19 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
                             fx.SpawnDamageText(p.position, (int)dmg);
                             fx.SpawnEffect(p.position, { 0,0,0 }, FX_HIT, RED);
                             UI::AddSystemLog(TextFormat(DataManager::uiStrings["LOG_DMG_TAKEN"].c_str(), data.name.c_str(), (int)dmg), RED);
+                            fx.TriggerDamageFlash(0.22f);
 
                             if (eType == E_AXE) fx.ShakeScreen(0.2f, 0.45f);
                             else fx.ShakeScreen(0.15f, 0.3f);
                         }
 
-                        attackTimer = 1.5f; // UŒ‚Œã‚ÌƒN[ƒ‹ƒ^ƒCƒ€
+                        attackTimer = 1.5f; // æ”»æ’ƒå¾Œã®ã‚¯ãƒ¼ãƒ«ã‚¿ã‚¤ãƒ 
                     }
                 }
             }
         }
         else {
-            isChargingAttack = false; // ƒvƒŒƒCƒ„[‚ğŒ©¸‚Á‚½‚çƒ`ƒƒ[ƒW‰ğœ
+            isChargingAttack = false; // ãƒ—ãƒ¬ã‚¤ãƒ¤ãƒ¼ã‚’è¦‹å¤±ã£ãŸã‚‰ãƒãƒ£ãƒ¼ã‚¸è§£é™¤
             if (Vector3Distance(position, patrolTarget) < 1.2f) { patrolTarget = d.GetRandomFloorPos(); stuckCount = 0; }
             bool hitWall = MoveSmart(patrolTarget, d);
             if (hitWall) { patrolTarget = d.GetRandomFloorPos(); stuckCount = 0; }
@@ -335,53 +339,74 @@ void Enemy::Draw(bool debug, Camera3D cam, Font font, Vector3 playerPos) {
         GameModel& gm = DataManager::loadedModels[key];
         gm.model.transform = MatrixIdentity();
 
-        // --- ƒAƒjƒ[ƒVƒ‡ƒ“”Ô†‚ÌŒˆ’è ---
-        int animIndex = 2; // ƒfƒtƒHƒ‹ƒg‚Í‘Ò‹@(Idle)
+        // =====================================================================
+        // 1. ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³ç•ªå·ã®æ±ºå®š
+        // =====================================================================
+        int animIndex = 2; // ãƒ‡ãƒ•ã‚©ãƒ«ãƒˆã¯å¾…æ©Ÿ(Idle)
+        float comboProgress = 1.0f - (bossActionTimer / 0.55f); // ãƒœã‚¹ã‚³ãƒ³ãƒœé€²è¡Œåº¦ (0.0 ã€œ 1.0)
+
         if (isDying) {
-            animIndex = 1; // €–S
+            animIndex = 1; // æ­»äº¡ãƒ¢ãƒ¼ã‚·ãƒ§ãƒ³
         }
         else if (isBoss) {
-            if (bossAttackType == 1) animIndex = 0; // ƒRƒ“ƒ{aŒ‚ƒ‚[ƒVƒ‡ƒ“
-            else if (bossAttackType == 2 || bossAttackType == 4) animIndex = 2; // –‚–@EAoEƒ^ƒ’†‚Í‘Ò‹@ƒ|[ƒY
-            else if (bossAttackType == 3) animIndex = (bossComboStep == 1) ? 3 : 2; // “Ëi“ËŒ‚’†‚Í‘–‚è(3)
+            if (bossAttackType == 1) {
+             
+                animIndex = (comboProgress < 0.70f) ? 2 : 0;
+            }
+            else if (bossAttackType == 2 || bossAttackType == 4) {
+                animIndex = 2; // é­”æ³•å¼¾å¹•ãƒ»AoEã‚¿ãƒ¡ä¸­ã¯å¾…æ©Ÿãƒãƒ¼ã‚º
+            }
+            else if (bossAttackType == 3) {
+                animIndex = (bossComboStep == 1) ? 3 : 2; // çªé€²çªæ’ƒä¸­ã¯èµ°ã‚Š(3)
+            }
             else {
-                // š C³: bossAttackType == 0iUŒ‚ŠÔ‚ÌˆÚ“®EƒAƒvƒ[ƒ`ƒtƒF[ƒYj
+                // bossAttackType == 0ï¼ˆæ”»æ’ƒé–“ã®ç§»å‹•ãƒ»ã‚¢ãƒ—ãƒ­ãƒ¼ãƒãƒ•ã‚§ãƒ¼ã‚ºï¼‰
                 float distToPlayer = Vector3Distance(position, playerPos);
                 if (state == STATE_PATROL) {
-                    animIndex = 3; // ƒpƒgƒ[ƒ‹œpœj’†‚Í•à‚«/‘–‚è
+                    animIndex = 3; // ãƒ‘ãƒˆãƒ­ãƒ¼ãƒ«å¾˜å¾Šä¸­ã¯æ­©ã/èµ°ã‚Š
                 }
                 else if (state == STATE_ATTACK && distToPlayer > 3.0f) {
-                    animIndex = 3; // ƒvƒŒƒCƒ„[‚É•à‚İŠñ‚Á‚Ä‚­‚é‚Í‘–‚èI
+                    animIndex = 3; // ãƒ—ãƒ¬ã‚¤ãƒ¤ãƒ¼ã«æ­©ã¿å¯„ã£ã¦ãã‚‹æ™‚ã¯èµ°ã‚Šï¼
                 }
                 else {
-                    animIndex = 2; // 3mˆÈ“à‚ÌŠÔ‡‚¢‚Å‘Ò‹@(Idle)
+                    animIndex = 2; // 3mä»¥å†…ã®è¿‘è·é›¢ã§ã¯å¾…æ©Ÿ(Idle)
                 }
             }
         }
         else {
             if (attackAnimTimer > 0.0f) {
-                animIndex = 0; // UŒ‚U‚è‰º‚ë‚µƒ‚[ƒVƒ‡ƒ“
+                animIndex = 0; // æ”»æ’ƒæŒ¯ã‚Šä¸‹ã‚ã—ãƒ¢ãƒ¼ã‚·ãƒ§ãƒ³
             }
             else if (isChargingAttack) {
-                animIndex = 2; // ƒ`ƒƒ[ƒW’†‚Í•Ší‚ğ\‚¦‚Ä‘Ò‹@
+                animIndex = 2; // ãƒãƒ£ãƒ¼ã‚¸ä¸­ã¯æ­¦å™¨ã‚’æ§‹ãˆã¦å¾…æ©Ÿ
             }
             else if (state == STATE_CHASE || state == STATE_PATROL) {
-                animIndex = 3; // ‘–‚è
+                animIndex = 3; // èµ°ã‚Š
             }
             else {
-                animIndex = 2; // ƒN[ƒ‹ƒ^ƒCƒ€’†‚Ì‘Ò‹@
+                animIndex = 2; // ã‚¯ãƒ¼ãƒ«ã‚¿ã‚¤ãƒ ä¸­ã®å¾…æ©Ÿ
             }
         }
 
         if (animIndex >= gm.animCount) animIndex = 0;
         int currentAnimIndex = animIndex;
 
-        // --- ƒtƒŒ[ƒ€”Ô†‚ÌŒˆ’èiUŒ‚ŠÔ‚ÆŠ®‘S“¯Šúj ---
+        // =====================================================================
+        // 2. ãƒ•ãƒ¬ãƒ¼ãƒ ç•ªå·ã®æ±ºå®šï¼ˆæ™‚é–“ã¨å®Œå…¨åŒæœŸï¼‰
+        // =====================================================================
         ModelAnimation anim = gm.anims[currentAnimIndex];
         int frame = 0;
+
         if (isDying) {
             frame = (animFrameCounter >= anim.frameCount - 1) ? anim.frameCount - 1 : animFrameCounter;
         }
+        //  ãƒœã‚¹ã®ã‚³ãƒ³ãƒœæ–¬æ’ƒ
+        else if (isBoss && bossAttackType == 1 && comboProgress >= 0.70f) {
+            float swingProgress = (comboProgress - 0.45f) / 0.55f;
+            if (swingProgress > 1.0f) swingProgress = 1.0f;
+            frame = (int)(swingProgress * (float)(anim.frameCount - 1));
+        }
+        // é€šå¸¸æ•µã®æ”»æ’ƒï¼šattackAnimTimerï¼ˆ0.5ç§’ï¼‰ã«åˆã‚ã›ã¦1å›ãã£ã¡ã‚ŠæŒ¯ã‚Šä¸‹ã‚ã™
         else if (!isBoss && attackAnimTimer > 0.0f) {
             float attackProgress = 1.0f - (attackAnimTimer / 0.5f);
             if (attackProgress < 0.0f) attackProgress = 0.0f;
@@ -396,9 +421,12 @@ void Enemy::Draw(bool debug, Camera3D cam, Font font, Vector3 playerPos) {
             UpdateModelAnimation(gm.model, anim, frame);
         }
 
-        // --- Œü‚«i‰ñ“]Šp“xj‚ÌŒvZ ---
+        // =====================================================================
+        // 3. å‘ãï¼ˆå›è»¢è§’åº¦ï¼‰ã®è¨ˆç®—
+        // =====================================================================
         float rotationAngle = 0.0f;
         Vector3 targetDir = { 0, 0, 1 };
+
         if (!isDying) {
             if (isBoss) {
                 if (bossAttackType != 0) {
@@ -412,19 +440,18 @@ void Enemy::Draw(bool debug, Camera3D cam, Font font, Vector3 playerPos) {
                 }
             }
             else {
-                // ’Êí“GFƒ`ƒƒ[ƒW’†‚ÍUŒ‚—\•ûŒüAõ“G’ÇÕ’†‚âUŒ‚ƒXƒe[ƒg‚ÍƒvƒŒƒCƒ„[ˆÊ’u‚ğ³–Ê‚ÉŒ©˜‚¦‚é
                 if (isChargingAttack) {
                     targetDir = lastAttackDir;
                 }
                 else if (state == STATE_CHASE || state == STATE_ATTACK) {
-                    targetDir = Vector3Subtract(playerPos, position);
+                    targetDir = Vector3Subtract(playerPos, position); // ãƒ—ãƒ¬ã‚¤ãƒ¤ãƒ¼ã‚’æ­£é¢ã«è¦‹æ®ãˆã‚‹
                 }
                 else {
                     targetDir = Vector3Subtract(patrolTarget, position);
                 }
             }
 
-            targetDir.y = 0.0f; // …•½‰»
+            targetDir.y = 0.0f; // æ°´å¹³åŒ–
             if (Vector3Length(targetDir) > 0.01f) {
                 rotationAngle = atan2f(targetDir.x, targetDir.z) * RAD2DEG;
             }
@@ -440,7 +467,9 @@ void Enemy::Draw(bool debug, Camera3D cam, Font font, Vector3 playerPos) {
 
         DrawModel(gm.model, drawPos, scale, WHITE);
 
-        // --- •Šíƒ{[ƒ“’Ç]ƒAƒ^ƒbƒ`ƒƒ“ƒg ---
+        // =====================================================================
+        // 4. æ­¦å™¨ãƒœãƒ¼ãƒ³è¿½å¾“ã‚¢ã‚¿ãƒƒãƒãƒ¡ãƒ³ãƒˆ
+        // =====================================================================
         int handBoneIndex = -1; int weaponBoneIndex = -1;
         for (int i = 0; i < gm.model.boneCount; i++) {
             std::string bName(gm.model.bones[i].name); std::string lowerName = bName;
@@ -485,7 +514,7 @@ void Enemy::Draw(bool debug, Camera3D cam, Font font, Vector3 playerPos) {
     }
 
     // =========================================================================
-    // ’Êí“G‚ÌAoE—\’›•\¦iŠÔ‡‚¢‚É“ü‚Á‚½‚ç˜güoŒ»{’†g‚ª–‚¿‚éj
+    // 5. é€šå¸¸æ•µã®AoEäºˆå…†è¡¨ç¤ºï¼ˆé–“åˆã„ã«å…¥ã£ãŸã‚‰æ ç·šå‡ºç¾ï¼‹ä¸­èº«ãŒæº€ã¡ã‚‹ï¼‰
     // =========================================================================
     if (!isDying && !isBoss && isChargingAttack && (eType == E_SWORD || eType == E_AXE || eType == E_SPEAR)) {
         float progress = 1.0f - (attackChargeTimer / attackChargeMax);
@@ -496,24 +525,24 @@ void Enemy::Draw(bool debug, Camera3D cam, Font font, Vector3 playerPos) {
         Vector3 hitCenter = Vector3Add(position, Vector3Scale(lastAttackDir, attackRange * 0.5f));
         hitCenter.y = 0.12f;
 
-        // 1. ‚Í‚Á‚«‚èŒ©‚¦‚éŠO˜g‚Ìü
+        // 1. ã¯ã£ãã‚Šè¦‹ãˆã‚‹å¤–æ ã®ç·š
         DrawCylinderWires(hitCenter, aoeRadius, aoeRadius, 0.04f, 32, Fade(RED, 0.95f));
 
-        // 2. ’†g‚ÌFFŠÔŒo‰ß‚Å”–‚¢Ô‚©‚ç”Z‚¢Ô‚Ö–‚¿‚Ä‚¢‚­
+        // 2. ä¸­èº«ã®è‰²ï¼šæ™‚é–“çµŒéã§è–„ã„èµ¤ã‹ã‚‰æ¿ƒã„èµ¤ã¸æº€ã¡ã¦ã„ã
         float fillAlpha = 0.10f + (progress * 0.55f);
         DrawCylinder(hitCenter, aoeRadius, aoeRadius, 0.03f, 32, Fade(RED, fillAlpha));
 
-        // 3. UŒ‚‚Ü‚Å‚ÌŠÔ‚ğ’¼Š´“I‚É“`‚¦‚éƒ`ƒƒ[ƒWƒQ[ƒWi’†S‚©‚çŠO˜g‚ÖL‚ª‚é‰~j
+        // 3. æ”»æ’ƒã¾ã§ã®æ™‚é–“ã‚’ç›´æ„Ÿçš„ã«ä¼ãˆã‚‹ãƒãƒ£ãƒ¼ã‚¸ã‚²ãƒ¼ã‚¸ï¼ˆä¸­å¿ƒã‹ã‚‰å¤–æ ã¸åºƒãŒã‚‹å††ï¼‰
         float gaugeRadius = aoeRadius * progress;
         DrawCylinder(hitCenter, gaugeRadius, gaugeRadius, 0.05f, 32, Fade(ORANGE, 0.5f + progress * 0.4f));
     }
 
     // =========================================================================
-    // ƒ{ƒX‚ÌAoE—\’›•\¦i‘Sƒpƒ^[ƒ“‚Å˜gü{is“xƒQ[ƒW‚ª–‚¿‚éj
+    // 6. ãƒœã‚¹ã®AoEäºˆå…†è¡¨ç¤ºï¼ˆå…¨ãƒ‘ã‚¿ãƒ¼ãƒ³ã§æ ç·šï¼‹é€²è¡Œåº¦ã‚²ãƒ¼ã‚¸ãŒæº€ã¡ã‚‹ï¼‰
     // =========================================================================
     if (!isDying && isBoss && bossAttackType != 0) {
         float maxTime = 1.0f;
-        if (bossAttackType == 1) maxTime = 0.6f;
+        if (bossAttackType == 1) maxTime = 0.55f; // â˜… ã‚³ãƒ³ãƒœæ™‚é–“ã«çµ±ä¸€
         else if (bossAttackType == 2) maxTime = 0.9f;
         else if (bossAttackType == 3) maxTime = 1.0f;
         else if (bossAttackType == 4) maxTime = 2.0f;
@@ -532,7 +561,7 @@ void Enemy::Draw(bool debug, Camera3D cam, Font font, Vector3 playerPos) {
             Color fillColor = Fade(PURPLE, baseAlpha);
             Color chargeColor = Fade(RED, 0.45f + progress * 0.45f);
 
-            // 1. ƒ{ƒX‚Ì‹‘å‘S•ûˆÊAoEibossAttackType == 4j
+            // â‘  ãƒœã‚¹ã®å·¨å¤§å…¨æ–¹ä½AoEï¼ˆbossAttackType == 4ï¼‰
             if (bossAttackType == 4) {
                 float totalRadius = 7.0f;
                 Vector3 center = { position.x, 0.12f, position.z };
@@ -542,7 +571,7 @@ void Enemy::Draw(bool debug, Camera3D cam, Font font, Vector3 playerPos) {
                 DrawCylinderWires(center, totalRadius, totalRadius, 0.04f, 36, outlineColor);
                 DrawCylinderWires(center, totalRadius + 0.05f, totalRadius + 0.05f, 0.04f, 36, Fade(RED, 0.6f));
             }
-            // 2. ƒ{ƒX‚ÌƒRƒ“ƒ{aŒ‚ibossAttackType == 1j
+            // â‘¡ ãƒœã‚¹ã®ã‚³ãƒ³ãƒœæ–¬æ’ƒï¼ˆbossAttackType == 1ï¼‰
             else if (bossAttackType == 1) {
                 float comboRadius = 2.5f;
                 Vector3 hitCenter = Vector3Add(position, Vector3Scale(bossTargetDir, 2.0f));
@@ -552,7 +581,7 @@ void Enemy::Draw(bool debug, Camera3D cam, Font font, Vector3 playerPos) {
                 DrawCylinder(hitCenter, comboRadius * progress, comboRadius * progress, 0.05f, 32, Fade(ORANGE, 0.7f));
                 DrawCylinderWires(hitCenter, comboRadius, comboRadius, 0.04f, 32, outlineColor);
             }
-            // 3. ƒ{ƒX‚Ì3•ûŒü’e–‹ƒŒ[ƒ“ibossAttackType == 2j
+            // â‘¢ ãƒœã‚¹ã®3æ–¹å‘å¼¾å¹•ãƒ¬ãƒ¼ãƒ³ï¼ˆbossAttackType == 2ï¼‰
             else if (bossAttackType == 2) {
                 for (int i = -1; i <= 1; i++) {
                     float angle = i * 20.0f * DEG2RAD; float c = cosf(angle), s = sinf(angle);
@@ -566,11 +595,11 @@ void Enemy::Draw(bool debug, Camera3D cam, Font font, Vector3 playerPos) {
                     Vector3 p4 = Vector3Add(position, Vector3Scale(side, -w / 2.0f));
                     p1.y = p2.y = p3.y = p4.y = 0.12f;
 
-                    // ”wŒi‚Ì”–‚¢“h‚è
+                    // èƒŒæ™¯ã®è–„ã„å¡—ã‚Š
                     DrawTriangle3D(p1, p4, p3, fillColor); DrawTriangle3D(p1, p3, p2, fillColor);
                     DrawTriangle3D(p3, p4, p1, fillColor); DrawTriangle3D(p2, p3, p1, fillColor);
 
-                    // è‘O‚©‚ç‰œ‚ÖL‚Ñ‚Ä‚¢‚­ƒ`ƒƒ[ƒWƒQ[ƒW
+                    // æ‰‹å‰ã‹ã‚‰å¥¥ã¸ä¼¸ã³ã¦ã„ããƒãƒ£ãƒ¼ã‚¸ã‚²ãƒ¼ã‚¸
                     float chargeLen = totalLen * progress;
                     Vector3 cp2 = Vector3Add(position, Vector3Add(Vector3Scale(dir, chargeLen), Vector3Scale(side, w / 2.0f)));
                     Vector3 cp3 = Vector3Add(position, Vector3Add(Vector3Scale(dir, chargeLen), Vector3Scale(side, -w / 2.0f)));
@@ -578,12 +607,12 @@ void Enemy::Draw(bool debug, Camera3D cam, Font font, Vector3 playerPos) {
                     DrawTriangle3D(p1, p4, cp3, chargeColor); DrawTriangle3D(p1, cp3, cp2, chargeColor);
                     DrawTriangle3D(cp3, p4, p1, chargeColor); DrawTriangle3D(cp2, cp3, p1, chargeColor);
 
-                    // ƒNƒbƒLƒŠ‚µ‚½ŠO˜gü
+                    // ã‚¯ãƒƒã‚­ãƒªã—ãŸå¤–æ ç·š
                     DrawLine3D(p1, p2, outlineColor); DrawLine3D(p2, p3, outlineColor);
                     DrawLine3D(p3, p4, outlineColor); DrawLine3D(p4, p1, outlineColor);
                 }
             }
-            // 4. ƒ{ƒX‚Ì“Ëi‹éŒ`ƒŒ[ƒ“ibossAttackType == 3j
+            // â‘£ ãƒœã‚¹ã®çªé€²çŸ©å½¢ãƒ¬ãƒ¼ãƒ³ï¼ˆbossAttackType == 3ï¼‰
             else if (bossAttackType == 3) {
                 float totalLen = 12.75f; float w = 5.5f;
                 Vector3 dir = Vector3Normalize(bossTargetDir);
@@ -595,11 +624,11 @@ void Enemy::Draw(bool debug, Camera3D cam, Font font, Vector3 playerPos) {
                 Vector3 p4 = Vector3Add(position, Vector3Scale(side, -w / 2.0f));
                 p1.y = p2.y = p3.y = p4.y = 0.12f;
 
-                // ”wŒi‚Ì”–‚¢“h‚è
+                // èƒŒæ™¯ã®è–„ã„å¡—ã‚Š
                 DrawTriangle3D(p1, p4, p3, fillColor); DrawTriangle3D(p1, p3, p2, fillColor);
                 DrawTriangle3D(p3, p4, p1, fillColor); DrawTriangle3D(p2, p3, p1, fillColor);
 
-                // è‘O‚©‚ç‰œ‚ÖL‚Ñ‚Ä‚¢‚­ƒ`ƒƒ[ƒW’·•ûŒ`
+                // æ‰‹å‰ã‹ã‚‰å¥¥ã¸ä¼¸ã³ã¦ã„ããƒãƒ£ãƒ¼ã‚¸é•·æ–¹å½¢
                 float chargeLen = totalLen * progress;
                 Vector3 cp2 = Vector3Add(position, Vector3Add(Vector3Scale(dir, chargeLen), Vector3Scale(side, w / 2.0f)));
                 Vector3 cp3 = Vector3Add(position, Vector3Add(Vector3Scale(dir, chargeLen), Vector3Scale(side, -w / 2.0f)));
@@ -607,7 +636,7 @@ void Enemy::Draw(bool debug, Camera3D cam, Font font, Vector3 playerPos) {
                 DrawTriangle3D(p1, p4, cp3, chargeColor); DrawTriangle3D(p1, cp3, cp2, chargeColor);
                 DrawTriangle3D(cp3, p4, p1, chargeColor); DrawTriangle3D(cp2, cp3, p1, chargeColor);
 
-                // ƒNƒbƒLƒŠ‚µ‚½ŠO˜gü
+                // ã‚¯ãƒƒã‚­ãƒªã—ãŸå¤–æ ç·š
                 DrawLine3D(p1, p2, outlineColor); DrawLine3D(p2, p3, outlineColor);
                 DrawLine3D(p3, p4, outlineColor); DrawLine3D(p4, p1, outlineColor);
             }

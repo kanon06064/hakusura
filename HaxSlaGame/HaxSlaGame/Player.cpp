@@ -63,6 +63,12 @@ expToNext(100), skillPoints(0), gold(0)
 	cooldownReduction = 0; healBonus = 0;
 	isStealth = false;
 
+	isChargingSmash = false;
+	smashChargeTimer = 0.0f;
+	smashChargeMax = 0.6f;
+	smashChargeDir = { 1, 0, 0 };
+
+
 	animTime = 0.0f;
 	currentAnimIndex = 4;
 	prevAnimIndex = 4;
@@ -89,6 +95,72 @@ float Player::GetItemTotalAtkBonus(const ItemData& item) {
 	return item.atkBonus + DataManager::GetModifier(item.modifierId).atk;
 }
 
+std::string Player::GetElementName(int elem) {
+	switch (elem) {
+	case ELEM_HELLFIRE: return "業火の";
+	case ELEM_ROT:      return "腐蝕の";
+	case ELEM_SOUL:     return "霊怨の";
+	case ELEM_ABYSS:    return "深淵の";
+	default:            return "";
+	}
+}
+
+Color Player::GetElementColor(int elem) {
+	switch (elem) {
+	case ELEM_HELLFIRE: return Color{ 255, 60, 40, 255 };   // 深紅（業火）
+	case ELEM_ROT:      return Color{ 80, 220, 60, 255 };   // 毒緑（腐蝕）
+	case ELEM_SOUL:     return Color{ 100, 200, 255, 255 }; // 幽青（霊怨）
+	case ELEM_ABYSS:    return Color{ 180, 50, 230, 255 };  // 深紫（深淵）
+	default:            return WHITE;
+	}
+}
+
+// アイテムのフルネーム（例：「伝説の 業火の 機神の滅斧」）
+std::string Player::GetFullItemName(const ItemData& item) {
+	if (item.id == -1) return "EMPTY";
+	Modifier mod = DataManager::GetModifier(item.modifierId);
+	std::string elemStr = GetElementName(item.element);
+
+	std::string fullName = "";
+	if (!mod.name.empty()) fullName += mod.name + " ";
+	if (!elemStr.empty()) fullName += elemStr + " ";
+	fullName += item.name;
+	return fullName;
+}
+
+// 属性相性倍率の計算
+float Player::GetElementMultiplier(int atkElem, int defElem) {
+	if (atkElem == ELEM_NONE || defElem == ELEM_NONE) return 1.0f;
+
+	// 深淵（Abyss）：与ダメ1.25倍のハイリスク属性
+	if (atkElem == ELEM_ABYSS) return 1.25f;
+
+	// 3すくみ関係
+	if (atkElem == ELEM_HELLFIRE && defElem == ELEM_ROT)  return 1.40f; // 業火 → 腐蝕（特効！）
+	if (atkElem == ELEM_ROT && defElem == ELEM_SOUL) return 1.40f; // 腐蝕 → 霊怨（特効！）
+	if (atkElem == ELEM_SOUL && defElem == ELEM_HELLFIRE) return 1.40f; // 霊怨 → 業火（特効！）
+
+	if (atkElem == ELEM_HELLFIRE && defElem == ELEM_SOUL) return 0.75f; // 不利
+	if (atkElem == ELEM_ROT && defElem == ELEM_HELLFIRE) return 0.75f; // 不利
+	if (atkElem == ELEM_SOUL && defElem == ELEM_ROT)  return 0.75f; // 不利
+
+	return 1.0f;
+}
+
+// 装備中の防具5部位から、特定属性の耐性合計を算出（1部位につき +15%）
+float Player::GetPlayerElementResistance(int elem) {
+	if (elem == ELEM_NONE) return 0.0f;
+	float totalRes = 0.0f;
+	for (int i = 0; i < 5; i++) {
+		if (equippedArmor[i].id != -1 && equippedArmor[i].element == elem) {
+			totalRes += 0.15f; // 1部位で15%カット
+		}
+	}
+	if (totalRes > 0.60f) totalRes = 0.60f; // 最大60%カット上限
+	return totalRes;
+}
+
+
 // アイテムのID帯とエンチャントの有無によって、レアリティ色を自動決定する
 Color Player::GetItemRarityColor(const ItemData& item) {
 	if (item.id == -1) return DARKGRAY;
@@ -105,6 +177,21 @@ Color Player::GetItemRarityColor(const ItemData& item) {
 	case 1: return WHITE; case 2: return GREEN; case 3: return SKYBLUE;
 	case 4: return PURPLE; case 5: return GOLD; default: return WHITE;
 	}
+}
+
+int Player::GetItemTier(const ItemData& item) {
+	if (item.id == -1) return 0;
+	if (item.type == "MATERIAL" || item.type == "CONSUMABLE") return 1;
+
+	int tier = 1;
+	if (item.id >= 100 && item.id < 200) tier = 1;
+	else if (item.id >= 200 && item.id < 300) tier = 2;
+	else if (item.id >= 300 && item.id < 400) tier = 3;
+	else if (item.id >= 400 && item.id < 500) tier = 4;
+	else if (item.id >= 500) tier = 5;
+
+	if (item.modifierId != 0 && tier < 5) tier++; // エンチャント付きは+1
+	return tier;
 }
 
 // 装備とスキルの効果を再計算して、最終的なHPや攻撃力を割り出す
@@ -247,40 +334,65 @@ void Player::PerformAttack(Vector3 ad, std::vector<Enemy>& enemies, Dungeon& d, 
 	else {
 		EffectType type = FX_SLASH;
 		Color fxCol = SKYBLUE;
-		float atkRange = 3.8f; // ★ 剣の射程：3.8m
+		float atkRange = 2.7f; // 剣の射程
 
 		if (currentWeapon == SPEAR) {
 			type = FX_THRUST;
 			fxCol = SKYBLUE;
-			atkRange = 5.5f;   // ★ 槍の射程：5.5m（長く伸びる！）
+			atkRange = 5.5f;   // 槍の射程
 		}
 		else if (currentWeapon == AXE) {
 			type = FX_SMASH;
 			fxCol = ORANGE;
-			atkRange = 3.2f;   // ★ 斧の射程：3.2m（手前で重く炸裂）
+			atkRange = 3.2f;   // 斧の射程
 		}
 
-		// ★ エフェクトに射程(atkRange)を渡す（見た目の長さがピッタリ一致）
+		// エフェクトに射程(atkRange)を渡して見た目の長さを合わせる
+		int weaponElem = equippedData[activeSlot].element;
+		if (weaponElem != ELEM_NONE) {
+			fxCol = GetElementColor(weaponElem);
+		}
+
 		fx.SpawnEffect(origin, ad, type, fxCol, atkRange);
 
-		// ★ 当たり判定：エフェクトの射程 + 敵の当たり判定半径 で判定
 		bool hitAny = false;
 		for (auto& e : enemies) {
-			// 距離チェック
 			float dist = Vector3Distance(e.position, position);
 			if (dist <= atkRange + e.radius) {
-				// 前方判定：プレイヤーの攻撃方向(ad)の正面側にいる敵にのみヒットさせる
+				if (!d.HasLineOfSight(position, e.position)) continue;
+
 				Vector3 toEnemy = Vector3Normalize(Vector3Subtract(e.position, position));
 				float dot = Vector3DotProduct(ad, toEnemy);
-
-				// 槍は前方の狭い直線(dot > 0.6)、剣や斧は前方の広い範囲(dot > 0.0)
 				float requiredDot = (currentWeapon == SPEAR) ? 0.6f : 0.0f;
 
 				if (dot >= requiredDot) {
-					int dmg = (int)(attackPower + GetItemTotalAtkBonus(equippedData[activeSlot]));
+					bool isCrit = (GetRandomValue(1, 100) <= 5);
+					float baseAtk = attackPower + GetItemTotalAtkBonus(equippedData[activeSlot]);
+
+					// ★ 属性相性倍率の適用（1.4倍 または 0.75倍）
+					float elemMulti = GetElementMultiplier(weaponElem, e.data.element);
+					int dmg = (int)(baseAtk * elemMulti) + GetRandomValue(0, 3);
+
+					if (isCrit) dmg = (int)((float)dmg * 1.75f);
+
 					e.hp -= dmg;
-					e.ApplyKnockback(ad, 1.0f, d);
-					fx.SpawnDamageText(e.position, dmg);
+					e.ApplyKnockback(ad, isCrit ? 1.8f : 1.0f, d);
+
+					// 特効時（1.4倍）は属性色でポップアップ
+					Color hitCol = (weaponElem != ELEM_NONE) ? GetElementColor(weaponElem) : (isCrit ? GOLD : RED);
+					fx.SpawnDamageText(e.position, dmg, isCrit);
+					fx.SpawnEffect(e.position, { 0,0,0 }, FX_HIT, hitCol);
+
+					// 特効時の専用ログ
+					if (elemMulti > 1.1f) {
+						UI::AddSystemLog("★ WEAKNESS EXPLOITED! (1.4x) ★", hitCol);
+					}
+					else if (isCrit) {
+						UI::AddSystemLog(TextFormat(DataManager::uiStrings["LOG_CRIT_DEALT"].c_str(), e.data.name.c_str(), dmg), GOLD);
+						fx.TriggerHitStop(0.08f);
+						fx.ShakeScreen(0.18f, 0.35f);
+					}
+
 					e.hudTimer = 5.0f;
 					isStealth = false;
 					hitAny = true;
@@ -288,8 +400,18 @@ void Player::PerformAttack(Vector3 ad, std::vector<Enemy>& enemies, Dungeon& d, 
 			}
 		}
 
-		if (hitAny && currentWeapon == AXE) {
-			fx.ShakeScreen(0.12f, 0.25f);
+		// ★ 命中時：武器ごとに異なる長さのヒットストップと画面揺れを発動
+		if (hitAny) {
+			if (currentWeapon == AXE) {
+				fx.TriggerHitStop(0.08f);       // 斧：重いヒットストップ
+				fx.ShakeScreen(0.12f, 0.25f);  // 斧：ガツンと画面揺れ
+			}
+			else if (currentWeapon == SPEAR) {
+				fx.TriggerHitStop(0.05f);       // 槍：ズスッと貫くヒットストップ
+			}
+			else if (currentWeapon == SWORD) {
+				fx.TriggerHitStop(0.04f);       // 剣：軽快で鋭いヒットストップ
+			}
 		}
 	}
 }
@@ -299,18 +421,42 @@ void Player::PerformSmash(Vector3 ad, std::vector<Enemy>& enemies, Dungeon& d, E
 	AudioManager::PlaySE(SE_SKILL);
 	fx.SpawnEffect(Vector3Add(position, { 0, 0.8f, 0 }), ad, FX_SMASH, RED);
 	fx.ShakeScreen(0.25f, 0.5f);
-	for (auto& e : enemies) if (Vector3Distance(e.position, position) < 5.0f) {
-		int dmg = (int)(attackPower * 2.5f); e.hp -= dmg; e.ApplyKnockback(ad, 3.0f, d); fx.SpawnDamageText(e.position, dmg);
-		e.hudTimer = 5.0f;
-		isStealth = false;
+	fx.TriggerHitStop(0.10f);
+	for (auto& e : enemies) {
+		if (Vector3Distance(e.position, position) < 4.5f) {
+			if (!d.HasLineOfSight(position, e.position)) continue;
+
+			// ★ 強撃スキルは25%の確率でクリティカル！
+			bool isCrit = (GetRandomValue(1, 100) <= 25);
+			int dmg = (int)(attackPower * 2.5f);
+			if (isCrit) dmg = (int)(dmg * 1.6f);
+
+			e.hp -= dmg;
+			e.ApplyKnockback(ad, 3.5f, d);
+			fx.SpawnDamageText(e.position, dmg, isCrit);
+			fx.SpawnEffect(e.position, { 0,0,0 }, FX_HIT, isCrit ? GOLD : RED);
+
+			if (isCrit) {
+				UI::AddSystemLog(TextFormat(DataManager::uiStrings["LOG_CRIT_DEALT"].c_str(), e.data.name.c_str(), dmg), GOLD);
+				fx.ShakeScreen(0.35f, 0.7f);   // 特大シェイク
+				fx.TriggerHitStop(0.14f);       // 特大ヒットストップ！
+			}
+
+			e.hudTimer = 5.0f;
+			isStealth = false;
+		}
 	}
 }
 
 // 毎フレームのプレイヤー移動、スキル処理、アニメーション遷移を管理する
+// =============================================================================
+// 毎フレームのプレイヤー移動、スキル処理、アニメーション遷移を管理する
+// =============================================================================
 void Player::Update(Camera3D& cam, Dungeon& d, std::vector<Enemy>& enemies, EffectManager& fx, bool stop) {
 	if (stop) return;
 	float dt = GetFrameTime();
 
+	// --- 各種クールダウンタイマー更新 ---
 	if (dashCooldownTimer > 0) dashCooldownTimer -= dt;
 	if (smashCooldownTimer > 0) smashCooldownTimer -= dt;
 	if (stealthCooldownTimer > 0) stealthCooldownTimer -= dt;
@@ -323,14 +469,33 @@ void Player::Update(Camera3D& cam, Dungeon& d, std::vector<Enemy>& enemies, Effe
 	if (kongoTimer > 0) { kongoTimer -= dt; if (kongoTimer <= 0) RecalculateStats(); }
 	if (zoukyouTimer > 0) { zoukyouTimer -= dt; if (zoukyouTimer <= 0) RecalculateStats(); }
 
+	// ★ 強撃(SMASH)のタメ（チャージ）カウントダウン処理
+	if (isChargingSmash) {
+		smashChargeTimer -= dt;
+		smashChargeDir = lastAimDir; // タメ中もマウス/スティックのエイム方向に狙いを定める
+
+		if (smashChargeTimer <= 0.0f) {
+			// タメ完了！ここで特大強撃を炸裂させる！
+			isChargingSmash = false;
+			PerformSmash(smashChargeDir, enemies, d, fx);
+
+			float cdMultiplier = 1.0f - cooldownReduction;
+			if (cdMultiplier < 0.2f) cdMultiplier = 0.2f;
+			smashCooldownTimer = GetSkillMaxCooldown(SKILL_ACTIVE_SMASH) * cdMultiplier;
+
+			attackTimer = 0.5f;
+			animTime = 0;
+		}
+	}
+
 	Vector3 cf = Vector3Normalize(Vector3Subtract(cam.target, cam.position)); cf.y = 0; cf = Vector3Normalize(cf);
 	Vector3 cr = { -cf.z, 0, cf.x }, md = { 0,0,0 };
 
 	bool isMoving = false;
-	//  curSpdをifブロックの前に宣言し、baseSpeedで初期化
 	float curSpd = baseSpeed;
 
-	if (attackTimer <= 0) {
+	// ★ 攻撃中、または強撃タメ中(isChargingSmash)は移動を停止して構える
+	if (attackTimer <= 0 && !isChargingSmash) {
 		if (IsKeyDown(DataManager::keyConfig.moveForward)) md = Vector3Add(md, cf);
 		if (IsKeyDown(DataManager::keyConfig.moveBackward)) md = Vector3Subtract(md, cf);
 		if (IsKeyDown(DataManager::keyConfig.moveLeft)) md = Vector3Subtract(md, cr);
@@ -344,7 +509,6 @@ void Player::Update(Camera3D& cam, Dungeon& d, std::vector<Enemy>& enemies, Effe
 		}
 
 		isMoving = (Vector3Length(md) > 0.1f);
-		// ★修正: ダッシュ状態に応じてcurSpdを再計算（再代入）する
 		curSpd = (dashTimer > 0) ? baseSpeed * 2.8f : baseSpeed;
 
 		if (isMoving) {
@@ -355,6 +519,7 @@ void Player::Update(Camera3D& cam, Dungeon& d, std::vector<Enemy>& enemies, Effe
 		}
 	}
 
+	// --- エイム（照準）の入力処理 ---
 	bool usingGamepadAim = false;
 	Vector2 mouseDelta = GetMouseDelta();
 	if (fabs(mouseDelta.x) > 1.0f || fabs(mouseDelta.y) > 1.0f || IsMouseButtonPressed(0) || IsMouseButtonPressed(1)) {
@@ -401,9 +566,10 @@ void Player::Update(Camera3D& cam, Dungeon& d, std::vector<Enemy>& enemies, Effe
 		}
 	}
 
+	// --- 通常攻撃入力 ---
 	if (attackTimer > 0) attackTimer -= dt;
 	bool attackInput = IsMouseButtonPressed(0) || IsGamepadButtonPressed(0, DataManager::keyConfig.padAttack);
-	if (attackInput && attackTimer <= 0 && currentWeapon != NONE) {
+	if (attackInput && attackTimer <= 0 && !isChargingSmash && currentWeapon != NONE) {
 		PerformAttack(lastAimDir, enemies, d, fx);
 		attackTimer = 0.5f; animTime = 0;
 	}
@@ -411,6 +577,7 @@ void Player::Update(Camera3D& cam, Dungeon& d, std::vector<Enemy>& enemies, Effe
 	float cdMultiplier = 1.0f - cooldownReduction;
 	if (cdMultiplier < 0.2f) cdMultiplier = 0.2f;
 
+	// --- スキル入力 ---
 	bool btnDash = IsKeyPressed(DataManager::keyConfig.dash) || IsGamepadButtonPressed(0, DataManager::keyConfig.padDash);
 	bool btnSmash = IsKeyPressed(DataManager::keyConfig.smash) || IsGamepadButtonPressed(0, DataManager::keyConfig.padSmash);
 	bool btnKongo = IsKeyPressed(DataManager::keyConfig.kongo) || IsGamepadButtonPressed(0, DataManager::keyConfig.padKongo);
@@ -422,9 +589,17 @@ void Player::Update(Camera3D& cam, Dungeon& d, std::vector<Enemy>& enemies, Effe
 	if (btnDash && IsSkillUnlocked(SKILL_ACTIVE_DASH) && dashCooldownTimer <= 0) {
 		dashTimer = 0.35f; dashCooldownTimer = GetSkillMaxCooldown(SKILL_ACTIVE_DASH) * cdMultiplier; AudioManager::PlaySE(SE_SKILL);
 	}
-	if (btnSmash && IsSkillUnlocked(SKILL_ACTIVE_SMASH) && smashCooldownTimer <= 0 && attackTimer <= 0) {
-		PerformSmash(lastAimDir, enemies, d, fx); smashCooldownTimer = GetSkillMaxCooldown(SKILL_ACTIVE_SMASH) * cdMultiplier; attackTimer = 0.8f; animTime = 0;
+
+	// ★ 強撃(SMASH)ボタン入力：即時発動せず、0.6秒のタメ（チャージ）を開始
+	if (btnSmash && IsSkillUnlocked(SKILL_ACTIVE_SMASH) && smashCooldownTimer <= 0 && attackTimer <= 0 && !isChargingSmash) {
+		isChargingSmash = true;
+		smashChargeMax = 0.6f;
+		smashChargeTimer = smashChargeMax;
+		smashChargeDir = lastAimDir;
+		attackTimer = 0.7f; // タメ中の通常攻撃を防止
+		AudioManager::PlaySE(SE_CLICK);
 	}
+
 	if (btnKongo && IsSkillUnlocked(SKILL_ACTIVE_KONGO) && kongoCooldownTimer <= 0) {
 		kongoTimer = 10.0f; kongoCooldownTimer = GetSkillMaxCooldown(SKILL_ACTIVE_KONGO) * cdMultiplier; AudioManager::PlaySE(SE_SKILL); fx.SpawnEffect(position, { 0,1,0 }, FX_HIT, GOLD); RecalculateStats();
 	}
@@ -439,12 +614,15 @@ void Player::Update(Camera3D& cam, Dungeon& d, std::vector<Enemy>& enemies, Effe
 		healCooldownTimer = GetSkillMaxCooldown(SKILL_ACTIVE_HEAL) * cdMultiplier; AudioManager::PlaySE(SE_HEAL); fx.SpawnEffect(position, { 0,1,0 }, FX_HIT, GREEN);
 	}
 
-	if (btnSwap) { activeSlot = 1 - activeSlot; currentWeapon = equippedWeapons[activeSlot]; }
+	if (btnSwap && !isChargingSmash) { activeSlot = 1 - activeSlot; currentWeapon = equippedWeapons[activeSlot]; }
 
-	if (attackTimer > 0) modelRotation = atan2f(lastAimDir.x, lastAimDir.z) * RAD2DEG;
+	// 攻撃中またはタメ中は、照準の方向を向く
+	if (attackTimer > 0 || isChargingSmash) modelRotation = atan2f(lastAimDir.x, lastAimDir.z) * RAD2DEG;
 
+	// --- アニメーション決定 ---
 	int targetAnim = 4;
 	if (hp <= 0) targetAnim = 3;
+	else if (isChargingSmash) targetAnim = 4; // タメ中は武器を構える待機ポーズ
 	else if (attackTimer > 0) targetAnim = (currentWeapon == SWORD ? 0 : (currentWeapon == AXE ? 1 : (currentWeapon == WAND ? 2 : 0)));
 	else if (dashTimer > 0) targetAnim = 6;
 	else if (isMoving) targetAnim = 5;
@@ -462,7 +640,9 @@ void Player::Update(Camera3D& cam, Dungeon& d, std::vector<Enemy>& enemies, Effe
 	animTime += dt * pSpd;
 }
 
+// =============================================================================
 // プレイヤー本体と、手に持った武器を描画する
+// =============================================================================
 void Player::Draw(bool debug) {
 	if (DataManager::loadedModels.count("Player") == 0) return;
 	GameModel& gm = DataManager::loadedModels["Player"];
@@ -472,11 +652,10 @@ void Player::Draw(bool debug) {
 	int frame = (currentAnimIndex <= 3) ? (int)fminf(animTime, (float)anim.frameCount - 1) : (int)fmodf(animTime, (float)anim.frameCount);
 
 	UpdateModelAnimation(gm.model, anim, frame);
-	// RaylibのIQMパーサーは不要なスケールをバインドしてしまうことがあるためリセットする
 	for (int i = 0; i < gm.model.boneCount; i++) gm.model.bindPose[i].scale = { 1.0f, 1.0f, 1.0f };
 
 	float scale = 0.01f;
-	float yOffset = -0.4f; // 少し下げて足が地面に接するようにする
+	float yOffset = -0.4f;
 	Vector3 drawPos = { position.x, position.y + yOffset, position.z };
 
 	gm.model.transform = MatrixMultiply(MatrixRotateX(-90 * DEG2RAD), MatrixRotateY(modelRotation * DEG2RAD));
@@ -485,7 +664,6 @@ void Player::Draw(bool debug) {
 	// --- 武器のアタッチメント(持たせる)処理 ---
 	if (currentWeapon != NONE && !isDead) {
 		int handIdx = -1;
-		// 右手のボーンを探す
 		for (int i = 0; i < gm.model.boneCount; i++) {
 			std::string bName = gm.model.bones[i].name;
 			for (auto& c : bName) c = (char)tolower(c);
@@ -499,30 +677,24 @@ void Player::Draw(bool debug) {
 		}
 
 		if (handIdx != -1) {
-			// アニメーション中の手の動き(純粋な移動と回転のみ)を取得
 			Matrix boneMat = GetPlayerBoneGlobalMatrix(gm.model, anim, frame, handIdx);
 
-			// プレイヤー自体のワールド座標・スケール行列
 			Matrix playerWorld = MatrixMultiply(
 				MatrixMultiply(MatrixScale(scale, scale, scale), gm.model.transform),
 				MatrixTranslate(drawPos.x, drawPos.y, drawPos.z)
 			);
 
-			// 武器のスケール(デバッグメニューで調整した値)
 			Matrix weaponScale = MatrixScale(customWeaponScale, customWeaponScale, customWeaponScale);
 
-			// 武器を持たせる角度と位置の微調整(デバッグメニューで調整した値)
 			Matrix offsetMatrix = MatrixMultiply(
 				MatrixRotateXYZ({ customWeaponOffsetRot.x * DEG2RAD, customWeaponOffsetRot.y * DEG2RAD, customWeaponOffsetRot.z * DEG2RAD }),
 				MatrixTranslate(customWeaponOffsetPos.x, customWeaponOffsetPos.y, customWeaponOffsetPos.z)
 			);
 
-			// 武器の最終的なワールド行列を計算
 			Matrix finalTransform = MatrixMultiply(weaponScale, offsetMatrix);
 			finalTransform = MatrixMultiply(finalTransform, boneMat);
 			finalTransform = MatrixMultiply(finalTransform, playerWorld);
 
-			// 描画する武器モデルを決定
 			int equipId = equippedData[activeSlot].id;
 			std::string baseKey = (currentWeapon == SWORD) ? "Wpn_Sword" : (currentWeapon == AXE ? "Wpn_Axe" : (currentWeapon == WAND ? "Wpn_Wand" : "Wpn_Spear"));
 			std::string finalKey = baseKey;
@@ -532,40 +704,53 @@ void Player::Draw(bool debug) {
 				finalKey = customName;
 			}
 			else {
-				// 伝説の武器(ID400番台)の場合は専用のLegendモデルを呼ぶ
 				if (equipId >= 400 && equipId < 500) { if (DataManager::loadedModels.count(baseKey + "_Legend")) finalKey = baseKey + "_Legend"; }
 				if (DataManager::loadedModels.count("Wpn_" + std::to_string(equipId))) finalKey = "Wpn_" + std::to_string(equipId);
 			}
 
 			if (DataManager::loadedModels.count(finalKey)) {
 				Model& wm = DataManager::loadedModels[finalKey].model;
-				wm.transform = finalTransform; // 計算した行列を適用
-				DrawModel(wm, { 0,0,0 }, 1.0f, WHITE); // 武器を描画
-				wm.transform = MatrixIdentity(); // 終わったらリセット
+				wm.transform = finalTransform;
+				DrawModel(wm, { 0,0,0 }, 1.0f, WHITE);
+				wm.transform = MatrixIdentity();
 			}
 			else {
-				// モデルが見つからなければ赤い棒を描画
 				Model& wm = DataManager::fallbackWeaponModel;
 				wm.transform = finalTransform;
 				DrawModel(wm, { 0,0,0 }, 1.0f, RED);
 				DrawModelWires(wm, { 0,0,0 }, 1.0f, MAROON);
 				wm.transform = MatrixIdentity();
 			}
-
-			//// デバッグ用に、右手の位置(青い球)とXYZ軸の線を描画する
-			//Vector3 handPos = { finalTransform.m12, finalTransform.m13, finalTransform.m14 };
-			//DrawSphere(handPos, 0.2f, Fade(BLUE, 0.8f));
-
-			//Vector3 right = { finalTransform.m0, finalTransform.m1, finalTransform.m2 };
-			//Vector3 up = { finalTransform.m4, finalTransform.m5, finalTransform.m6 };
-			//Vector3 forward = { finalTransform.m8, finalTransform.m9, finalTransform.m10 };
-
-			//right = Vector3Normalize(right); up = Vector3Normalize(up); forward = Vector3Normalize(forward);
-
-			//DrawLine3D(handPos, Vector3Add(handPos, Vector3Scale(right, 2.0f)), RED);   // X軸
-			//DrawLine3D(handPos, Vector3Add(handPos, Vector3Scale(up, 2.0f)), GREEN);    // Y軸
-			//DrawLine3D(handPos, Vector3Add(handPos, Vector3Scale(forward, 2.0f)), BLUE); // Z軸
 		}
 	}
 	gm.model.transform = MatrixIdentity();
+
+	// =========================================================================
+	// ★ 強撃スキルのAoE予告範囲表示（タメ中に地面に表示）
+	// =========================================================================
+	if (isChargingSmash) {
+		float progress = 1.0f - (smashChargeTimer / smashChargeMax);
+		if (progress < 0.0f) progress = 0.0f;
+		if (progress > 1.0f) progress = 1.0f;
+
+		float aoeRadius = 3.8f;
+		Vector3 aoeCenter = Vector3Add(position, Vector3Scale(smashChargeDir, 1.8f));
+		aoeCenter.y = 0.12f;
+
+		// 1. 鮮やかな水色の外枠線（敵の赤枠と絶対に被らない）
+		Color outlineCol = SKYBLUE;
+		DrawCylinderWires(aoeCenter, aoeRadius, aoeRadius, 0.05f, 36, outlineCol);
+		DrawCylinderWires(aoeCenter, aoeRadius + 0.05f, aoeRadius + 0.05f, 0.05f, 36, Fade(WHITE, 0.8f));
+
+		// 2. 内部の満ちる色（薄いシアン → 濃い青へ）
+		Color fillCol = Fade(BLUE, 0.15f + progress * 0.45f);
+		DrawCylinder(aoeCenter, aoeRadius, aoeRadius, 0.04f, 36, fillCol);
+
+		// 3. 中心から外枠へ広がるチャージゲージ円（白く輝く水色）
+		float gaugeRadius = aoeRadius * progress;
+		Color gaugeCol = Fade(SKYBLUE, 0.5f + progress * 0.4f);
+		DrawCylinder(aoeCenter, gaugeRadius, gaugeRadius, 0.05f, 36, gaugeCol);
+	}
+
+
 }

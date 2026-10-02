@@ -38,7 +38,7 @@
   "DASH": "ダッシュ",
   "SMASH": "強撃",
   "HIDE": "隠密",
-  "STEALTH": "ステルス",
+  "STEALTH": "隠密",
 
   "LOG_LEVELUP": "レベルアップ！ ステータスが上昇した",
   "LOG_LEVEL_UP": "LEVEL UP!",
@@ -208,7 +208,7 @@
   "KEY_SMASH": "強撃",
   "KEY_KONGO": "金剛",
   "KEY_ZOUKYOU": "増強",
-  "KEY_STEALTH": "ステルス",
+  "KEY_STEALTH": "隠密",
   "KEY_HEAL": "ヒール",
   "KEY_SWAP": "武器切り替え",
   "PRESS_ANY_KEY": "割り当てるボタンを押してください...",
@@ -221,4 +221,4 @@
   "WINDOWED": "ウィンドウ",
   "FULLSCREEN": "フルスクリーン",
   "CTRL_SCREEN_SETTING": "操作・画面設定"
-} 
+}

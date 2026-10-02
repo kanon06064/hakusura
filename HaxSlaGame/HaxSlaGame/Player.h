@@ -28,6 +28,12 @@ public:
     // --- スキルとクールダウンの管理 ---
     float dashTimer, dashCooldownTimer;
     float smashCooldownTimer;
+
+    bool isChargingSmash;
+    float smashChargeTimer;
+    float smashChargeMax;
+    Vector3 smashChargeDir;
+
     float stealthTimer, stealthCooldownTimer;
     float kongoTimer, kongoCooldownTimer;
     float zoukyouTimer, zoukyouCooldownTimer;
@@ -82,6 +88,12 @@ public:
     static std::string GetFullItemName(const ItemData& item);
     static float GetItemTotalAtkBonus(const ItemData& item);
     static Color GetItemRarityColor(const ItemData& item);
+    static int GetItemTier(const ItemData& item);
+
+    static std::string GetElementName(int elem);
+    static Color GetElementColor(int elem);
+    static float GetElementMultiplier(int atkElem, int defElem); // 属性相性倍率
+    float GetPlayerElementResistance(int elem); // 防具の合計属性耐性(%)
 
 private:
     void PerformAttack(Vector3 ad, std::vector<Enemy>& enemies, Dungeon& d, EffectManager& fx);
