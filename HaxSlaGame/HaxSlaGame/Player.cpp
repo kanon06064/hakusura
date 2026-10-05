@@ -84,11 +84,6 @@ expToNext(100), skillPoints(0), gold(0)
 	RecalculateStats();
 }
 
-std::string Player::GetFullItemName(const ItemData& item) {
-	if (item.id == -1) return "EMPTY";
-	Modifier mod = DataManager::GetModifier(item.modifierId); // エンチャント(接頭辞)を取得
-	return mod.name.empty() ? item.name : mod.name + " " + item.name;
-}
 
 float Player::GetItemTotalAtkBonus(const ItemData& item) {
 	if (item.id == -1) return 0.0f;
@@ -97,20 +92,20 @@ float Player::GetItemTotalAtkBonus(const ItemData& item) {
 
 std::string Player::GetElementName(int elem) {
 	switch (elem) {
-	case ELEM_HELLFIRE: return "業火の";
-	case ELEM_ROT:      return "腐蝕の";
-	case ELEM_SOUL:     return "霊怨の";
-	case ELEM_ABYSS:    return "深淵の";
+	case ELEM_HELLFIRE: return T("ELEM_HELLFIRE", "Hellfire ");
+	case ELEM_ROT:      return T("ELEM_ROT", "Rot ");
+	case ELEM_SOUL:     return T("ELEM_SOUL", "Soul ");
+	case ELEM_ABYSS:    return T("ELEM_ABYSS", "Abyss ");
 	default:            return "";
 	}
 }
 
 Color Player::GetElementColor(int elem) {
 	switch (elem) {
-	case ELEM_HELLFIRE: return Color{ 255, 60, 40, 255 };   // 深紅（業火）
-	case ELEM_ROT:      return Color{ 80, 220, 60, 255 };   // 毒緑（腐蝕）
-	case ELEM_SOUL:     return Color{ 100, 200, 255, 255 }; // 幽青（霊怨）
-	case ELEM_ABYSS:    return Color{ 180, 50, 230, 255 };  // 深紫（深淵）
+	case ELEM_HELLFIRE: return Color{ 255, 60, 40, 255 };   // 深紅
+	case ELEM_ROT:      return Color{ 80, 220, 60, 255 };   // 毒緑
+	case ELEM_SOUL:     return Color{ 100, 200, 255, 255 }; // 幽青
+	case ELEM_ABYSS:    return Color{ 180, 50, 230, 255 };  // 深紫
 	default:            return WHITE;
 	}
 }
@@ -128,21 +123,24 @@ std::string Player::GetFullItemName(const ItemData& item) {
 	return fullName;
 }
 
-// 属性相性倍率の計算
 float Player::GetElementMultiplier(int atkElem, int defElem) {
 	if (atkElem == ELEM_NONE || defElem == ELEM_NONE) return 1.0f;
 
-	// 深淵（Abyss）：与ダメ1.25倍のハイリスク属性
+	// 深淵（Abyss）：全属性に1.25倍
 	if (atkElem == ELEM_ABYSS) return 1.25f;
 
-	// 3すくみ関係
-	if (atkElem == ELEM_HELLFIRE && defElem == ELEM_ROT)  return 1.40f; // 業火 → 腐蝕（特効！）
-	if (atkElem == ELEM_ROT && defElem == ELEM_SOUL) return 1.40f; // 腐蝕 → 霊怨（特効！）
-	if (atkElem == ELEM_SOUL && defElem == ELEM_HELLFIRE) return 1.40f; // 霊怨 → 業火（特効！）
+	// ★ 同属性耐性：同じ属性で攻撃すると耐性によりダメージ軽減（0.6倍）
+	if (atkElem == defElem) return 0.60f;
 
-	if (atkElem == ELEM_HELLFIRE && defElem == ELEM_SOUL) return 0.75f; // 不利
-	if (atkElem == ELEM_ROT && defElem == ELEM_HELLFIRE) return 0.75f; // 不利
-	if (atkElem == ELEM_SOUL && defElem == ELEM_ROT)  return 0.75f; // 不利
+	// 3すくみ相性
+	if (atkElem == ELEM_HELLFIRE && defElem == ELEM_ROT)  return 1.40f; // 業火 → 腐蝕（特効 1.4倍）
+	if (atkElem == ELEM_ROT && defElem == ELEM_SOUL) return 1.40f; // 腐蝕 → 霊怨（特効 1.4倍）
+	if (atkElem == ELEM_SOUL && defElem == ELEM_HELLFIRE) return 1.40f; // 霊怨 → 業火（特効 1.4倍）
+
+	// 不利属性
+	if (atkElem == ELEM_HELLFIRE && defElem == ELEM_SOUL) return 0.75f;
+	if (atkElem == ELEM_ROT && defElem == ELEM_HELLFIRE) return 0.75f;
+	if (atkElem == ELEM_SOUL && defElem == ELEM_ROT)  return 0.75f;
 
 	return 1.0f;
 }
@@ -153,11 +151,54 @@ float Player::GetPlayerElementResistance(int elem) {
 	float totalRes = 0.0f;
 	for (int i = 0; i < 5; i++) {
 		if (equippedArmor[i].id != -1 && equippedArmor[i].element == elem) {
-			totalRes += 0.15f; // 1部位で15%カット
+			totalRes += 0.15f;
 		}
 	}
-	if (totalRes > 0.60f) totalRes = 0.60f; // 最大60%カット上限
+	if (totalRes > 0.60f) totalRes = 0.60f; // 最大60%上限
 	return totalRes;
+}
+
+int Player::CompareWithEquipped(const ItemData& item, const Player& p) {
+	if (item.id == -1) return 0;
+
+	// --- 武器の比較（合計攻撃力で判定） ---
+	if (item.type == "EQUIP") {
+		const ItemData& cur = p.equippedData[p.activeSlot];
+		float curAtk = 0.0f;
+		if (cur.id != -1) {
+			curAtk = cur.atkBonus + DataManager::GetModifier(cur.modifierId).atk;
+		}
+		else {
+			return 1; // 現在何も装備していなければ必ず強い
+		}
+
+		float itemAtk = item.atkBonus + DataManager::GetModifier(item.modifierId).atk;
+		if (itemAtk > curAtk + 0.01f) return 1;   // 強い (▲)
+		if (itemAtk < curAtk - 0.01f) return -1;  // 弱い (▼)
+		return 0;
+	}
+
+	// --- 防具の比較（合計防御力で判定） ---
+	if (item.type == "ARMOR") {
+		int sub = item.weaponSubtype;
+		if (sub < 0 || sub >= 5) return 0;
+
+		const ItemData& cur = p.equippedArmor[sub];
+		float curDef = 0.0f;
+		if (cur.id != -1) {
+			curDef = cur.defBonus + DataManager::GetModifier(cur.modifierId).def;
+		}
+		else {
+			return 1; // スロットが空なら必ず強い
+		}
+
+		float itemDef = item.defBonus + DataManager::GetModifier(item.modifierId).def;
+		if (itemDef > curDef + 0.01f) return 1;   // 強い (▲)
+		if (itemDef < curDef - 0.01f) return -1;  // 弱い (▼)
+		return 0;
+	}
+
+	return 0;
 }
 
 

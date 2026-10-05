@@ -72,6 +72,6 @@ private:
     static std::vector<SystemLogMessage> systemLogs;
     static std::vector<Rectangle> interactables;
 
-    static void DrawDetailWindow(Font font);
+    static void DrawDetailWindow(Font font, class Player& p);
     static void OpenDetail(const ItemData& item);
 };

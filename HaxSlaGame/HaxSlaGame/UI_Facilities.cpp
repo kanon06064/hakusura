@@ -95,12 +95,12 @@ void UI::DrawCraftingMenu(Player& p, Font font, bool& isOpen) {
     if (UI::DrawButton({ 80, bottomY, 100, 30 }, "<<", font, locked ? GRAY : GRAY) && !locked && craftingScroll > 0) craftingScroll--;
     if (UI::DrawButton({ 200, bottomY, 100, 30 }, ">>", font, locked ? GRAY : GRAY) && !locked && craftingScroll < maxP - 1) craftingScroll++;
 
-    DrawDetailWindow(font);
+    DrawDetailWindow(font, p);
 }
 
-// ==========================================
-// 倉庫 (手持ちのアイテムを出し入れする)
-// ==========================================
+// =============================================================================
+// 倉庫 (手持ちのアイテムを出し入れする ＆ 素材一括預け入れ搭載)
+// =============================================================================
 void UI::DrawStorage(Player& p, Font font, bool& isOpen, std::vector<ItemData>& sItems, std::vector<ItemData>& sEquip) {
     static bool wasOpen = false;
     static float openTimer = 0.0f;
@@ -123,7 +123,43 @@ void UI::DrawStorage(Player& p, Font font, bool& isOpen, std::vector<ItemData>& 
     float leftX = 80.0f;
     float rightX = sw - 430.0f;
 
+    // --- 左側：プレイヤーの所持アイテム ---
     DrawTextEx(font, T("PLAYER_INV", "Player Inv").c_str(), { leftX, 120 }, 20, 1, SKYBLUE);
+
+    // ★ ここを追加：手持ちに素材があるかチェック
+    int matCountInBag = 0;
+    for (const auto& item : p.inventoryItems) {
+        if (item.type == "MATERIAL") matCountInBag += item.count;
+    }
+
+    // ★ ここを追加：「素材を一括預入」ボタン
+    Rectangle depositAllBtn = { leftX + 160.0f, 112.0f, 190.0f, 36.0f };
+    Color depBtnCol = (matCountInBag > 0) ? ORANGE : DARKGRAY;
+
+    if (UI::DrawButton(depositAllBtn, T("DEPOSIT_ALL_MATS", "Deposit All Mats").c_str(), font, modalLocked ? Fade(depBtnCol, 0.4f) : depBtnCol) && !modalLocked && matCountInBag > 0) {
+        // 手持ちの全素材を倉庫へ自動転送
+        for (auto it = p.inventoryItems.begin(); it != p.inventoryItems.end(); ) {
+            if (it->type == "MATERIAL") {
+                bool found = false;
+                for (auto& si : sItems) {
+                    if (si.id == it->id) {
+                        si.count += it->count;
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) {
+                    sItems.push_back(*it);
+                }
+                it = p.inventoryItems.erase(it); // インベントリから削除
+            }
+            else {
+                ++it;
+            }
+        }
+        AudioManager::PlaySE(SE_SAVE); // 保管完了の重厚な音
+        UI::AddSystemLog(T("LOG_DEPOSITED_ALL_MATS", "Deposited all materials!"), GREEN);
+    }
 
     const int perP = 10;
     int mPInv = (int)ceil((float)p.inventoryItems.size() / perP);
@@ -152,6 +188,7 @@ void UI::DrawStorage(Player& p, Font font, bool& isOpen, std::vector<ItemData>& 
     if (UI::DrawButton({ leftX, bottomY, 100, 30 }, "<<", font, modalLocked ? GRAY : GRAY) && !modalLocked && storageInvPage > 0) storageInvPage--;
     if (UI::DrawButton({ leftX + 110, bottomY, 100, 30 }, ">>", font, modalLocked ? GRAY : GRAY) && !modalLocked && storageInvPage < mPInv - 1) storageInvPage++;
 
+    // --- 右側：倉庫の保管アイテム ---
     DrawTextEx(font, T("STORAGE_INV", "Storage Inv").c_str(), { rightX, 120 }, 20, 1, GREEN);
     for (int i = 0; i < perP; i++) {
         int idx = storageBoxPage * perP + i;
@@ -175,6 +212,7 @@ void UI::DrawStorage(Player& p, Font font, bool& isOpen, std::vector<ItemData>& 
 
     if (UI::DrawButton({ (float)sw - 160, 70, 100, 45 }, T("CLOSE", "Close").c_str(), font, modalLocked ? Fade(RED, 0.5f) : RED) && !modalLocked) isOpen = false;
 
+    // --- 個数指定モーダルウィンドウ ---
     if (transferIdx != -1 && !showDetail) {
         DrawRectangle(0, 0, sw, sh, Fade(BLACK, 0.7f));
         int mw = 420, mh = 260;
@@ -184,9 +222,10 @@ void UI::DrawStorage(Player& p, Font font, bool& isOpen, std::vector<ItemData>& 
         DrawRectangleLinesEx({ (float)mx, (float)my, (float)mw, (float)mh }, 3, ORANGE);
 
         ItemData& targetItem = isDeposit ? p.inventoryItems[transferIdx] : sItems[transferIdx];
-        const char* title = isDeposit ? T("DEPOSIT_AMT", "Deposit Amount").c_str() : T("WITHDRAW_AMT", "Withdraw Amount").c_str();
-        Vector2 tSize = MeasureTextEx(font, title, 20, 1);
-        DrawTextEx(font, title, { (float)mx + mw / 2 - tSize.x / 2, (float)my + 20 }, 20, 1, WHITE);
+
+        std::string title = isDeposit ? T("DEPOSIT_AMT", "Deposit Amount") : T("WITHDRAW_AMT", "Withdraw Amount");
+        Vector2 tSize = MeasureTextEx(font, title.c_str(), 20, 1);
+        DrawTextEx(font, title.c_str(), { (float)mx + mw / 2 - tSize.x / 2, (float)my + 20 }, 20, 1, WHITE);
 
         std::string nameStr = TextFormat("%s (Max: %d)", targetItem.name.c_str(), transferMax);
         Vector2 nSize = MeasureTextEx(font, nameStr.c_str(), 18, 1);
@@ -237,12 +276,13 @@ void UI::DrawStorage(Player& p, Font font, bool& isOpen, std::vector<ItemData>& 
             transferIdx = -1; AudioManager::PlaySE(SE_CLICK);
         }
     }
-    DrawDetailWindow(font);
+
+    DrawDetailWindow(font, p);
 }
 
-// ==========================================
-// リフォージ (ゴールドを払って装備のエンチャントを再抽選する)
-// ==========================================
+// =============================================================================
+// リフォージ ＆ 属性エンチャント (モディファイア再抽選 ＆ 属性付与)
+// =============================================================================
 void UI::DrawReforgeMenu(Player& p, Font font, bool& isOpen) {
     static bool wasOpen = false; static float openTimer = 0.0f;
     if (isOpen && !wasOpen) openTimer = 0.0f; wasOpen = isOpen; if (isOpen) openTimer += GetFrameTime();
@@ -251,55 +291,124 @@ void UI::DrawReforgeMenu(Player& p, Font font, bool& isOpen) {
 
     DrawRectangle(50, 50, sw - 100, sh - 100, Fade(BLACK, 0.95f));
     DrawRectangleLinesEx({ 50, 50, (float)sw - 100, (float)sh - 100 }, 3, GOLD);
-    if (UI::DrawButton({ (float)sw - 160, 60, 100, 40 }, T("CLOSE", "Close").c_str(), font, locked ? Fade(RED, 0.5f) : RED) && !locked) { isOpen = false; reforgeItemIdx = -1; }
+    if (UI::DrawButton({ (float)sw - 160, 60, 100, 40 }, T("CLOSE", "Close").c_str(), font, locked ? Fade(RED, 0.5f) : RED) && !locked) {
+        isOpen = false;
+        reforgeItemIdx = -1;
+    }
 
-    DrawTextEx(font, T("REFORGE", "Reforge").c_str(), { 80, 70 }, 24, 1, GOLD);
+    DrawTextEx(font, T("REFORGE", "Reforge & Enchant").c_str(), { 80, 70 }, 24, 1, GOLD);
     DrawTextEx(font, TextFormat("Gold: %d G", p.gold), { 80, 110 }, 20, 1, YELLOW);
 
     const int perPage = 10;
     float midX = (float)sw / 2.0f;
 
+    // --- 左側：所持装備品一覧 ---
     for (int i = 0; i < (int)p.inventoryEquip.size(); i++) {
         if (i >= perPage) break;
-        Rectangle r = { 80, 180.0f + i * 42, midX - 160.0f, 38 };
+        Rectangle r = { 80, 160.0f + i * 44, midX - 160.0f, 40 };
         Color c = (reforgeItemIdx == i) ? DARKBLUE : DARKGRAY;
 
         if (DrawButton(r, "", font, locked ? Fade(c, 0.5f) : c) && !locked) { reforgeItemIdx = i; }
 
         Vector2 tSize = MeasureTextEx(font, Player::GetFullItemName(p.inventoryEquip[i]).c_str(), 18, 1);
-        DrawTextEx(font, Player::GetFullItemName(p.inventoryEquip[i]).c_str(), { r.x + r.width / 2 - tSize.x / 2, r.y + r.height / 2 - tSize.y / 2 }, 18, 1, Player::GetItemRarityColor(p.inventoryEquip[i]));
+        DrawTextEx(font, Player::GetFullItemName(p.inventoryEquip[i]).c_str(), { r.x + 15, r.y + r.height / 2 - tSize.y / 2 }, 18, 1, Player::GetItemRarityColor(p.inventoryEquip[i]));
     }
 
+    // --- 右側：選択中の装備と、リフォージ/エンチャントパネル ---
     if (reforgeItemIdx != -1 && reforgeItemIdx < (int)p.inventoryEquip.size()) {
         ItemData& item = p.inventoryEquip[reforgeItemIdx];
-        DrawRectangle(midX, 180, midX - 80, 300, Fade(DARKGRAY, 0.5f));
-        DrawTextEx(font, Player::GetFullItemName(item).c_str(), { midX + 20, 200 }, 22, 1, Player::GetItemRarityColor(item));
+        DrawRectangle(midX, 160, midX - 80, sh - 250, Fade(DARKGRAY, 0.4f));
+        DrawRectangleLines(midX, 160, midX - 80, sh - 250, GRAY);
+
+        // 装備名と現在の属性表示
+        DrawTextEx(font, Player::GetFullItemName(item).c_str(), { midX + 20, 180 }, 22, 1, Player::GetItemRarityColor(item));
+
+        std::string elemName = Player::GetElementName(item.element);
+        if (elemName.empty()) elemName = T("NONE_ELEM", "None");
+        Color elemCol = (item.element != ELEM_NONE) ? Player::GetElementColor(item.element) : LIGHTGRAY;
+        DrawTextEx(font, TextFormat(T("CURRENT_ELEM", "Element: %s").c_str(), elemName.c_str()), { midX + 20, 215 }, 18, 1, elemCol);
 
         float baseAtk = item.atkBonus;
         Modifier mod = DataManager::GetModifier(item.modifierId);
         float modAtk = mod.atk;
         float totalAtk = baseAtk + modAtk;
 
-        DrawTextEx(font, TextFormat(T("BASE_ATK", "Base ATK: %.1f").c_str(), baseAtk), { midX + 20, 250 }, 18, 1, SKYBLUE);
-        DrawTextEx(font, TextFormat(T("MOD_ATK", "Mod ATK: %.1f (%s)").c_str(), modAtk, mod.name.c_str()), { midX + 20, 280 }, 18, 1, (modAtk >= 0 ? GREEN : RED));
-        DrawTextEx(font, TextFormat(T("TOTAL_ATK", "Total ATK: %.1f").c_str(), totalAtk), { midX + 20, 310 }, 20, 1, YELLOW);
+        DrawTextEx(font, TextFormat(T("BASE_ATK", "Base ATK: %.1f").c_str(), baseAtk), { midX + 20, 250 }, 16, 1, SKYBLUE);
+        DrawTextEx(font, TextFormat(T("MOD_ATK", "Mod ATK: %.1f (%s)").c_str(), modAtk, mod.name.c_str()), { midX + 20, 275 }, 16, 1, (modAtk >= 0 ? GREEN : RED));
+        DrawTextEx(font, TextFormat(T("TOTAL_ATK", "Total ATK: %.1f").c_str(), totalAtk), { midX + 20, 305 }, 18, 1, YELLOW);
 
-        int cost = 50 + p.level * 10 + (int)item.atkBonus * 2;
-        DrawTextEx(font, TextFormat(T("COST", "Cost: %d G").c_str(), cost), { midX + 20, 360 }, 18, 1, GOLD);
+        // ---------------------------------------------------------------------
+        // 操作1: 通常リフォージ（モディファイア再抽選）
+        // ---------------------------------------------------------------------
+        float panel1Y = 350.0f;
+        DrawLine(midX + 20, panel1Y - 10, sw - 100, panel1Y - 10, GRAY);
+        DrawTextEx(font, T("TITLE_REFORGE_MOD", "[Modifier Reforge]").c_str(), { midX + 20, panel1Y }, 18, 1, WHITE);
 
-        if (p.gold >= cost) {
-            if (DrawButton({ midX + 20, 400, 150, 50 }, T("REFORGE", "Reforge").c_str(), font, locked ? Fade(GREEN, 0.5f) : GREEN) && !locked) {
-                p.gold -= cost;
+        int reforgeCost = 50 + p.level * 10 + (int)item.atkBonus * 2;
+        DrawTextEx(font, TextFormat(T("COST", "Cost: %d G").c_str(), reforgeCost), { midX + 20, panel1Y + 30 }, 16, 1, GOLD);
+
+        if (p.gold >= reforgeCost) {
+            if (DrawButton({ midX + 20, panel1Y + 60, 160, 42 }, T("REFORGE", "Reforge").c_str(), font, locked ? Fade(GREEN, 0.5f) : GREEN) && !locked) {
+                p.gold -= reforgeCost;
                 item.modifierId = DataManager::GetRandomModifierId();
                 AudioManager::PlaySE(SE_REFORGE);
             }
         }
         else {
-            DrawRectangle(midX + 20, 400, 150, 50, showDetail ? ColorBrightness(GRAY, -0.4f) : GRAY);
-            DrawTextEx(font, T("NOT_ENOUGH_GOLD", "Not Enough Gold").c_str(), { midX + 30, 415 }, 18, 1, BLACK);
+            DrawRectangle(midX + 20, panel1Y + 60, 160, 42, DARKGRAY);
+            DrawTextEx(font, T("NOT_ENOUGH_GOLD", "Not Enough Gold").c_str(), { midX + 30, panel1Y + 72 }, 16, 1, RED);
+        }
+
+        // ---------------------------------------------------------------------
+        // 操作2: 属性エンチャント（素材「魔水晶」＋ゴールド消費）
+        // ---------------------------------------------------------------------
+        float panel2Y = 470.0f;
+        DrawLine(midX + 20, panel2Y - 10, sw - 100, panel2Y - 10, GRAY);
+        DrawTextEx(font, T("TITLE_ENCHANT_ELEM", "[Element Enchant]").c_str(), { midX + 20, panel2Y }, 18, 1, elemCol);
+
+        int enchantCost = 150;
+        int reqItemId = 17;    // 魔水晶 (ID: 17)
+        int reqItemCount = 1;
+
+        ItemData reqItemCfg = DataManager::GetItemConfigCopy(reqItemId);
+        int playerHasItem = 0;
+        for (const auto& invItem : p.inventoryItems) {
+            if (invItem.id == reqItemId) playerHasItem += invItem.count;
+        }
+
+        bool hasMat = (playerHasItem >= reqItemCount);
+        bool hasGold = (p.gold >= enchantCost);
+
+        Color matTxtCol = hasMat ? GREEN : RED;
+        DrawTextEx(font, TextFormat(T("REQ_MAT", "Material: %s x%d (Have: %d)").c_str(), reqItemCfg.name.c_str(), reqItemCount, playerHasItem), { midX + 20, panel2Y + 30 }, 16, 1, matTxtCol);
+        DrawTextEx(font, TextFormat(T("COST", "Cost: %d G").c_str(), enchantCost), { midX + 20, panel2Y + 55 }, 16, 1, (hasGold ? GOLD : RED));
+
+        if (hasMat && hasGold) {
+            if (DrawButton({ midX + 20, panel2Y + 85, 160, 42 }, T("ENCHANT_BTN", "Enchant").c_str(), font, locked ? Fade(PURPLE, 0.5f) : PURPLE) && !locked) {
+                p.gold -= enchantCost;
+                for (auto it = p.inventoryItems.begin(); it != p.inventoryItems.end(); ++it) {
+                    if (it->id == reqItemId) {
+                        it->count -= reqItemCount;
+                        if (it->count <= 0) p.inventoryItems.erase(it);
+                        break;
+                    }
+                }
+
+                item.element = GetRandomValue(ELEM_HELLFIRE, ELEM_ABYSS);
+                AudioManager::PlaySE(SE_REFORGE);
+                UI::AddSystemLog("Enchanted: " + Player::GetFullItemName(item), Player::GetElementColor(item.element));
+            }
+        }
+        else {
+            DrawRectangle(midX + 20, panel2Y + 85, 160, 42, DARKGRAY);
+            // ★ 文字化け防止：std::string で一時オブジェクトを保持
+            std::string reason = !hasMat ? T("NOT_ENOUGH_MAT", "Need Material") : T("NOT_ENOUGH_GOLD", "Need Gold");
+            DrawTextEx(font, reason.c_str(), { midX + 30, panel2Y + 97 }, 16, 1, RED);
         }
     }
-    DrawDetailWindow(font);
+
+   
+    DrawDetailWindow(font, p);
 }
 
 // ==========================================

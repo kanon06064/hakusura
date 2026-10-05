@@ -95,6 +95,8 @@ public:
     static float GetElementMultiplier(int atkElem, int defElem); // ‘®«‘Š«”{—¦
     float GetPlayerElementResistance(int elem); // –h‹ï‚Ì‡Œv‘®«‘Ï«(%)
 
+    static int CompareWithEquipped(const ItemData& item, const Player& p);
+
 private:
     void PerformAttack(Vector3 ad, std::vector<Enemy>& enemies, Dungeon& d, EffectManager& fx);
     void PerformSmash(Vector3 ad, std::vector<Enemy>& enemies, Dungeon& d, EffectManager& fx);

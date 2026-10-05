@@ -220,5 +220,39 @@
   "SCREEN_MODE": "画面モード",
   "WINDOWED": "ウィンドウ",
   "FULLSCREEN": "フルスクリーン",
-  "CTRL_SCREEN_SETTING": "操作・画面設定"
+  "CTRL_SCREEN_SETTING": "操作・画面設定",
+
+  "ELEM_HELLFIRE": "業火の",
+  "ELEM_ROT": "腐蝕の",
+  "ELEM_SOUL": "霊怨の",
+  "ELEM_ABYSS": "深淵の",
+
+  "ENCHANT_BTN": "属性付与",
+  "CURRENT_ELEM": "属性: %s",
+  "REQ_MAT": "必要素材: %s x%d (所持: %d)",
+  "NOT_ENOUGH_MAT": "素材不足",
+  "NONE_ELEM": "なし",
+  "TITLE_REFORGE_MOD": "【モディファイア再抽選】",
+  "TITLE_ENCHANT_ELEM": "【属性エンチャント付与】",
+
+  "MODIFIER_TITLE": "モディファイア:",
+  "ELEM_ATK_LABEL": "付与属性 (特効 1.4倍):",
+  "ELEM_RES_LABEL": "属性耐性 (被ダメ15%軽減):",
+  "ELEM_ATK_LABEL": "付与属性 (特効 1.4倍):",
+  "ELEM_RES_LABEL": "属性耐性 (被ダメ15%軽減):",
+  "ELEM_NAME_HELLFIRE": "【業火属性】",
+  "ELEM_NAME_ROT": "【腐蝕属性】",
+  "ELEM_NAME_SOUL": "【霊怨属性】",
+  "ELEM_NAME_ABYSS": "【深淵属性】",
+  "ELEM_DESC_HELLFIRE_WPN": "効果: 腐蝕に特効 (1.4倍) / 霊怨に不利",
+  "ELEM_DESC_ROT_WPN": "効果: 霊怨に特効 (1.4倍) / 業火に不利",
+  "ELEM_DESC_SOUL_WPN": "効果: 業火に特効 (1.4倍) / 腐蝕に不利",
+  "ELEM_DESC_ABYSS_WPN": "効果: 全属性に特効 (1.25倍)",
+  "ELEM_DESC_ARMOR": "効果: この属性の被ダメージを15%軽減",
+
+  "EQUIPPED_NOW": "【現在装備中】",
+  "SLOT_EMPTY_NOW": "【未装備スロット】",
+  "DEPOSIT_ALL_MATS": "素材を一括預入",
+  "LOG_DEPOSITED_ALL_MATS": "手持ちの素材を全て倉庫に保管しました！"
+
 }

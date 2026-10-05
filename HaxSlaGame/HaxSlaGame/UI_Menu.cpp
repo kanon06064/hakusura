@@ -98,19 +98,44 @@ int UI::DrawMenu(Player& p, Dungeon& d, MenuTab& tab, Font font) {
             UI::RegisterInteractable(r);
 
             DrawRectangleRec(r, showDetail ? ColorBrightness(BLACK, -0.4f) : BLACK);
-            if (!showDetail && CheckCollisionPointRec(GetMousePosition(), r)) { if (GetMouseX() < rightX + 230) { if (clickInput) OpenDetail(p.inventoryEquip[idx]); } }
-            DrawTextEx(font, Player::GetFullItemName(p.inventoryEquip[idx]).c_str(), { rightX + 10, (float)y + 10 }, 14, 1, Player::GetItemRarityColor(p.inventoryEquip[idx]));
+            if (!showDetail && CheckCollisionPointRec(GetMousePosition(), r)) { if (GetMouseX() < rightX + 210) { if (clickInput) OpenDetail(p.inventoryEquip[idx]); } }
 
+            // =================================================================
+           // ★ 現在装備との性能比較インジケーター（裏面カリング防止・両面描画対応）
+           // =================================================================
+            int comp = Player::CompareWithEquipped(p.inventoryEquip[idx], p);
+            float cx = rightX + 16.0f; // 三角形の中心X
+            float cy = (float)y + 20.0f; // 三角形の中心Y
+
+            if (comp == 1) {
+                // 上向き緑三角 ▲（反時計回り CCW で確実に描画）
+                Vector2 pTop = { cx, cy - 6.0f };
+                Vector2 pRight = { cx + 6.0f, cy + 6.0f };
+                Vector2 pLeft = { cx - 6.0f, cy + 6.0f };
+                DrawTriangle(pTop, pRight, pLeft, LIME);
+                DrawTriangle(pTop, pLeft, pRight, LIME); // 念のための両面描画
+            }
+            else if (comp == -1) {
+                // 下向き赤三角 ▼（反時計回り CCW で確実に描画）
+                Vector2 pBottom = { cx, cy + 6.0f };
+                Vector2 pLeft = { cx - 6.0f, cy - 6.0f };
+                Vector2 pRight = { cx + 6.0f, cy - 6.0f };
+                DrawTriangle(pBottom, pLeft, pRight, RED);
+                DrawTriangle(pBottom, pRight, pLeft, RED); // 念のための両面描画
+            }
+
+            // アイテム名は三角アイコンの右側から描画
+            DrawTextEx(font, Player::GetFullItemName(p.inventoryEquip[idx]).c_str(), { rightX + 30.0f, (float)y + 10 }, 14, 1, Player::GetItemRarityColor(p.inventoryEquip[idx]));
+
+            // 装備ボタン（武器はW1/W2、防具はEQUIP）
             if (p.inventoryEquip[idx].type == "EQUIP") {
-                // 武器は スロット1(W1) か スロット2(W2) を選んで装備
-                if (UI::DrawButton({ rightX + 220, (float)y, 40, 40 }, T("W1", "W1").c_str(), font, DARKGRAY)) { p.EquipWeapon(idx, 0); break; }
-                if (UI::DrawButton({ rightX + 265, (float)y, 40, 40 }, T("W2", "W2").c_str(), font, DARKGRAY)) { p.EquipWeapon(idx, 1); break; }
+                if (UI::DrawButton({ rightX + 215, (float)y, 40, 40 }, T("W1", "W1").c_str(), font, DARKGRAY)) { p.EquipWeapon(idx, 0); break; }
+                if (UI::DrawButton({ rightX + 260, (float)y, 40, 40 }, T("W2", "W2").c_str(), font, DARKGRAY)) { p.EquipWeapon(idx, 1); break; }
             }
             else if (p.inventoryEquip[idx].type == "ARMOR") {
-                // 防具は種類(部位)が合致する枠へ装備
                 int subtype = p.inventoryEquip[idx].weaponSubtype;
                 if (subtype >= 0 && subtype < 5) {
-                    if (UI::DrawButton({ rightX + 220, (float)y, 85, 40 }, T("EQUIP", "EQUIP").c_str(), font, DARKGREEN)) { p.EquipArmor(idx, subtype); break; }
+                    if (UI::DrawButton({ rightX + 215, (float)y, 85, 40 }, T("EQUIP", "EQUIP").c_str(), font, DARKGREEN)) { p.EquipArmor(idx, subtype); break; }
                 }
             }
         }
@@ -446,6 +471,6 @@ int UI::DrawMenu(Player& p, Dungeon& d, MenuTab& tab, Font font) {
         }
     }
 
-    DrawDetailWindow(font);
+    DrawDetailWindow(font, p); 
     return eventCode;
 }

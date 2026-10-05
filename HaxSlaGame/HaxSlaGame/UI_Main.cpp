@@ -159,7 +159,7 @@ bool UI::DrawButton(Rectangle r, const char* label, Font font, Color col, bool f
     return clicked;
 }
 
-void UI::DrawDetailWindow(Font font) {
+void UI::DrawDetailWindow(Font font, Player& p) {
     if (!showDetail) return;
     detailOpenTimer += GetFrameTime();
 
@@ -168,13 +168,13 @@ void UI::DrawDetailWindow(Font font) {
 
     DrawRectangle(0, 0, sw, sh, Fade(BLACK, 0.7f));
 
-    int w = 450; int h = 550;
+    int w = 470; int h = 590;
     int x = (sw - w) / 2; int y = (sh - h) / 2;
     DrawRectangle(x, y, w, h, Fade(DARKBLUE, 0.95f));
     DrawRectangleLinesEx({ (float)x, (float)y, (float)w, (float)h }, 3, GOLD);
 
     Color rarityColor = Player::GetItemRarityColor(focusingItem);
-    DrawTextEx(font, Player::GetFullItemName(focusingItem).c_str(), { (float)x + 25, (float)y + 25 }, 28, 1, rarityColor);
+    DrawTextEx(font, Player::GetFullItemName(focusingItem).c_str(), { (float)x + 25, (float)y + 25 }, 24, 1, rarityColor);
 
     std::string typeStr = focusingItem.type;
     if (typeStr == "EQUIP") typeStr = T("WEAPON", "Weapon");
@@ -190,32 +190,157 @@ void UI::DrawDetailWindow(Font font) {
         std::string aTypes[] = { T("HEAD", "Head"), T("CHEST", "Chest"), T("HANDS", "Hands"), T("LEGS", "Legs"), T("FEET", "Feet") };
         if (focusingItem.weaponSubtype >= 0 && focusingItem.weaponSubtype <= 4) typeStr += std::string(" (") + aTypes[focusingItem.weaponSubtype] + ")";
     }
-    DrawTextEx(font, typeStr.c_str(), { (float)x + 25, (float)y + 60 }, 20, 1, LIGHTGRAY);
+    DrawTextEx(font, typeStr.c_str(), { (float)x + 25, (float)y + 58 }, 18, 1, LIGHTGRAY);
 
+    // =========================================================================
+    // ★ 性能比較（Diff）の計算：現在装備中の同部位アイテムを取得
+    // =========================================================================
+    ItemData curEquipped;
+    curEquipped.id = -1;
+    bool isCurrentlyEquippedThis = false;
+
+    if (focusingItem.type == "EQUIP") {
+        curEquipped = p.equippedData[p.activeSlot];
+        if (curEquipped.id == focusingItem.id && curEquipped.modifierId == focusingItem.modifierId && curEquipped.element == focusingItem.element) {
+            isCurrentlyEquippedThis = true;
+        }
+    }
+    else if (focusingItem.type == "ARMOR") {
+        int sub = focusingItem.weaponSubtype;
+        if (sub >= 0 && sub < 5) {
+            curEquipped = p.equippedArmor[sub];
+            if (curEquipped.id == focusingItem.id && curEquipped.modifierId == focusingItem.modifierId && curEquipped.element == focusingItem.element) {
+                isCurrentlyEquippedThis = true;
+            }
+        }
+    }
+
+    // 装備中バッジの表示
+    if (isCurrentlyEquippedThis) {
+        DrawTextEx(font, T("EQUIPPED_NOW", "[Equipped]").c_str(), { (float)x + w - 150, (float)y + 58 }, 18, 1, GREEN);
+    }
+
+    // 比較対象（現在装備）のステータス計算
+    float curAtk = 0, curDef = 0, curHp = 0, curSpd = 0;
+    if (curEquipped.id != -1) {
+        Modifier curMod = DataManager::GetModifier(curEquipped.modifierId);
+        curAtk = curEquipped.atkBonus + curMod.atk;
+        curDef = curEquipped.defBonus + curMod.def;
+        curHp = curEquipped.hpBonus + curMod.hp;
+        curSpd = curEquipped.speedBonus + curMod.spd;
+    }
+
+    // 選択中アイテムのステータス計算
     Modifier mod = DataManager::GetModifier(focusingItem.modifierId);
     float totalAtk = focusingItem.atkBonus + mod.atk;
     float totalDef = focusingItem.defBonus + mod.def;
     float totalHp = focusingItem.hpBonus + mod.hp;
     float totalSpd = focusingItem.speedBonus + mod.spd;
 
-    int statsY = y + 110; int lineH = 35;
-    if (totalAtk != 0) { DrawTextEx(font, TextFormat(T("STAT_ATK", "ATK : %+.1f").c_str(), totalAtk), { (float)x + 40, (float)statsY }, 22, 1, RED); if (mod.atk != 0) DrawTextEx(font, TextFormat(T("STAT_MOD", "(Mod %+.1f)").c_str(), mod.atk), { (float)x + 250, (float)statsY }, 18, 1, ORANGE); statsY += lineH; }
-    if (totalDef != 0) { DrawTextEx(font, TextFormat(T("STAT_DEF", "DEF : %+.1f").c_str(), totalDef), { (float)x + 40, (float)statsY }, 22, 1, BLUE); if (mod.def != 0) DrawTextEx(font, TextFormat(T("STAT_MOD", "(Mod %+.1f)").c_str(), mod.def), { (float)x + 250, (float)statsY }, 18, 1, ORANGE); statsY += lineH; }
-    if (totalHp != 0) { DrawTextEx(font, TextFormat(T("STAT_HP", "HP : %+.0f").c_str(), totalHp), { (float)x + 40, (float)statsY }, 22, 1, GREEN); if (mod.hp != 0) DrawTextEx(font, TextFormat(T("STAT_MOD_HP", "(Mod %+.0f)").c_str(), mod.hp), { (float)x + 250, (float)statsY }, 18, 1, ORANGE); statsY += lineH; }
-    if (totalSpd != 0) { DrawTextEx(font, TextFormat(T("STAT_SPD", "SPD : %+.2f").c_str(), totalSpd), { (float)x + 40, (float)statsY }, 22, 1, SKYBLUE); if (mod.spd != 0) DrawTextEx(font, TextFormat(T("STAT_MOD_SPD", "(Mod %+.2f)").c_str(), mod.spd), { (float)x + 250, (float)statsY }, 18, 1, ORANGE); statsY += lineH; }
-    if (focusingItem.heal > 0) { DrawTextEx(font, TextFormat(T("STAT_HEAL", "Heal : %.0f").c_str(), focusingItem.heal), { (float)x + 40, (float)statsY }, 22, 1, PINK); statsY += lineH; }
+    // 差分の算出
+    float diffAtk = totalAtk - curAtk;
+    float diffDef = totalDef - curDef;
+    float diffHp = totalHp - curHp;
+    float diffSpd = totalSpd - curSpd;
 
-    if (mod.id != 0) {
-        statsY += 20;
-        DrawRectangleLines(x + 20, statsY - 5, w - 40, 70, ORANGE);
-        DrawTextEx(font, T("ENCHANTMENT", "Enchantment:").c_str(), { (float)x + 30, (float)statsY }, 18, 1, ORANGE);
-        DrawTextEx(font, mod.name.c_str(), { (float)x + 50, (float)statsY + 30 }, 22, 1, YELLOW);
+    // 差分テキストを描画するラムダ関数
+    auto drawDiff = [&](float diff, int drawY, bool isFloatVal = true) {
+        if (focusingItem.type != "EQUIP" && focusingItem.type != "ARMOR") return;
+        if (isCurrentlyEquippedThis) return; // 装備中そのものなら差分は非表示
+
+        std::string diffStr = "";
+        Color diffCol = LIGHTGRAY;
+        if (diff > 0.001f) {
+            diffStr = isFloatVal ? TextFormat("(+%.1f)", diff) : TextFormat("(+%.0f)", diff);
+            diffCol = GREEN;
+        }
+        else if (diff < -0.001f) {
+            diffStr = isFloatVal ? TextFormat("(%.1f)", diff) : TextFormat("(%.0f)", diff);
+            diffCol = RED;
+        }
+        else if (curEquipped.id != -1) {
+            diffStr = "(+0)";
+        }
+
+        if (!diffStr.empty()) {
+            DrawTextEx(font, diffStr.c_str(), { (float)x + 320, (float)drawY }, 18, 1, diffCol);
+        }
+        };
+
+    int statsY = y + 95; int lineH = 30;
+    if (totalAtk != 0 || (curEquipped.id != -1 && curAtk != 0)) {
+        DrawTextEx(font, TextFormat(T("STAT_ATK", "ATK : %+.1f").c_str(), totalAtk), { (float)x + 35, (float)statsY }, 20, 1, RED);
+        if (mod.atk != 0) DrawTextEx(font, TextFormat("(Mod %+.1f)", mod.atk), { (float)x + 200, (float)statsY }, 16, 1, ORANGE);
+        drawDiff(diffAtk, statsY);
+        statsY += lineH;
+    }
+    if (totalDef != 0 || (curEquipped.id != -1 && curDef != 0)) {
+        DrawTextEx(font, TextFormat(T("STAT_DEF", "DEF : %+.1f").c_str(), totalDef), { (float)x + 35, (float)statsY }, 20, 1, BLUE);
+        if (mod.def != 0) DrawTextEx(font, TextFormat("(Mod %+.1f)", mod.def), { (float)x + 200, (float)statsY }, 16, 1, ORANGE);
+        drawDiff(diffDef, statsY);
+        statsY += lineH;
+    }
+    if (totalHp != 0 || (curEquipped.id != -1 && curHp != 0)) {
+        DrawTextEx(font, TextFormat(T("STAT_HP", "HP : %+.0f").c_str(), totalHp), { (float)x + 35, (float)statsY }, 20, 1, GREEN);
+        if (mod.hp != 0) DrawTextEx(font, TextFormat("(Mod %+.0f)", mod.hp), { (float)x + 200, (float)statsY }, 16, 1, ORANGE);
+        drawDiff(diffHp, statsY, false);
+        statsY += lineH;
+    }
+    if (totalSpd != 0 || (curEquipped.id != -1 && curSpd != 0)) {
+        DrawTextEx(font, TextFormat(T("STAT_SPD", "SPD : %+.2f").c_str(), totalSpd), { (float)x + 35, (float)statsY }, 20, 1, SKYBLUE);
+        if (mod.spd != 0) DrawTextEx(font, TextFormat("(Mod %+.2f)", mod.spd), { (float)x + 200, (float)statsY }, 16, 1, ORANGE);
+        drawDiff(diffSpd, statsY);
+        statsY += lineH;
+    }
+    if (focusingItem.heal > 0) {
+        DrawTextEx(font, TextFormat(T("STAT_HEAL", "Heal : %.0f").c_str(), focusingItem.heal), { (float)x + 35, (float)statsY }, 20, 1, PINK);
+        statsY += lineH;
     }
 
-    Rectangle closeBtn = { (float)x + w / 2 - 80, (float)y + h - 70, 160, 50 };
-    bool inputEnabled = (detailOpenTimer >= 0.3f);
+    // 1. モディファイア枠
+    if (mod.id != 0) {
+        statsY += 10;
+        DrawRectangleLines(x + 20, statsY - 5, w - 40, 58, ORANGE);
+        DrawTextEx(font, T("MODIFIER_TITLE", "Modifier:").c_str(), { (float)x + 30, (float)statsY }, 15, 1, ORANGE);
+        DrawTextEx(font, mod.name.c_str(), { (float)x + 45, (float)statsY + 22 }, 20, 1, YELLOW);
+        statsY += 62;
+    }
 
-    // ★修正: 閉じるボタンに forceInteractable = true を渡す
+    // 2. 属性表示枠
+    if (focusingItem.element != ELEM_NONE) {
+        statsY += 10;
+        Color elemCol = Player::GetElementColor(focusingItem.element);
+        std::string elemTitle = "";
+        std::string elemDesc = "";
+
+        switch (focusingItem.element) {
+        case ELEM_HELLFIRE:
+            elemTitle = T("ELEM_NAME_HELLFIRE", "[Hellfire Element]");
+            elemDesc = (focusingItem.type == "ARMOR") ? T("ELEM_DESC_ARMOR", "Resist: -15% Damage") : T("ELEM_DESC_HELLFIRE_WPN", "Strong vs Rot (1.4x) / Weak vs Soul");
+            break;
+        case ELEM_ROT:
+            elemTitle = T("ELEM_NAME_ROT", "[Rot Element]");
+            elemDesc = (focusingItem.type == "ARMOR") ? T("ELEM_DESC_ARMOR", "Resist: -15% Damage") : T("ELEM_DESC_ROT_WPN", "Strong vs Soul (1.4x) / Weak vs Hellfire");
+            break;
+        case ELEM_SOUL:
+            elemTitle = T("ELEM_NAME_SOUL", "[Soul Element]");
+            elemDesc = (focusingItem.type == "ARMOR") ? T("ELEM_DESC_ARMOR", "Resist: -15% Damage") : T("ELEM_DESC_SOUL_WPN", "Strong vs Hellfire (1.4x) / Weak vs Rot");
+            break;
+        case ELEM_ABYSS:
+            elemTitle = T("ELEM_NAME_ABYSS", "[Abyss Element]");
+            elemDesc = (focusingItem.type == "ARMOR") ? T("ELEM_DESC_ARMOR", "Resist: -15% Damage") : T("ELEM_DESC_ABYSS_WPN", "Strong vs All Elements (1.25x)");
+            break;
+        }
+
+        DrawRectangleLines(x + 20, statsY - 5, w - 40, 62, elemCol);
+        DrawTextEx(font, elemTitle.c_str(), { (float)x + 30, (float)statsY }, 18, 1, elemCol);
+        DrawTextEx(font, elemDesc.c_str(), { (float)x + 35, (float)statsY + 26 }, 14, 1, WHITE);
+        statsY += 66;
+    }
+
+    // 閉じるボタン
+    Rectangle closeBtn = { (float)x + w / 2 - 80, (float)y + h - 60, 160, 45 };
+    bool inputEnabled = (detailOpenTimer >= 0.3f);
     if (UI::DrawButton(closeBtn, T("CLOSE", "Close").c_str(), font, inputEnabled ? MAROON : Fade(MAROON, 0.5f), true)) {
         if (inputEnabled) {
             showDetail = false;
@@ -411,29 +536,66 @@ void UI::DrawHUD(Player& p, std::vector<Enemy>& enemies, Dungeon& d, Camera3D& c
     DrawCircle(mapX + mapSize / 2, mapY + mapSize / 2, 4, RED);
     EndScissorMode();
 
-    // --- 右側: 敵のHPバー (直近で攻撃を与えた敵) ---
+    // =========================================================================
+    // --- 敵のHPバー描画（右側リスト ＆ 3D空間の頭上バー） ---
+    // =========================================================================
     int listCount = 0;
     for (auto& e : enemies) {
-        if (e.hudTimer > 0) { // 攻撃されるとHUDタイマーが5.0秒になり、0になるまで描画
+        // --- 1. 右側HUD: 直近でダメージを与えた敵のHPバーリスト ---
+        if (e.hudTimer > 0) {
             int yPos = mapY + mapSize + 20 + listCount * 50;
-            DrawRectangle(sw - 220, yPos, 200, 45, Fade(BLACK, 0.7f));
-            DrawTextEx(font, TextFormat("Lv.%d %s", e.level, e.data.name.c_str()), { (float)sw - 210, (float)yPos + 5 }, 16, 1, WHITE);
-            DrawRectangle(sw - 210, yPos + 25, 180, 10, DARKGRAY);
-            DrawRectangle(sw - 210, yPos + 25, (int)(180.0f * (e.hp / e.maxHp)), 10, RED);
+            DrawRectangle(sw - 230, yPos, 210, 45, Fade(BLACK, 0.75f));
+            DrawRectangleLines(sw - 230, yPos, 210, 45, Fade(GRAY, 0.5f));
+
+            // 属性バッジの取得（属性色で描画）
+            std::string elemTag = "";
+            Color elemTagCol = WHITE;
+            if (e.data.element != ELEM_NONE) {
+                elemTag = TextFormat("[%s]", Player::GetElementName(e.data.element).c_str());
+                elemTagCol = Player::GetElementColor(e.data.element);
+            }
+
+            // 敵の名前とレベル
+            DrawTextEx(font, TextFormat("Lv.%d %s", e.level, e.data.name.c_str()), { (float)sw - 220, (float)yPos + 5 }, 16, 1, WHITE);
+
+            // 属性バッジを右上に表示
+            if (!elemTag.empty()) {
+                DrawTextEx(font, elemTag.c_str(), { (float)sw - 85, (float)yPos + 6 }, 14, 1, elemTagCol);
+            }
+
+            // HPバー背景と赤バー
+            DrawRectangle(sw - 220, yPos + 25, 190, 10, DARKGRAY);
+            float hpRate = fmaxf(0.0f, e.hp / e.maxHp);
+            DrawRectangle(sw - 220, yPos + 25, (int)(190.0f * hpRate), 10, RED);
+
             listCount++;
-            if (listCount >= 5) break; // 最大5体まで
+            if (listCount >= 5) break; // 最大5体まで表示
         }
 
-        // --- インゲーム(敵の頭上)のHPバー描画 ---
+        // --- 2. 3D空間（敵の頭上）のインゲームHPバー ---
         if (debug || d.IsDiscovered((float)e.position.x, (float)e.position.z)) {
             Vector2 s = GetWorldToScreen(e.position, cam);
-            // 画面内にある場合のみ描画
+
+            // 画面内に映っている場合のみ描画
             if (s.x > 0 && s.y > 0 && s.x < sw && s.y < sh) {
-                std::string txt = "Lv." + std::to_string(e.level) + " " + e.data.name;
+                // 頭上にレベル・名前・属性を表示
+                std::string txt = TextFormat("Lv.%d %s", e.level, e.data.name.c_str());
+                if (e.data.element != ELEM_NONE) {
+                    txt += TextFormat(" [%s]", Player::GetElementName(e.data.element).c_str());
+                }
+
+                // 属性持ちなら属性カラーで文字を光らせる
+                Color nameCol = (e.data.element != ELEM_NONE) ? Player::GetElementColor(e.data.element) : WHITE;
                 Vector2 tSize = MeasureTextEx(font, txt.c_str(), 16, 1);
-                DrawTextEx(font, txt.c_str(), { s.x - tSize.x / 2, s.y - 45 }, 16, 1, WHITE);
+
+                // 文字の影（黒）と本体
+                DrawTextEx(font, txt.c_str(), { s.x - tSize.x / 2 + 1, s.y - 44 }, 16, 1, Fade(BLACK, 0.8f));
+                DrawTextEx(font, txt.c_str(), { s.x - tSize.x / 2, s.y - 45 }, 16, 1, nameCol);
+
+                // 頭上HPバー
                 DrawRectangle((int)s.x - 20, (int)s.y - 25, 40, 4, DARKGRAY);
-                DrawRectangle((int)s.x - 20, (int)s.y - 25, (int)(40.0f * (e.hp / e.maxHp)), 4, RED);
+                float headHpRate = fmaxf(0.0f, e.hp / e.maxHp);
+                DrawRectangle((int)s.x - 20, (int)s.y - 25, (int)(40.0f * headHpRate), 4, RED);
             }
         }
     }
@@ -519,16 +681,39 @@ void UI::DrawLogs(std::vector<GameLog>& logs, Player& p, Camera3D& cam, Font fon
     }
 }
 
-// 足元に落ちているアイテムの名前を3D連動で表示
+// =============================================================================
+// 足元に落ちているアイテムの名前を3D連動で表示（性能比較三角アイコン付き）
+// =============================================================================
 void UI::DrawNearbyItems(Player& p, std::vector<DroppedItem>& di, Dungeon& d, Camera3D& cam, Font font) {
     for (auto& item : di) {
         if (!d.IsDiscovered(item.pos.x, item.pos.z)) continue;
 
         float dist = Vector3Distance(p.position, item.pos);
-        if (dist < 5.0f) { // プレイヤーから一定距離以内のみ表示
+        if (dist < 5.0f) { // プレイヤーから5m以内のみ表示
             Vector2 s = GetWorldToScreen(item.pos, cam);
             if (s.x > 0 && s.y > 0) {
-                DrawTextEx(font, Player::GetFullItemName(item.data).c_str(), { s.x - 20, s.y - 20 }, 16, 1, Player::GetItemRarityColor(item.data));
+                // ★ 落ちているアイテムの性能比較判定
+                int comp = Player::CompareWithEquipped(item.data, p);
+                float triX = s.x - 24.0f;
+                float triY = s.y - 12.0f;
+
+                // 強いなら緑▲、弱いなら赤▼を確実に描画
+                if (comp == 1) {
+                    Vector2 pTop = { triX, triY - 6.0f };
+                    Vector2 pRight = { triX + 6.0f, triY + 6.0f };
+                    Vector2 pLeft = { triX - 6.0f, triY + 6.0f };
+                    DrawTriangle(pTop, pRight, pLeft, LIME);
+                    DrawTriangle(pTop, pLeft, pRight, LIME);
+                }
+                else if (comp == -1) {
+                    Vector2 pBottom = { triX, triY + 6.0f };
+                    Vector2 pLeft = { triX - 6.0f, triY - 6.0f };
+                    Vector2 pRight = { triX + 6.0f, triY - 6.0f };
+                    DrawTriangle(pBottom, pLeft, pRight, RED);
+                    DrawTriangle(pBottom, pRight, pLeft, RED);
+                }
+
+                DrawTextEx(font, Player::GetFullItemName(item.data).c_str(), { s.x - 12.0f, s.y - 20.0f }, 16, 1, Player::GetItemRarityColor(item.data));
             }
         }
     }
