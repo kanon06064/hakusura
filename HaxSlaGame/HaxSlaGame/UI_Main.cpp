@@ -734,24 +734,44 @@ void UI::UpdateSystemLogs(float deltaTime) {
     }
 }
 
+// =============================================================================
+// 戦闘・システムログの描画（クッキリ視認性向上版）
+// =============================================================================
 void UI::DrawSystemLogs(Font font) {
-    int startY = GetScreenHeight() - 150;
-    int startX = 20; int fontSize = 20; int lineSpacing = 25;
+    if (systemLogs.empty()) return;
 
-    for (size_t i = 0; i < systemLogs.size(); ++i) {
+    // ステータス枠（sh - 120）のすぐ上にログを配置
+    int startY = GetScreenHeight() - 145;
+    int startX = 20;
+    int fontSize = 18;
+    int lineSpacing = 24;
+
+    // 最大表示行数を直近6件に制限
+    int displayCount = (int)systemLogs.size();
+    if (displayCount > 6) displayCount = 6;
+
+    for (int i = 0; i < displayCount; ++i) {
+        int logIdx = (int)systemLogs.size() - 1 - i;
+        auto& log = systemLogs[logIdx];
+
+        // 寿命に応じたフェードアウト（残り1秒で徐々に透明化）
         float alpha = 1.0f;
-        if (systemLogs[i].lifeTime < 1.0f) { alpha = systemLogs[i].lifeTime; } // ラスト1秒でフェードアウト
+        if (log.lifeTime < 1.0f) alpha = log.lifeTime;
+        if (alpha < 0.0f) alpha = 0.0f;
 
-        Color textColor = systemLogs[i].color;
-        textColor.a = static_cast<unsigned char>(255 * alpha);
+        Color textColor = log.color;
+        textColor.a = (unsigned char)(255 * alpha);
 
-        Vector2 tSize = MeasureTextEx(font, systemLogs[i].text.c_str(), fontSize, 1);
-        int drawY = startY - static_cast<int>((systemLogs.size() - 1 - i) * lineSpacing);
+        int drawY = startY - (i * lineSpacing);
+        Vector2 tSize = MeasureTextEx(font, log.text.c_str(), (float)fontSize, 1);
 
-        Color bgColor = BLACK;
-        bgColor.a = static_cast<unsigned char>(150 * alpha);
+        // 半透明の黒い背景プレート
+        Color bgCol = Fade(BLACK, 0.65f * alpha);
+        DrawRectangle(startX - 6, drawY - 2, (int)tSize.x + 12, fontSize + 4, bgCol);
+        DrawRectangleLines(startX - 6, drawY - 2, (int)tSize.x + 12, fontSize + 4, Fade(DARKGRAY, 0.5f * alpha));
 
-        DrawRectangle(startX - 5, drawY - 2, static_cast<int>(tSize.x) + 10, fontSize + 4, bgColor);
-        DrawTextEx(font, systemLogs[i].text.c_str(), { (float)startX, (float)drawY }, fontSize, 1, textColor);
+        // 黒い影（縁取り）を描いてから本体を描画して視認性を極大化
+        DrawTextEx(font, log.text.c_str(), { (float)startX + 1, (float)drawY + 1 }, (float)fontSize, 1, Fade(BLACK, alpha));
+        DrawTextEx(font, log.text.c_str(), { (float)startX, (float)drawY }, (float)fontSize, 1, textColor);
     }
 }

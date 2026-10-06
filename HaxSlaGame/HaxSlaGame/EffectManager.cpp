@@ -5,6 +5,8 @@
 #include "raymath.h"
 #include <math.h>
 #include <algorithm>
+#include "DataManager.h"
+#include "UI.h"
 
 void EffectManager::SpawnProjectile(Vector3 pos, Vector3 dir, float speed, int type, bool isPlayer) {
     Projectile p;
@@ -26,7 +28,7 @@ void EffectManager::SpawnEffect(Vector3 pos, Vector3 dir, EffectType type, Color
     eff.color = col;
     eff.life = 0.3f;
     eff.maxLife = 0.3f;
-    eff.scale = scale; // 射程スケール
+    eff.scale = scale;
     effects.push_back(eff);
 }
 
@@ -35,7 +37,7 @@ void EffectManager::SpawnDamageText(Vector3 pos, int dmg, bool isCrit) {
 }
 
 void EffectManager::Update(float dt, Dungeon& d) {
-    // 画面揺れタイマー更新
+    // 画面揺れタイマー更新（shakeIntensity を使用）
     if (shakeTimer > 0.0f) {
         shakeTimer -= dt;
         if (shakeTimer <= 0.0f) {
@@ -74,7 +76,7 @@ void EffectManager::Update(float dt, Dungeon& d) {
 }
 
 Vector3 EffectManager::GetShakeOffset() const {
-    if (shakeTimer <= 0.0f || shakeIntensity  <= 0.0f) {
+    if (shakeTimer <= 0.0f || shakeIntensity <= 0.0f) {
         return { 0.0f, 0.0f, 0.0f };
     }
     float currentMag = shakeIntensity;
@@ -84,15 +86,16 @@ Vector3 EffectManager::GetShakeOffset() const {
     return { rx, ry, rz };
 }
 
+// =============================================================================
+// プロジェクタイル(弾丸・魔法)の当たり判定とダメージ処理
+// =============================================================================
 void EffectManager::CheckProjectileCollisions(std::vector<Enemy>& enemies, Player& p, Dungeon& d) {
     for (auto& proj : projectiles) {
         if (!proj.active) continue;
 
         if (proj.isPlayer) {
-            // プレイヤーの弾（魔法等）の敵命中判定
             for (auto& e : enemies) {
                 if (Vector3Distance(proj.pos, e.position) < (proj.radius + e.radius + 0.3f)) {
-                    // 15%でクリティカル
                     bool isCrit = (GetRandomValue(1, 100) <= 15);
 
                     float totalBonus = Player::GetItemTotalAtkBonus(p.equippedData[p.activeSlot]);
@@ -109,9 +112,19 @@ void EffectManager::CheckProjectileCollisions(std::vector<Enemy>& enemies, Playe
                     SpawnDamageText(e.position, dmg, isCrit);
                     SpawnEffect(proj.pos, { 0,0,0 }, FX_HIT, isCrit ? GOLD : PURPLE);
 
-                    if (isCrit) {
+                    // ★ 文字化け防止：安全なダメージログ出力
+                    if (elemMulti > 1.1f) {
+                        std::string weakFmt = DataManager::uiStrings.count("LOG_WEAKNESS_HIT") ? DataManager::uiStrings["LOG_WEAKNESS_HIT"] : "★ %s WEAKNESS! %d DMG! ★";
+                        Color elemCol = Player::GetElementColor(weaponElem);
+                        UI::AddSystemLog(TextFormat(weakFmt.c_str(), e.data.name.c_str(), dmg), elemCol);
+                    }
+                    else if (isCrit) {
+                        UI::AddSystemLog(TextFormat(DataManager::uiStrings["LOG_CRIT_DEALT"].c_str(), e.data.name.c_str(), dmg), GOLD);
                         TriggerHitStop(0.06f);
                         ShakeScreen(0.15f, 0.3f);
+                    }
+                    else {
+                        UI::AddSystemLog(TextFormat(DataManager::uiStrings["LOG_DMG_DEALT"].c_str(), e.data.name.c_str(), dmg), ORANGE);
                     }
 
                     proj.active = false;
@@ -120,12 +133,10 @@ void EffectManager::CheckProjectileCollisions(std::vector<Enemy>& enemies, Playe
             }
         }
         else {
-            // 敵の弾のプレイヤー命中判定
             if (Vector3Distance(proj.pos, p.position) < (proj.radius + p.radius + 0.2f)) {
                 float rawDmg = 12.0f;
                 float defDmg = fmaxf(1.0f, rawDmg - p.defense);
 
-                // 弾属性耐性カット（type 1: 深淵、0: 無属性）
                 int projElem = (proj.type == 1) ? ELEM_ABYSS : ELEM_NONE;
                 float resist = p.GetPlayerElementResistance(projElem);
                 float finalDmg = fmaxf(1.0f, defDmg * (1.0f - resist));
@@ -137,6 +148,16 @@ void EffectManager::CheckProjectileCollisions(std::vector<Enemy>& enemies, Playe
                 ShakeScreen(0.15f, 0.3f);
                 TriggerDamageFlash(0.25f);
 
+                // ★ 文字化け防止：赤い被弾ログを ui_text.json 経由で出力
+                if (resist > 0.05f) {
+                    std::string resFmt = DataManager::uiStrings.count("LOG_RESISTED_PROJ") ? DataManager::uiStrings["LOG_RESISTED_PROJ"] : "★ RESISTED! (-%d%%) ★";
+                    UI::AddSystemLog(TextFormat(resFmt.c_str(), (int)(resist * 100)), SKYBLUE);
+                }
+                else {
+                    std::string hitFmt = DataManager::uiStrings.count("LOG_ENEMY_HIT") ? DataManager::uiStrings["LOG_ENEMY_HIT"] : "ENEMY HIT: %d DMG!";
+                    UI::AddSystemLog(TextFormat(hitFmt.c_str(), (int)finalDmg), RED);
+                }
+
                 proj.active = false;
             }
         }
@@ -144,7 +165,6 @@ void EffectManager::CheckProjectileCollisions(std::vector<Enemy>& enemies, Playe
 }
 
 void EffectManager::Draw() {
-    // 1. プロジェクタイル（弾）
     for (const auto& p : projectiles) {
         Color c = (p.type == 0) ? YELLOW : PURPLE;
         if (!p.isPlayer) c = RED;
@@ -157,12 +177,10 @@ void EffectManager::Draw() {
         DrawLine3D(p.pos, tail, Fade(WHITE, 0.8f));
     }
 
-    // 2. 近接・スキルエフェクト
     for (const auto& e : effects) {
         float ratio = e.life / e.maxLife;
         Color c = Fade(e.color, ratio);
 
-        // 【剣】FX_SLASH：前方に丸く膨らむ王道アーク、左から右へ薙ぎ払う三日月ブレード
         if (e.type == FX_SLASH) {
             float baseAngle = atan2f(e.dir.z, e.dir.x);
             Vector3 center = e.pos;
@@ -172,7 +190,7 @@ void EffectManager::Draw() {
             float pTrail = (progress - 0.22f) * 1.5f; if (pTrail < 0.0f) pTrail = 0.0f;
 
             if (pLead > pTrail) {
-                float totalArc = 105.0f * DEG2RAD; // 角度幅105度
+                float totalArc = 105.0f * DEG2RAD;
                 float leftAngle = baseAngle - (totalArc * 0.5f);
                 int segments = 16;
 
@@ -189,7 +207,6 @@ void EffectManager::Draw() {
                     float maxR = e.scale;
                     float innerR = 0.6f;
 
-                    // 両端が針のように鋭く尖り、中央がふっくら太い三日月プロファイル
                     float thick1 = (maxR - innerR) * sinf(t1 * 3.14159265f);
                     float thick2 = (maxR - innerR) * sinf(t2 * 3.14159265f);
 
@@ -209,11 +226,10 @@ void EffectManager::Draw() {
                     DrawTriangle3D(pIn1, pOut2, pOut1, Fade(e.color, alpha2));
                     DrawTriangle3D(pIn1, pIn2, pOut2, Fade(e.color, alpha1));
 
-                    DrawLine3D(pOut1, pOut2, Fade(WHITE, alpha2 * 0.9f));
+                    DrawLine3D(pOut1, pOut2, Fade(WHITE, alpha2));
                 }
             }
         }
-        // 【槍】FX_THRUST：前方を鋭く貫く光の槍
         else if (e.type == FX_THRUST) {
             Vector3 start = e.pos;
             Vector3 end = Vector3Add(e.pos, Vector3Scale(e.dir, e.scale));
@@ -224,7 +240,6 @@ void EffectManager::Draw() {
             DrawSphere(end, 0.3f * ratio, WHITE);
             DrawSphere(end, 0.5f * ratio, Fade(e.color, ratio * 0.4f));
         }
-        // 【斧】FX_SMASH：地面を叩き割るように広がる円形衝撃波
         else if (e.type == FX_SMASH) {
             Vector3 impactPos = Vector3Add(e.pos, Vector3Scale(e.dir, e.scale * 0.6f));
             impactPos.y = 0.08f;
@@ -236,7 +251,6 @@ void EffectManager::Draw() {
             DrawCylinderWires(impactPos, currentRadius, currentRadius, 0.04f, 28, Fade(GOLD, ratio * 0.9f));
             DrawCylinderWires(impactPos, currentRadius * 0.7f, currentRadius * 0.7f, 0.04f, 28, Fade(WHITE, ratio * 0.6f));
         }
-        // 【ヒット時】FX_HIT：光のスパーク
         else if (e.type == FX_HIT) {
             DrawSphere(e.pos, 0.2f * ratio, WHITE);
             DrawSphere(e.pos, 0.4f * ratio, Fade(e.color, ratio * 0.5f));
@@ -252,7 +266,6 @@ void EffectManager::Draw2D(Font font, Camera3D cam) {
         if (dt.amount == 999) {
             DrawTextEx(font, "LEVEL UP!!", { s.x - 50, s.y - 30 }, 28, 1, YELLOW);
         }
-        // クリティカル時の特大ゴールド表示
         else if (dt.isCrit) {
             std::string critTxt = TextFormat("CRIT! %d", dt.amount);
             Vector2 tSize = MeasureTextEx(font, critTxt.c_str(), 34, 1);

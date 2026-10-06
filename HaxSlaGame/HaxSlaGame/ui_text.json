@@ -253,6 +253,13 @@
   "EQUIPPED_NOW": "【現在装備中】",
   "SLOT_EMPTY_NOW": "【未装備スロット】",
   "DEPOSIT_ALL_MATS": "素材を一括預入",
-  "LOG_DEPOSITED_ALL_MATS": "手持ちの素材を全て倉庫に保管しました！"
+  "LOG_DEPOSITED_ALL_MATS": "手持ちの素材を全て倉庫に保管しました！",
+
+  "LOG_WEAKNESS_HIT": "★ %s に %d の特効ダメージ！ ★",
+  "LOG_SMASH_HIT": "強撃！ %s に %d の大ダメージ！",
+  "LOG_SMASH_CRIT": "★ 強撃会心！ %s に %d の特大ダメージ！ ★",
+  "LOG_RESISTED_HIT": "★ 攻撃を耐性で軽減！ (-%d%%) ★",
+  "LOG_RESISTED_PROJ": "★ 魔法攻撃を耐性で軽減！ (-%d%%) ★",
+  "LOG_ENEMY_HIT": "敵の攻撃！ %d のダメージを受けた！"
 
 }

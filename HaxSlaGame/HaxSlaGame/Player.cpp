@@ -364,7 +364,9 @@ void Player::UpdateHuntQuest(int eId) { for (auto& q : activeQuests) if (!q.isCo
 bool Player::CheckGatherQuest(int itemId, int count) { int sum = 0; for (auto& i : inventoryItems) if (i.id == itemId) sum += i.count; return sum >= count; }
 void Player::CompleteQuest(int qId) { for (auto it = activeQuests.begin(); it != activeQuests.end(); ++it) if (it->questId == qId) { QuestData d = DataManager::GetQuestData(qId); gold += d.rewardGold; if (d.rewardItemId != -1) { ItemData r = DataManager::GetItemConfigCopy(d.rewardItemId); r.count = d.rewardItemCount; AddToInventory(r); } clearedQuests.push_back(qId); activeQuests.erase(it); AudioManager::PlaySE(SE_REFORGE); return; } }
 
+// =============================================================================
 // 通常攻撃の実行処理
+// =============================================================================
 void Player::PerformAttack(Vector3 ad, std::vector<Enemy>& enemies, Dungeon& d, EffectManager& fx) {
 	AudioManager::PlaySE(SE_ATTACK);
 	Vector3 origin = Vector3Add(position, { 0, 0.8f, 0 });
@@ -375,20 +377,20 @@ void Player::PerformAttack(Vector3 ad, std::vector<Enemy>& enemies, Dungeon& d, 
 	else {
 		EffectType type = FX_SLASH;
 		Color fxCol = SKYBLUE;
-		float atkRange = 2.7f; // 剣の射程
+		float atkRange = 2.7f; // 剣の射程：2.7m
 
 		if (currentWeapon == SPEAR) {
 			type = FX_THRUST;
 			fxCol = SKYBLUE;
-			atkRange = 5.5f;   // 槍の射程
+			atkRange = 5.0f;   // 槍の射程：5.0m
 		}
 		else if (currentWeapon == AXE) {
 			type = FX_SMASH;
 			fxCol = ORANGE;
-			atkRange = 3.2f;   // 斧の射程
+			atkRange = 3.0f;   // 斧の射程：3.0m
 		}
 
-		// エフェクトに射程(atkRange)を渡して見た目の長さを合わせる
+		// 武器属性カラーの反映
 		int weaponElem = equippedData[activeSlot].element;
 		if (weaponElem != ELEM_NONE) {
 			fxCol = GetElementColor(weaponElem);
@@ -397,9 +399,12 @@ void Player::PerformAttack(Vector3 ad, std::vector<Enemy>& enemies, Dungeon& d, 
 		fx.SpawnEffect(origin, ad, type, fxCol, atkRange);
 
 		bool hitAny = false;
+		bool anyCrit = false;
+
 		for (auto& e : enemies) {
 			float dist = Vector3Distance(e.position, position);
 			if (dist <= atkRange + e.radius) {
+				// 壁貫通防止
 				if (!d.HasLineOfSight(position, e.position)) continue;
 
 				Vector3 toEnemy = Vector3Normalize(Vector3Subtract(e.position, position));
@@ -407,31 +412,31 @@ void Player::PerformAttack(Vector3 ad, std::vector<Enemy>& enemies, Dungeon& d, 
 				float requiredDot = (currentWeapon == SPEAR) ? 0.6f : 0.0f;
 
 				if (dot >= requiredDot) {
-					bool isCrit = (GetRandomValue(1, 100) <= 5);
-					float baseAtk = attackPower + GetItemTotalAtkBonus(equippedData[activeSlot]);
+					bool isCrit = (GetRandomValue(1, 100) <= 15);
+					if (isCrit) anyCrit = true;
 
-					// ★ 属性相性倍率の適用（1.4倍 または 0.75倍）
+					float baseAtk = attackPower + GetItemTotalAtkBonus(equippedData[activeSlot]);
 					float elemMulti = GetElementMultiplier(weaponElem, e.data.element);
 					int dmg = (int)(baseAtk * elemMulti) + GetRandomValue(0, 3);
-
 					if (isCrit) dmg = (int)((float)dmg * 1.75f);
 
 					e.hp -= dmg;
 					e.ApplyKnockback(ad, isCrit ? 1.8f : 1.0f, d);
 
-					// 特効時（1.4倍）は属性色でポップアップ
 					Color hitCol = (weaponElem != ELEM_NONE) ? GetElementColor(weaponElem) : (isCrit ? GOLD : RED);
 					fx.SpawnDamageText(e.position, dmg, isCrit);
 					fx.SpawnEffect(e.position, { 0,0,0 }, FX_HIT, hitCol);
 
-					// 特効時の専用ログ
+					// ★ 文字化け防止：安全なログ出力
 					if (elemMulti > 1.1f) {
-						UI::AddSystemLog("★ WEAKNESS EXPLOITED! (1.4x) ★", hitCol);
+						std::string weakFmt = DataManager::uiStrings.count("LOG_WEAKNESS_HIT") ? DataManager::uiStrings["LOG_WEAKNESS_HIT"] : "★ %s WEAKNESS! %d DMG! ★";
+						UI::AddSystemLog(TextFormat(weakFmt.c_str(), e.data.name.c_str(), dmg), hitCol);
 					}
 					else if (isCrit) {
 						UI::AddSystemLog(TextFormat(DataManager::uiStrings["LOG_CRIT_DEALT"].c_str(), e.data.name.c_str(), dmg), GOLD);
-						fx.TriggerHitStop(0.08f);
-						fx.ShakeScreen(0.18f, 0.35f);
+					}
+					else {
+						UI::AddSystemLog(TextFormat(DataManager::uiStrings["LOG_DMG_DEALT"].c_str(), e.data.name.c_str(), dmg), ORANGE);
 					}
 
 					e.hudTimer = 5.0f;
@@ -441,34 +446,42 @@ void Player::PerformAttack(Vector3 ad, std::vector<Enemy>& enemies, Dungeon& d, 
 			}
 		}
 
-		// ★ 命中時：武器ごとに異なる長さのヒットストップと画面揺れを発動
 		if (hitAny) {
-			if (currentWeapon == AXE) {
-				fx.TriggerHitStop(0.08f);       // 斧：重いヒットストップ
-				fx.ShakeScreen(0.12f, 0.25f);  // 斧：ガツンと画面揺れ
+			if (anyCrit) {
+				fx.TriggerHitStop(0.08f);
+				fx.ShakeScreen(0.18f, 0.35f);
+			}
+			else if (currentWeapon == AXE) {
+				fx.TriggerHitStop(0.08f);
+				fx.ShakeScreen(0.12f, 0.25f);
 			}
 			else if (currentWeapon == SPEAR) {
-				fx.TriggerHitStop(0.05f);       // 槍：ズスッと貫くヒットストップ
+				fx.TriggerHitStop(0.05f);
 			}
 			else if (currentWeapon == SWORD) {
-				fx.TriggerHitStop(0.04f);       // 剣：軽快で鋭いヒットストップ
+				fx.TriggerHitStop(0.04f);
 			}
 		}
 	}
 }
 
+// =============================================================================
 // 強撃(SMASH)スキルの実行処理
+// =============================================================================
 void Player::PerformSmash(Vector3 ad, std::vector<Enemy>& enemies, Dungeon& d, EffectManager& fx) {
 	AudioManager::PlaySE(SE_SKILL);
-	fx.SpawnEffect(Vector3Add(position, { 0, 0.8f, 0 }), ad, FX_SMASH, RED);
-	fx.ShakeScreen(0.25f, 0.5f);
-	fx.TriggerHitStop(0.10f);
+	fx.SpawnEffect(Vector3Add(position, { 0, 0.8f, 0 }), ad, FX_SMASH, RED, 4.2f);
+
+	bool hitAny = false;
+	bool anyCrit = false;
+
 	for (auto& e : enemies) {
 		if (Vector3Distance(e.position, position) < 4.5f) {
 			if (!d.HasLineOfSight(position, e.position)) continue;
 
-			// ★ 強撃スキルは25%の確率でクリティカル！
 			bool isCrit = (GetRandomValue(1, 100) <= 25);
+			if (isCrit) anyCrit = true;
+
 			int dmg = (int)(attackPower * 2.5f);
 			if (isCrit) dmg = (int)(dmg * 1.6f);
 
@@ -477,14 +490,30 @@ void Player::PerformSmash(Vector3 ad, std::vector<Enemy>& enemies, Dungeon& d, E
 			fx.SpawnDamageText(e.position, dmg, isCrit);
 			fx.SpawnEffect(e.position, { 0,0,0 }, FX_HIT, isCrit ? GOLD : RED);
 
+			// ★ 文字化け防止：安全なログ出力
 			if (isCrit) {
-				UI::AddSystemLog(TextFormat(DataManager::uiStrings["LOG_CRIT_DEALT"].c_str(), e.data.name.c_str(), dmg), GOLD);
-				fx.ShakeScreen(0.35f, 0.7f);   // 特大シェイク
-				fx.TriggerHitStop(0.14f);       // 特大ヒットストップ！
+				std::string critFmt = DataManager::uiStrings.count("LOG_SMASH_CRIT") ? DataManager::uiStrings["LOG_SMASH_CRIT"] : "★ SMASH CRIT! %s: %d DMG! ★";
+				UI::AddSystemLog(TextFormat(critFmt.c_str(), e.data.name.c_str(), dmg), GOLD);
+			}
+			else {
+				std::string smashFmt = DataManager::uiStrings.count("LOG_SMASH_HIT") ? DataManager::uiStrings["LOG_SMASH_HIT"] : "SMASH: %s: %d DMG!";
+				UI::AddSystemLog(TextFormat(smashFmt.c_str(), e.data.name.c_str(), dmg), ORANGE);
 			}
 
 			e.hudTimer = 5.0f;
 			isStealth = false;
+			hitAny = true;
+		}
+	}
+
+	if (hitAny) {
+		if (anyCrit) {
+			fx.ShakeScreen(0.35f, 0.7f);
+			fx.TriggerHitStop(0.14f);
+		}
+		else {
+			fx.ShakeScreen(0.25f, 0.5f);
+			fx.TriggerHitStop(0.10f);
 		}
 	}
 }

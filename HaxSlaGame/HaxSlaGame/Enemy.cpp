@@ -137,7 +137,7 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
                     bossTargetDir = Vector3Normalize(Vector3Subtract(p.position, position));
                     lastAttackDir = bossTargetDir;
 
-                    if (bossAttackType == 1) bossActionTimer = 0.55f; // コンボ時間は0.55秒に統一
+                    if (bossAttackType == 1) bossActionTimer = 0.55f;
                     else if (bossAttackType == 2) bossActionTimer = 0.9f;
                     else if (bossAttackType == 3) bossActionTimer = 1.0f;
                     else if (bossAttackType == 4) bossActionTimer = 2.0f;
@@ -147,7 +147,6 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
                 }
             }
             else {
-                // 1. ボスの3連コンボ攻撃
                 if (bossAttackType == 1) {
                     bossActionTimer -= dt;
                     if (bossActionTimer <= 0.0f) {
@@ -161,7 +160,6 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
                             float rawDmg = 10.0f + level * 2; if (bossComboStep == 3) rawDmg *= 1.5f;
                             float defDmg = fmaxf(1.0f, rawDmg - p.defense);
 
-                            // ★ ボスの攻撃属性とプレイヤーの防具耐性を連動
                             float resist = p.GetPlayerElementResistance(data.element);
                             float finalDmg = fmaxf(1.0f, defDmg * (1.0f - resist));
                             p.hp -= finalDmg;
@@ -170,7 +168,8 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
                             fx.SpawnEffect(p.position, { 0,0,0 }, FX_HIT, RED);
 
                             if (resist > 0.05f) {
-                                UI::AddSystemLog(TextFormat("★ RESISTED! (-%d%%) ★", (int)(resist * 100)), SKYBLUE);
+                                std::string resFmt = DataManager::uiStrings.count("LOG_RESISTED_HIT") ? DataManager::uiStrings["LOG_RESISTED_HIT"] : "★ RESISTED! (-%d%%) ★";
+                                UI::AddSystemLog(TextFormat(resFmt.c_str(), (int)(resist * 100)), SKYBLUE);
                             }
                             else {
                                 UI::AddSystemLog(TextFormat(DataManager::uiStrings["LOG_BOSS_COMBO"].c_str(), (int)finalDmg), RED);
@@ -190,7 +189,6 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
                         }
                     }
                 }
-                // 2. ボスの3方向弾幕
                 else if (bossAttackType == 2) {
                     bossActionTimer -= dt;
                     if (bossActionTimer <= 0.0f) {
@@ -204,7 +202,6 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
                         bossAttackType = 0; attackTimer = 1.5f;
                     }
                 }
-                // 3. ボスの突進攻撃
                 else if (bossAttackType == 3) {
                     bossActionTimer -= dt;
                     if (bossComboStep == 0) {
@@ -229,8 +226,13 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
                             fx.SpawnDamageText(p.position, (int)finalDmg);
                             fx.SpawnEffect(p.position, { 0,0,0 }, FX_HIT, RED);
 
-                            if (resist > 0.05f) UI::AddSystemLog(TextFormat("★ RESISTED! (-%d%%) ★", (int)(resist * 100)), SKYBLUE);
-                            else UI::AddSystemLog(TextFormat(DataManager::uiStrings["LOG_BOSS_DASH"].c_str(), (int)finalDmg), RED);
+                            if (resist > 0.05f) {
+                                std::string resFmt = DataManager::uiStrings.count("LOG_RESISTED_HIT") ? DataManager::uiStrings["LOG_RESISTED_HIT"] : "★ RESISTED! (-%d%%) ★";
+                                UI::AddSystemLog(TextFormat(resFmt.c_str(), (int)(resist * 100)), SKYBLUE);
+                            }
+                            else {
+                                UI::AddSystemLog(TextFormat(DataManager::uiStrings["LOG_BOSS_DASH"].c_str(), (int)finalDmg), RED);
+                            }
 
                             fx.ShakeScreen(0.35f, 0.7f);
                             fx.TriggerDamageFlash(0.35f);
@@ -239,7 +241,6 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
                         if (hitWall || bossActionTimer <= 0.0f) { bossAttackType = 0; attackTimer = 2.0f; }
                     }
                 }
-                // 4. ボスの巨大全方位AoE
                 else if (bossAttackType == 4) {
                     bossActionTimer -= dt;
                     if (bossActionTimer <= 0.0f) {
@@ -262,8 +263,13 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
                             fx.SpawnDamageText(p.position, (int)finalDmg);
                             fx.SpawnEffect(p.position, { 0,0,0 }, FX_HIT, RED);
 
-                            if (resist > 0.05f) UI::AddSystemLog(TextFormat("★ RESISTED! (-%d%%) ★", (int)(resist * 100)), SKYBLUE);
-                            else UI::AddSystemLog(TextFormat(DataManager::uiStrings["LOG_BOSS_AOE"].c_str(), (int)finalDmg), RED);
+                            if (resist > 0.05f) {
+                                std::string resFmt = DataManager::uiStrings.count("LOG_RESISTED_HIT") ? DataManager::uiStrings["LOG_RESISTED_HIT"] : "★ RESISTED! (-%d%%) ★";
+                                UI::AddSystemLog(TextFormat(resFmt.c_str(), (int)(resist * 100)), SKYBLUE);
+                            }
+                            else {
+                                UI::AddSystemLog(TextFormat(DataManager::uiStrings["LOG_BOSS_AOE"].c_str(), (int)finalDmg), RED);
+                            }
 
                             fx.TriggerDamageFlash(0.35f);
                         }
@@ -282,7 +288,7 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
         }
     }
     // =========================================================================
-    // 通常敵AI（攻撃予兆＋チャージシステム搭載）
+    // 通常敵AI
     // =========================================================================
     else {
         if (dist < attackRange && canSee && dist < effectiveDetect) state = STATE_ATTACK;
@@ -295,7 +301,6 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
                 if (dist > attackRange * 0.7f) MoveSmart(p.position, d);
             }
 
-            // 攻撃範囲に入ったら予兆（チャージ）を開始
             if (dist < attackRange && attackTimer <= 0.0f && !isChargingAttack) {
                 isChargingAttack = true;
                 lastAttackDir = Vector3Normalize(Vector3Subtract(p.position, position));
@@ -307,7 +312,6 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
                 attackChargeTimer = attackChargeMax;
             }
 
-            // チャージ中の処理（タイマー満了で攻撃発動）
             if (isChargingAttack) {
                 attackChargeTimer -= dt;
                 lastAttackDir = Vector3Normalize(Vector3Subtract(p.position, position));
@@ -328,7 +332,6 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
                         if (eType == E_SPEAR) effectType = FX_THRUST;
                         else if (eType == E_AXE) effectType = FX_SMASH;
 
-                        // 敵の属性に応じたエフェクト色を適用
                         Color atkCol = (data.element != ELEM_NONE) ? Player::GetElementColor(data.element) : GOLD;
                         fx.SpawnEffect(spawnPos, lastAttackDir, effectType, atkCol);
 
@@ -339,7 +342,6 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
                             float rawDmg = 10.0f + level * 2;
                             float defDmg = fmaxf(1.0f, rawDmg - p.defense);
 
-                            // ★ プレイヤーの防具属性耐性カット
                             float resist = p.GetPlayerElementResistance(data.element);
                             float finalDmg = fmaxf(1.0f, defDmg * (1.0f - resist));
                             p.hp -= finalDmg;
@@ -347,11 +349,14 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
                             fx.SpawnDamageText(p.position, (int)finalDmg);
                             fx.SpawnEffect(p.position, { 0,0,0 }, FX_HIT, RED);
 
+                            // ★ 文字化け防止：安全な被弾ログ出力
                             if (resist > 0.05f) {
-                                UI::AddSystemLog(TextFormat("★ RESISTED! (-%d%%) ★", (int)(resist * 100)), SKYBLUE);
+                                std::string resFmt = DataManager::uiStrings.count("LOG_RESISTED_HIT") ? DataManager::uiStrings["LOG_RESISTED_HIT"] : "★ RESISTED! (-%d%%) ★";
+                                UI::AddSystemLog(TextFormat(resFmt.c_str(), (int)(resist * 100)), SKYBLUE);
                             }
                             else {
-                                UI::AddSystemLog(TextFormat(DataManager::uiStrings["LOG_DMG_TAKEN"].c_str(), data.name.c_str(), (int)finalDmg), RED);
+                                std::string takenFmt = DataManager::uiStrings.count("LOG_DMG_TAKEN") ? DataManager::uiStrings["LOG_DMG_TAKEN"] : "%s HIT: %d DMG!";
+                                UI::AddSystemLog(TextFormat(takenFmt.c_str(), data.name.c_str(), (int)finalDmg), RED);
                             }
 
                             if (eType == E_AXE) fx.ShakeScreen(0.2f, 0.45f);
