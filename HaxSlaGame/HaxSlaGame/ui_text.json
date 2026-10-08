@@ -260,6 +260,7 @@
   "LOG_SMASH_CRIT": "★ 強撃会心！ %s に %d の特大ダメージ！ ★",
   "LOG_RESISTED_HIT": "★ 攻撃を耐性で軽減！ (-%d%%) ★",
   "LOG_RESISTED_PROJ": "★ 魔法攻撃を耐性で軽減！ (-%d%%) ★",
-  "LOG_ENEMY_HIT": "敵の攻撃！ %d のダメージを受けた！"
+  "LOG_ENEMY_HIT": "敵の攻撃！ %d のダメージを受けた！",
+  "LOG_RESISTED_ATTACK": "【耐性】%s に攻撃を軽減された！ (%d ダメージ)"
 
 }

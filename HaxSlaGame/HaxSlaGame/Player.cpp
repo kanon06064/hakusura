@@ -432,6 +432,11 @@ void Player::PerformAttack(Vector3 ad, std::vector<Enemy>& enemies, Dungeon& d, 
 						std::string weakFmt = DataManager::uiStrings.count("LOG_WEAKNESS_HIT") ? DataManager::uiStrings["LOG_WEAKNESS_HIT"] : "★ %s WEAKNESS! %d DMG! ★";
 						UI::AddSystemLog(TextFormat(weakFmt.c_str(), e.data.name.c_str(), dmg), hitCol);
 					}
+					else if (elemMulti < 0.9f) {
+						// ★ ここを追加：不利属性・同属性耐性で軽減された時（レジスト！）
+						std::string resFmt = DataManager::uiStrings.count("LOG_RESISTED_ATTACK") ? DataManager::uiStrings["LOG_RESISTED_ATTACK"] : "【耐性】%s に攻撃を軽減された！ (%d ダメージ)";
+						UI::AddSystemLog(TextFormat(resFmt.c_str(), e.data.name.c_str(), dmg), LIGHTGRAY);
+					}
 					else if (isCrit) {
 						UI::AddSystemLog(TextFormat(DataManager::uiStrings["LOG_CRIT_DEALT"].c_str(), e.data.name.c_str(), dmg), GOLD);
 					}

@@ -118,6 +118,11 @@ void EffectManager::CheckProjectileCollisions(std::vector<Enemy>& enemies, Playe
                         Color elemCol = Player::GetElementColor(weaponElem);
                         UI::AddSystemLog(TextFormat(weakFmt.c_str(), e.data.name.c_str(), dmg), elemCol);
                     }
+                    else if (elemMulti < 0.9f) {
+                        // ★ ここを追加：魔法弾の耐性レジストログ
+                        std::string resFmt = DataManager::uiStrings.count("LOG_RESISTED_ATTACK") ? DataManager::uiStrings["LOG_RESISTED_ATTACK"] : "【耐性】%s に攻撃を軽減された！ (%d ダメージ)";
+                        UI::AddSystemLog(TextFormat(resFmt.c_str(), e.data.name.c_str(), dmg), LIGHTGRAY);
+                    }
                     else if (isCrit) {
                         UI::AddSystemLog(TextFormat(DataManager::uiStrings["LOG_CRIT_DEALT"].c_str(), e.data.name.c_str(), dmg), GOLD);
                         TriggerHitStop(0.06f);
