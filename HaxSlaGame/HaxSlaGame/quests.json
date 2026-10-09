@@ -20,5 +20,38 @@
     "rewardGold": 250,
     "rewardItemId": -1,
     "rewardItemCount": 0
+  },
+  {
+    "id": 3,
+    "title": "溶解液の採取",
+    "description": "アシッドスライムから採取できる溶解液が3個必要だ。",
+    "type": "GATHER",
+    "targetId": 26,
+    "targetCount": 3,
+    "rewardGold": 500,
+    "rewardItemId": 16,
+    "rewardItemCount": 2
+  },
+  {
+    "id": 4,
+    "title": "狂暴なオークの討伐",
+    "description": "下層に潜むオークバーサーカーを3体討伐してほしい。",
+    "type": "HUNT",
+    "targetId": 24,
+    "targetCount": 3,
+    "rewardGold": 800,
+    "rewardItemId": 27,
+    "rewardItemCount": 1
+  },
+  {
+    "id": 5,
+    "title": "深淵の脅威",
+    "description": "最深部に蠢くビホルダーを2体討伐せよ。",
+    "type": "HUNT",
+    "targetId": 13,
+    "targetCount": 2,
+    "rewardGold": 1500,
+    "rewardItemId": 28,
+    "rewardItemCount": 2
   }
 ]

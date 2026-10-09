@@ -1,5 +1,5 @@
 {
-    "bgmVolume": 0.006666666828095913,
+    "bgmVolume": 0.996666669845581,
     "dash": 340,
     "heal": 53,
     "isFullscreen": false,
@@ -18,7 +18,7 @@
     "padStealth": 4,
     "padSwap": 9,
     "padZoukyou": 3,
-    "seVolume": 0.009999999776482582,
+    "seVolume": 0.996666669845581,
     "smash": 49,
     "stealth": 52,
     "swapWeapon": 81,

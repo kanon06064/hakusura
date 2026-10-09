@@ -483,7 +483,7 @@ void Enemy::Draw(bool debug, Camera3D cam, Font font, Vector3 playerPos) {
         gm.model.transform = MatrixMultiply(gm.model.transform, matRotX);
         gm.model.transform = MatrixMultiply(gm.model.transform, matRotY);
 
-        DrawModel(gm.model, drawPos, scale, WHITE);
+        DrawModel(gm.model, drawPos, scale, data.tint);
 
         if (!isDying && status.HasAnyStatus()) {
             status.DrawAura(position, radius);

@@ -159,6 +159,9 @@ bool UI::DrawButton(Rectangle r, const char* label, Font font, Color col, bool f
     return clicked;
 }
 
+// =============================================================================
+// アイテム詳細ウィンドウ（三回り拡大 ＆ 文字二回り大型化版）
+// =============================================================================
 void UI::DrawDetailWindow(Font font, Player& p) {
     if (!showDetail) return;
     detailOpenTimer += GetFrameTime();
@@ -166,15 +169,17 @@ void UI::DrawDetailWindow(Font font, Player& p) {
     int sw = GetScreenWidth();
     int sh = GetScreenHeight();
 
-    DrawRectangle(0, 0, sw, sh, Fade(BLACK, 0.7f));
+    DrawRectangle(0, 0, sw, sh, Fade(BLACK, 0.75f));
 
-    int w = 470; int h = 590;
+    // ★ ウィンドウサイズを幅530px、高さ630pxに拡大！
+    int w = 530; int h = 630;
     int x = (sw - w) / 2; int y = (sh - h) / 2;
     DrawRectangle(x, y, w, h, Fade(DARKBLUE, 0.95f));
     DrawRectangleLinesEx({ (float)x, (float)y, (float)w, (float)h }, 3, GOLD);
 
+    // アイテム名（28pxに大型化）
     Color rarityColor = Player::GetItemRarityColor(focusingItem);
-    DrawTextEx(font, Player::GetFullItemName(focusingItem).c_str(), { (float)x + 25, (float)y + 25 }, 24, 1, rarityColor);
+    DrawTextEx(font, Player::GetFullItemName(focusingItem).c_str(), { (float)x + 30, (float)y + 25 }, 28, 1, rarityColor);
 
     std::string typeStr = focusingItem.type;
     if (typeStr == "EQUIP") typeStr = T("WEAPON", "Weapon");
@@ -190,11 +195,9 @@ void UI::DrawDetailWindow(Font font, Player& p) {
         std::string aTypes[] = { T("HEAD", "Head"), T("CHEST", "Chest"), T("HANDS", "Hands"), T("LEGS", "Legs"), T("FEET", "Feet") };
         if (focusingItem.weaponSubtype >= 0 && focusingItem.weaponSubtype <= 4) typeStr += std::string(" (") + aTypes[focusingItem.weaponSubtype] + ")";
     }
-    DrawTextEx(font, typeStr.c_str(), { (float)x + 25, (float)y + 58 }, 18, 1, LIGHTGRAY);
+    DrawTextEx(font, typeStr.c_str(), { (float)x + 30, (float)y + 64 }, 20, 1, LIGHTGRAY);
 
-    // =========================================================================
-    // ★ 性能比較（Diff）の計算：現在装備中の同部位アイテムを取得
-    // =========================================================================
+    // 性能比較（Diff）の計算
     ItemData curEquipped;
     curEquipped.id = -1;
     bool isCurrentlyEquippedThis = false;
@@ -215,12 +218,10 @@ void UI::DrawDetailWindow(Font font, Player& p) {
         }
     }
 
-    // 装備中バッジの表示
     if (isCurrentlyEquippedThis) {
-        DrawTextEx(font, T("EQUIPPED_NOW", "[Equipped]").c_str(), { (float)x + w - 150, (float)y + 58 }, 18, 1, GREEN);
+        DrawTextEx(font, T("EQUIPPED_NOW", "[Equipped]").c_str(), { (float)x + w - 170, (float)y + 64 }, 20, 1, GREEN);
     }
 
-    // 比較対象（現在装備）のステータス計算
     float curAtk = 0, curDef = 0, curHp = 0, curSpd = 0;
     if (curEquipped.id != -1) {
         Modifier curMod = DataManager::GetModifier(curEquipped.modifierId);
@@ -230,23 +231,21 @@ void UI::DrawDetailWindow(Font font, Player& p) {
         curSpd = curEquipped.speedBonus + curMod.spd;
     }
 
-    // 選択中アイテムのステータス計算
     Modifier mod = DataManager::GetModifier(focusingItem.modifierId);
     float totalAtk = focusingItem.atkBonus + mod.atk;
     float totalDef = focusingItem.defBonus + mod.def;
     float totalHp = focusingItem.hpBonus + mod.hp;
     float totalSpd = focusingItem.speedBonus + mod.spd;
 
-    // 差分の算出
     float diffAtk = totalAtk - curAtk;
     float diffDef = totalDef - curDef;
     float diffHp = totalHp - curHp;
     float diffSpd = totalSpd - curSpd;
 
-    // 差分テキストを描画するラムダ関数
+    // 差分テキスト描画
     auto drawDiff = [&](float diff, int drawY, bool isFloatVal = true) {
         if (focusingItem.type != "EQUIP" && focusingItem.type != "ARMOR") return;
-        if (isCurrentlyEquippedThis) return; // 装備中そのものなら差分は非表示
+        if (isCurrentlyEquippedThis) return;
 
         std::string diffStr = "";
         Color diffCol = LIGHTGRAY;
@@ -263,50 +262,50 @@ void UI::DrawDetailWindow(Font font, Player& p) {
         }
 
         if (!diffStr.empty()) {
-            DrawTextEx(font, diffStr.c_str(), { (float)x + 320, (float)drawY }, 18, 1, diffCol);
+            DrawTextEx(font, diffStr.c_str(), { (float)x + 360, (float)drawY }, 20, 1, diffCol);
         }
         };
 
-    int statsY = y + 95; int lineH = 30;
+    int statsY = y + 105; int lineH = 34; // 行間を34pxに拡大
     if (totalAtk != 0 || (curEquipped.id != -1 && curAtk != 0)) {
-        DrawTextEx(font, TextFormat(T("STAT_ATK", "ATK : %+.1f").c_str(), totalAtk), { (float)x + 35, (float)statsY }, 20, 1, RED);
-        if (mod.atk != 0) DrawTextEx(font, TextFormat("(Mod %+.1f)", mod.atk), { (float)x + 200, (float)statsY }, 16, 1, ORANGE);
+        DrawTextEx(font, TextFormat(T("STAT_ATK", "ATK : %+.1f").c_str(), totalAtk), { (float)x + 40, (float)statsY }, 22, 1, RED);
+        if (mod.atk != 0) DrawTextEx(font, TextFormat("(Mod %+.1f)", mod.atk), { (float)x + 230, (float)statsY }, 18, 1, ORANGE);
         drawDiff(diffAtk, statsY);
         statsY += lineH;
     }
     if (totalDef != 0 || (curEquipped.id != -1 && curDef != 0)) {
-        DrawTextEx(font, TextFormat(T("STAT_DEF", "DEF : %+.1f").c_str(), totalDef), { (float)x + 35, (float)statsY }, 20, 1, BLUE);
-        if (mod.def != 0) DrawTextEx(font, TextFormat("(Mod %+.1f)", mod.def), { (float)x + 200, (float)statsY }, 16, 1, ORANGE);
+        DrawTextEx(font, TextFormat(T("STAT_DEF", "DEF : %+.1f").c_str(), totalDef), { (float)x + 40, (float)statsY }, 22, 1, BLUE);
+        if (mod.def != 0) DrawTextEx(font, TextFormat("(Mod %+.1f)", mod.def), { (float)x + 230, (float)statsY }, 18, 1, ORANGE);
         drawDiff(diffDef, statsY);
         statsY += lineH;
     }
     if (totalHp != 0 || (curEquipped.id != -1 && curHp != 0)) {
-        DrawTextEx(font, TextFormat(T("STAT_HP", "HP : %+.0f").c_str(), totalHp), { (float)x + 35, (float)statsY }, 20, 1, GREEN);
-        if (mod.hp != 0) DrawTextEx(font, TextFormat("(Mod %+.0f)", mod.hp), { (float)x + 200, (float)statsY }, 16, 1, ORANGE);
+        DrawTextEx(font, TextFormat(T("STAT_HP", "HP : %+.0f").c_str(), totalHp), { (float)x + 40, (float)statsY }, 22, 1, GREEN);
+        if (mod.hp != 0) DrawTextEx(font, TextFormat("(Mod %+.0f)", mod.hp), { (float)x + 230, (float)statsY }, 18, 1, ORANGE);
         drawDiff(diffHp, statsY, false);
         statsY += lineH;
     }
     if (totalSpd != 0 || (curEquipped.id != -1 && curSpd != 0)) {
-        DrawTextEx(font, TextFormat(T("STAT_SPD", "SPD : %+.2f").c_str(), totalSpd), { (float)x + 35, (float)statsY }, 20, 1, SKYBLUE);
-        if (mod.spd != 0) DrawTextEx(font, TextFormat("(Mod %+.2f)", mod.spd), { (float)x + 200, (float)statsY }, 16, 1, ORANGE);
+        DrawTextEx(font, TextFormat(T("STAT_SPD", "SPD : %+.2f").c_str(), totalSpd), { (float)x + 40, (float)statsY }, 22, 1, SKYBLUE);
+        if (mod.spd != 0) DrawTextEx(font, TextFormat("(Mod %+.2f)", mod.spd), { (float)x + 230, (float)statsY }, 18, 1, ORANGE);
         drawDiff(diffSpd, statsY);
         statsY += lineH;
     }
     if (focusingItem.heal > 0) {
-        DrawTextEx(font, TextFormat(T("STAT_HEAL", "Heal : %.0f").c_str(), focusingItem.heal), { (float)x + 35, (float)statsY }, 20, 1, PINK);
+        DrawTextEx(font, TextFormat(T("STAT_HEAL", "Heal : %.0f").c_str(), focusingItem.heal), { (float)x + 40, (float)statsY }, 22, 1, PINK);
         statsY += lineH;
     }
 
-    // 1. モディファイア枠
+    // 1. モディファイア枠（幅を広げてゆったり表示）
     if (mod.id != 0) {
         statsY += 10;
-        DrawRectangleLines(x + 20, statsY - 5, w - 40, 58, ORANGE);
-        DrawTextEx(font, T("MODIFIER_TITLE", "Modifier:").c_str(), { (float)x + 30, (float)statsY }, 15, 1, ORANGE);
-        DrawTextEx(font, mod.name.c_str(), { (float)x + 45, (float)statsY + 22 }, 20, 1, YELLOW);
-        statsY += 62;
+        DrawRectangleLines(x + 25, statsY - 5, w - 50, 62, ORANGE);
+        DrawTextEx(font, T("MODIFIER_TITLE", "Modifier:").c_str(), { (float)x + 35, (float)statsY }, 16, 1, ORANGE);
+        DrawTextEx(font, mod.name.c_str(), { (float)x + 55, (float)statsY + 24 }, 22, 1, YELLOW);
+        statsY += 68;
     }
 
-    // 2. 属性表示枠
+    // 2. 属性表示枠（解説文もゆったり収まる幅）
     if (focusingItem.element != ELEM_NONE) {
         statsY += 10;
         Color elemCol = Player::GetElementColor(focusingItem.element);
@@ -332,14 +331,14 @@ void UI::DrawDetailWindow(Font font, Player& p) {
             break;
         }
 
-        DrawRectangleLines(x + 20, statsY - 5, w - 40, 62, elemCol);
-        DrawTextEx(font, elemTitle.c_str(), { (float)x + 30, (float)statsY }, 18, 1, elemCol);
-        DrawTextEx(font, elemDesc.c_str(), { (float)x + 35, (float)statsY + 26 }, 14, 1, WHITE);
-        statsY += 66;
+        DrawRectangleLines(x + 25, statsY - 5, w - 50, 66, elemCol);
+        DrawTextEx(font, elemTitle.c_str(), { (float)x + 35, (float)statsY }, 20, 1, elemCol);
+        DrawTextEx(font, elemDesc.c_str(), { (float)x + 40, (float)statsY + 28 }, 16, 1, WHITE);
+        statsY += 72;
     }
 
-    // 閉じるボタン
-    Rectangle closeBtn = { (float)x + w / 2 - 80, (float)y + h - 60, 160, 45 };
+    // 閉じるボタン（幅180pxに拡大）
+    Rectangle closeBtn = { (float)x + w / 2 - 90, (float)y + h - 65, 180, 48 };
     bool inputEnabled = (detailOpenTimer >= 0.3f);
     if (UI::DrawButton(closeBtn, T("CLOSE", "Close").c_str(), font, inputEnabled ? MAROON : Fade(MAROON, 0.5f), true)) {
         if (inputEnabled) {
@@ -450,10 +449,13 @@ int UI::DrawTitleScreen(Font font) {
 }
 
 // ゲームプレイ中のUI(HUD)描画
+// =============================================================================
+// ゲームプレイ中のUI(HUD)描画（文字・アイコン大型化＆視認性強化版）
+// =============================================================================
 void UI::DrawHUD(Player& p, std::vector<Enemy>& enemies, Dungeon& d, Camera3D& cam, int floor, int dungeonId, bool debug, Font font) {
     int sw = GetScreenWidth(); int sh = GetScreenHeight();
 
-    // --- 左上: 現在の階層やステージ名 ---
+    // --- 1. 左上: 現在の階層やステージ名 ---
     std::string floorText;
     if (floor > 1000) { floorText = TextFormat(T("STAGE", "STAGE %d").c_str(), floor - 1000); }
     else if (floor == 0) { floorText = T("HOME", "HOME"); }
@@ -464,15 +466,16 @@ void UI::DrawHUD(Player& p, std::vector<Enemy>& enemies, Dungeon& d, Camera3D& c
         else if (dungeonId == 2) dName = T("DUNGEON_3", "Abyss");
         floorText = TextFormat("%s: %s %d", dName.c_str(), label.c_str(), floor);
     }
-    Vector2 fSize = MeasureTextEx(font, floorText.c_str(), 24, 1);
-    DrawRectangle(20, 20, (int)fSize.x + 30, 40, Fade(BLACK, 0.6f));
-    DrawTextEx(font, floorText.c_str(), { 35, 28 }, 24, 1, WHITE);
+    Vector2 fSize = MeasureTextEx(font, floorText.c_str(), 26, 1);
+    DrawRectangle(20, 20, (int)fSize.x + 35, 45, Fade(BLACK, 0.7f));
+    DrawRectangleLines(20, 20, (int)fSize.x + 35, 45, Fade(GRAY, 0.6f));
+    DrawTextEx(font, floorText.c_str(), { 35, 29 }, 26, 1, WHITE);
 
-    // --- 左側: クエストの進捗状況 ---
+    // --- 2. 左側: クエストの進捗状況（文字を一回り拡大） ---
     if (!p.activeQuests.empty()) {
-        int questY = 75; int questX = 20;
-        DrawTextEx(font, T("QUESTS", "[Active Quests]").c_str(), { (float)questX, (float)questY }, 18, 1, GOLD);
-        questY += 22;
+        int questY = 80; int questX = 20;
+        DrawTextEx(font, T("QUESTS", "[Active Quests]").c_str(), { (float)questX, (float)questY }, 20, 1, GOLD);
+        questY += 26;
         for (const auto& q : p.activeQuests) {
             QuestData qData = DataManager::GetQuestData(q.questId);
             if (qData.id != -1) {
@@ -488,23 +491,21 @@ void UI::DrawHUD(Player& p, std::vector<Enemy>& enemies, Dungeon& d, Camera3D& c
                     }
                 }
                 std::string displayText = qData.title + progressStr;
-                Vector2 tSize = MeasureTextEx(font, displayText.c_str(), 16, 1);
-                DrawRectangle(questX - 5, questY - 2, (int)tSize.x + 10, 20, Fade(BLACK, 0.5f));
-                DrawTextEx(font, displayText.c_str(), { (float)questX, (float)questY }, 16, 1, textColor);
-                questY += 22;
+                Vector2 tSize = MeasureTextEx(font, displayText.c_str(), 18, 1);
+                DrawRectangle(questX - 5, questY - 2, (int)tSize.x + 10, 22, Fade(BLACK, 0.6f));
+                DrawTextEx(font, displayText.c_str(), { (float)questX, (float)questY }, 18, 1, textColor);
+                questY += 26;
             }
         }
     }
 
-    // --- 右上: ミニマップ ---
-    int mapSize = 200; int mapX = sw - mapSize - 20; int mapY = 20;
-    DrawRectangle(mapX, mapY, mapSize, mapSize, Fade(BLACK, 0.6f));
+    // --- 3. 右上: ミニマップ ---
+    int mapSize = 210; int mapX = sw - mapSize - 20; int mapY = 20;
+    DrawRectangle(mapX, mapY, mapSize, mapSize, Fade(BLACK, 0.65f));
     DrawRectangleLines(mapX, mapY, mapSize, mapSize, GRAY);
 
-    // ScissorModeでマップの四角い枠内だけを描画する
     BeginScissorMode(mapX, mapY, mapSize, mapSize);
-    float sc = 8.0f; // 1マスのサイズ
-    // プレイヤーの位置がマップの中心になるようオフセットを計算
+    float sc = 8.5f;
     float offX = mapX + mapSize / 2.0f - (p.position.x / TILE_SIZE) * sc;
     float offY = mapY + mapSize / 2.0f - (p.position.z / TILE_SIZE) * sc;
 
@@ -532,22 +533,17 @@ void UI::DrawHUD(Player& p, std::vector<Enemy>& enemies, Dungeon& d, Camera3D& c
     else {
         drawMapIcon(d.healStationPos, PINK); drawMapIcon(d.bossSpawnPos, MAGENTA);
     }
-    // プレイヤー自身(赤丸)
-    DrawCircle(mapX + mapSize / 2, mapY + mapSize / 2, 4, RED);
+    DrawCircle(mapX + mapSize / 2, mapY + mapSize / 2, 5, RED);
     EndScissorMode();
 
-    // =========================================================================
-    // --- 敵のHPバー描画（右側リスト ＆ 3D空間の頭上バー） ---
-    // =========================================================================
+    // --- 4. 敵のHPバー描画（右側HUD ＆ 頭上バー大型化） ---
     int listCount = 0;
     for (auto& e : enemies) {
-        // --- 1. 右側HUD: 直近でダメージを与えた敵のHPバーリスト ---
         if (e.hudTimer > 0) {
-            int yPos = mapY + mapSize + 20 + listCount * 50;
-            DrawRectangle(sw - 230, yPos, 210, 45, Fade(BLACK, 0.75f));
-            DrawRectangleLines(sw - 230, yPos, 210, 45, Fade(GRAY, 0.5f));
+            int yPos = mapY + mapSize + 20 + listCount * 56;
+            DrawRectangle(sw - 250, yPos, 230, 50, Fade(BLACK, 0.75f));
+            DrawRectangleLines(sw - 250, yPos, 230, 50, Fade(GRAY, 0.5f));
 
-            // 属性バッジの取得（属性色で描画）
             std::string elemTag = "";
             Color elemTagCol = WHITE;
             if (e.data.element != ELEM_NONE) {
@@ -555,68 +551,68 @@ void UI::DrawHUD(Player& p, std::vector<Enemy>& enemies, Dungeon& d, Camera3D& c
                 elemTagCol = Player::GetElementColor(e.data.element);
             }
 
-            // 敵の名前とレベル
-            DrawTextEx(font, TextFormat("Lv.%d %s", e.level, e.data.name.c_str()), { (float)sw - 220, (float)yPos + 5 }, 16, 1, WHITE);
-
-            // 属性バッジを右上に表示
+            DrawTextEx(font, TextFormat("Lv.%d %s", e.level, e.data.name.c_str()), { (float)sw - 240, (float)yPos + 6 }, 18, 1, WHITE);
             if (!elemTag.empty()) {
-                DrawTextEx(font, elemTag.c_str(), { (float)sw - 85, (float)yPos + 6 }, 14, 1, elemTagCol);
+                DrawTextEx(font, elemTag.c_str(), { (float)sw - 90, (float)yPos + 7 }, 15, 1, elemTagCol);
             }
 
-            // HPバー背景と赤バー
-            DrawRectangle(sw - 220, yPos + 25, 190, 10, DARKGRAY);
+            DrawRectangle(sw - 240, yPos + 30, 210, 12, DARKGRAY);
             float hpRate = fmaxf(0.0f, e.hp / e.maxHp);
-            DrawRectangle(sw - 220, yPos + 25, (int)(190.0f * hpRate), 10, RED);
+            DrawRectangle(sw - 240, yPos + 30, (int)(210.0f * hpRate), 12, RED);
 
             listCount++;
-            if (listCount >= 5) break; // 最大5体まで表示
+            if (listCount >= 5) break;
         }
 
-        // --- 2. 3D空間（敵の頭上）のインゲームHPバー ---
+        // ★ 3D空間の頭上バー（文字とバーの厚みを大幅拡大！）
         if (debug || d.IsDiscovered((float)e.position.x, (float)e.position.z)) {
             Vector2 s = GetWorldToScreen(e.position, cam);
-
-            // 画面内に映っている場合のみ描画
             if (s.x > 0 && s.y > 0 && s.x < sw && s.y < sh) {
-                // 頭上にレベル・名前・属性を表示
                 std::string txt = TextFormat("Lv.%d %s", e.level, e.data.name.c_str());
                 if (e.data.element != ELEM_NONE) {
                     txt += TextFormat(" [%s]", Player::GetElementName(e.data.element).c_str());
                 }
 
-                // 属性持ちなら属性カラーで文字を光らせる
                 Color nameCol = (e.data.element != ELEM_NONE) ? Player::GetElementColor(e.data.element) : WHITE;
-                Vector2 tSize = MeasureTextEx(font, txt.c_str(), 16, 1);
+                Vector2 tSize = MeasureTextEx(font, txt.c_str(), 20, 1);
 
-                // 文字の影（黒）と本体
-                DrawTextEx(font, txt.c_str(), { s.x - tSize.x / 2 + 1, s.y - 44 }, 16, 1, Fade(BLACK, 0.8f));
-                DrawTextEx(font, txt.c_str(), { s.x - tSize.x / 2, s.y - 45 }, 16, 1, nameCol);
+                // 頭上文字（20pxでクッキリ表示）
+                DrawTextEx(font, txt.c_str(), { s.x - tSize.x / 2 + 1, s.y - 51 }, 20, 1, Fade(BLACK, 0.85f));
+                DrawTextEx(font, txt.c_str(), { s.x - tSize.x / 2, s.y - 52 }, 20, 1, nameCol);
 
-                // 頭上HPバー
-                DrawRectangle((int)s.x - 20, (int)s.y - 25, 40, 4, DARKGRAY);
+                // 頭上バー（幅60px、厚み8pxに拡大）
+                DrawRectangle((int)s.x - 30, (int)s.y - 28, 60, 8, DARKGRAY);
+                DrawRectangleLines((int)s.x - 30, (int)s.y - 28, 60, 8, BLACK);
                 float headHpRate = fmaxf(0.0f, e.hp / e.maxHp);
-                DrawRectangle((int)s.x - 20, (int)s.y - 25, (int)(40.0f * headHpRate), 4, RED);
+                DrawRectangle((int)s.x - 30, (int)s.y - 28, (int)(60.0f * headHpRate), 8, RED);
             }
         }
     }
 
-    // --- 左下: プレイヤーステータス ---
-    DrawRectangle(10, sh - 120, 320, 110, Fade(BLACK, 0.6f));
-    DrawTextEx(font, TextFormat(T("HUD_LV_EXP", "Lv: %d   EXP: %d/%d").c_str(), p.level, p.exp, p.expToNext), { 20, (float)sh - 110 }, 18, 1, SKYBLUE);
+    // --- 5. 左下: プレイヤーステータス（枠と文字の大型化） ---
+    DrawRectangle(10, sh - 145, 360, 135, Fade(BLACK, 0.7f));
+    DrawRectangleLines(10, sh - 145, 360, 135, Fade(GRAY, 0.5f));
 
-    // HPバー
-    DrawRectangle(20, sh - 85, 280, 18, DARKGRAY);
-    DrawRectangle(20, sh - 85, (int)(280 * (fmaxf(0.0f, p.hp) / p.maxHp)), 18, GREEN);
-    DrawTextEx(font, TextFormat(T("HUD_HP", "HP: %.0f/%.0f").c_str(), p.hp, p.maxHp), { 30, (float)sh - 84 }, 14, 1, WHITE);
+    // レベル ＆ EXP（20px）
+    DrawTextEx(font, TextFormat(T("HUD_LV_EXP", "Lv: %d   EXP: %d/%d").c_str(), p.level, p.exp, p.expToNext), { 25, (float)sh - 138 }, 20, 1, SKYBLUE);
 
-    // ATK, DEF, GOLD, SP
-    DrawTextEx(font, TextFormat(T("HUD_STATS", "ATK: %.1f  DEF: %.1f").c_str(), p.attackPower, p.defense), { 20, (float)sh - 60 }, 18, 1, WHITE);
-    DrawTextEx(font, TextFormat(T("HUD_GOLD_SP", "Gold: %d  SP: %d").c_str(), p.gold, p.skillPoints), { 20, (float)sh - 35 }, 18, 1, WHITE);
+    // HPバー（厚み22pxに拡大）
+    DrawRectangle(25, sh - 108, 330, 22, DARKGRAY);
+    DrawRectangle(25, sh - 108, (int)(330 * (fmaxf(0.0f, p.hp) / p.maxHp)), 22, GREEN);
+    DrawRectangleLines(25, sh - 108, 330, 22, BLACK);
+    DrawTextEx(font, TextFormat(T("HUD_HP", "HP: %.0f / %.0f").c_str(), p.hp, p.maxHp), { 35, (float)sh - 106 }, 17, 1, WHITE);
 
-    // --- 右下: スキルアイコンとクールダウン ---
-    int iconSize = 40; int startX = sw - 320; int startY = sh - 60;
+    // 攻撃力・防御力（20px）
+    DrawTextEx(font, TextFormat(T("HUD_STATS", "ATK: %.1f   DEF: %.1f").c_str(), p.attackPower, p.defense), { 25, (float)sh - 78 }, 20, 1, WHITE);
 
-    // 表示するスキルのリスト
+    // 所持金・スキルポイント（20px）
+    DrawTextEx(font, TextFormat(T("HUD_GOLD_SP", "Gold: %d G   SP: %d").c_str(), p.gold, p.skillPoints), { 25, (float)sh - 48 }, 20, 1, YELLOW);
+
+    // --- 6. 右下: スキルアイコン（40px → 52px に大型化！） ---
+    int iconSize = 52;
+    int startX = sw - 370;
+    int startY = sh - 75;
+
     struct SkillIcon { SkillType type; const char* labelKey; std::string key; std::string padKey; };
     SkillIcon icons[] = {
         { SKILL_ACTIVE_SMASH, "SMASH", getKeyStr(DataManager::keyConfig.smash), UI::GetPadBtnStr(DataManager::keyConfig.padSmash) },
@@ -630,54 +626,35 @@ void UI::DrawHUD(Player& p, std::vector<Enemy>& enemies, Dungeon& d, Camera3D& c
     bool padActive = IsGamepadAvailable(0);
 
     for (int i = 0; i < 6; i++) {
-        int x = startX + i * (iconSize + 10);
+        int x = startX + i * (iconSize + 8);
         bool unlocked = p.IsSkillUnlocked(icons[i].type);
-        Color baseCol = unlocked ? DARKBLUE : DARKGRAY; // 取得していないスキルはグレー
+        Color baseCol = unlocked ? DARKBLUE : DARKGRAY;
 
         DrawRectangle(x, startY, iconSize, iconSize, baseCol);
         DrawRectangleLines(x, startY, iconSize, iconSize, RAYWHITE);
 
-        std::string displayKey = padActive ? icons[i].padKey : icons[i].key; // 操作方法
-        DrawTextEx(font, displayKey.c_str(), { (float)x + 2, (float)startY + 2 }, 10, 1, WHITE);
+        // キー操作ガイド（左上に14pxで表示）
+        std::string displayKey = padActive ? icons[i].padKey : icons[i].key;
+        DrawTextEx(font, displayKey.c_str(), { (float)x + 4, (float)startY + 3 }, 14, 1, YELLOW);
 
         if (unlocked) {
             float cd = p.GetSkillCooldown(icons[i].type);
             float maxCd = p.GetSkillMaxCooldown(icons[i].type);
 
-            // クールダウン中は赤くオーバーレイし、秒数を表示
             if (cd > 0) {
                 float ratio = cd / maxCd;
                 DrawRectangle(x, startY + (int)((float)iconSize * (1.0f - ratio)), iconSize, (int)((float)iconSize * ratio), Fade(RED, 0.7f));
-                DrawTextEx(font, TextFormat("%.1f", cd), { (float)x + 5, (float)startY + 15 }, 14, 1, YELLOW);
+                DrawTextEx(font, TextFormat("%.1f", cd), { (float)x + 6, (float)startY + 20 }, 18, 1, YELLOW);
             }
             else {
+                // スキル名（下部に13pxで表示）
                 std::string label = T(icons[i].labelKey, icons[i].labelKey);
-                DrawTextEx(font, label.c_str(), { (float)x + 2, (float)startY + 25 }, 10, 1, GREEN);
+                DrawTextEx(font, label.c_str(), { (float)x + 4, (float)startY + 32 }, 13, 1, GREEN);
             }
         }
         else {
-            DrawTextEx(font, T("SKILL_LOCKED", "LOCK").c_str(), { (float)x + 5, (float)startY + 15 }, 10, 1, GRAY);
+            DrawTextEx(font, T("SKILL_LOCKED", "LOCK").c_str(), { (float)x + 8, (float)startY + 22 }, 13, 1, GRAY);
         }
-    }
-}
-
-// プレイヤーの頭上に浮かぶログ(インゲームでの行動結果)を描画
-void UI::DrawLogs(std::vector<GameLog>& logs, Player& p, Camera3D& cam, Font font) {
-    Vector3 headPos = Vector3Add(p.position, { 0, 2.0f, 0 });
-    Vector2 screenPos = GetWorldToScreen(headPos, cam);
-    if (screenPos.x < 0 || screenPos.y < 0 || screenPos.x > GetScreenWidth() || screenPos.y > GetScreenHeight()) return;
-
-    for (int i = 0; i < (int)logs.size(); i++) {
-        float a = fminf(1.0f, logs[i].life * 2.0f); // 消えかけでフェードアウト
-        float moveUp = (4.0f - logs[i].life) * 10.0f; // 時間と共に少し上に昇る
-        float yOffset = (i * 25.0f) + moveUp;
-
-        Vector2 tSize = MeasureTextEx(font, logs[i].message.c_str(), 20, 1);
-        Vector2 drawPos = { screenPos.x - tSize.x / 2, screenPos.y - 40 - yOffset };
-
-        // 影(黒文字)を少しずらして描いてから本体を描画
-        DrawTextEx(font, logs[i].message.c_str(), { drawPos.x + 1, drawPos.y + 1 }, 20, 1, Fade(BLACK, a));
-        DrawTextEx(font, logs[i].message.c_str(), drawPos, 20, 1, Fade(logs[i].color, a));
     }
 }
 
@@ -735,18 +712,17 @@ void UI::UpdateSystemLogs(float deltaTime) {
 }
 
 // =============================================================================
-// 戦闘・システムログの描画（クッキリ視認性向上版）
+// 戦闘・システムログの描画
 // =============================================================================
 void UI::DrawSystemLogs(Font font) {
     if (systemLogs.empty()) return;
 
-    // ステータス枠（sh - 120）のすぐ上にログを配置
-    int startY = GetScreenHeight() - 145;
+    // ステータス枠（sh - 145）のすぐ上に配置
+    int startY = GetScreenHeight() - 170;
     int startX = 20;
-    int fontSize = 18;
-    int lineSpacing = 24;
+    int fontSize = 21; 
+    int lineSpacing = 28;
 
-    // 最大表示行数を直近6件に制限
     int displayCount = (int)systemLogs.size();
     if (displayCount > 6) displayCount = 6;
 
@@ -754,7 +730,6 @@ void UI::DrawSystemLogs(Font font) {
         int logIdx = (int)systemLogs.size() - 1 - i;
         auto& log = systemLogs[logIdx];
 
-        // 寿命に応じたフェードアウト（残り1秒で徐々に透明化）
         float alpha = 1.0f;
         if (log.lifeTime < 1.0f) alpha = log.lifeTime;
         if (alpha < 0.0f) alpha = 0.0f;
@@ -765,13 +740,32 @@ void UI::DrawSystemLogs(Font font) {
         int drawY = startY - (i * lineSpacing);
         Vector2 tSize = MeasureTextEx(font, log.text.c_str(), (float)fontSize, 1);
 
-        // 半透明の黒い背景プレート
-        Color bgCol = Fade(BLACK, 0.65f * alpha);
-        DrawRectangle(startX - 6, drawY - 2, (int)tSize.x + 12, fontSize + 4, bgCol);
-        DrawRectangleLines(startX - 6, drawY - 2, (int)tSize.x + 12, fontSize + 4, Fade(DARKGRAY, 0.5f * alpha));
+        Color bgCol = Fade(BLACK, 0.7f * alpha);
+        DrawRectangle(startX - 6, drawY - 2, (int)tSize.x + 12, fontSize + 5, bgCol);
+        DrawRectangleLines(startX - 6, drawY - 2, (int)tSize.x + 12, fontSize + 5, Fade(DARKGRAY, 0.5f * alpha));
 
-        // 黒い影（縁取り）を描いてから本体を描画して視認性を極大化
         DrawTextEx(font, log.text.c_str(), { (float)startX + 1, (float)drawY + 1 }, (float)fontSize, 1, Fade(BLACK, alpha));
         DrawTextEx(font, log.text.c_str(), { (float)startX, (float)drawY }, (float)fontSize, 1, textColor);
+    }
+
+
+}
+
+void UI::DrawLogs(std::vector<GameLog>& logs, Player& p, Camera3D& cam, Font font) {
+    Vector3 headPos = Vector3Add(p.position, { 0, 2.2f, 0 });
+    Vector2 screenPos = GetWorldToScreen(headPos, cam);
+    if (screenPos.x < 0 || screenPos.y < 0 || screenPos.x > GetScreenWidth() || screenPos.y > GetScreenHeight()) return;
+
+    for (int i = 0; i < (int)logs.size(); i++) {
+        float a = fminf(1.0f, logs[i].life * 2.0f); // 消えかけでフェードアウト
+        float moveUp = (4.0f - logs[i].life) * 12.0f; // 時間と共に上に昇る
+        float yOffset = (i * 26.0f) + moveUp;
+
+        Vector2 tSize = MeasureTextEx(font, logs[i].message.c_str(), 22, 1);
+        Vector2 drawPos = { screenPos.x - tSize.x / 2.0f, screenPos.y - 45.0f - yOffset };
+
+        // 影（黒文字）を描いてから本体を描画
+        DrawTextEx(font, logs[i].message.c_str(), { drawPos.x + 1.5f, drawPos.y + 1.5f }, 22, 1, Fade(BLACK, a * 0.9f));
+        DrawTextEx(font, logs[i].message.c_str(), drawPos, 22, 1, Fade(logs[i].color, a));
     }
 }

@@ -168,6 +168,32 @@
     "heal": 200,
     "dropChance": 0.1
   },
+
+  {
+    "id": 26,
+    "name": "溶解液",
+    "type": "MATERIAL",
+    "dropChance": 0.25
+  },
+  {
+    "id": 27,
+    "name": "竜血のエキス",
+    "type": "MATERIAL",
+    "dropChance": 0.15
+  },
+  {
+    "id": 28,
+    "name": "霊怨の結晶",
+    "type": "MATERIAL",
+    "dropChance": 0.15
+  },
+  {
+    "id": 29,
+    "name": "深淵の核",
+    "type": "MATERIAL",
+    "dropChance": 0.08
+  },
+
   {
     "id": 101,
     "name": "略奪者の剣",
@@ -204,6 +230,7 @@
     "weaponSubtype": 3,
     "dropChance": 0.05
   },
+
   {
     "id": 201,
     "name": "魂のナイトブレード",
@@ -240,6 +267,44 @@
     "weaponSubtype": 3,
     "dropChance": 0.03
   },
+
+  {
+    "id": 251,
+    "name": "竜骨の大剣",
+    "type": "EQUIP",
+    "model": "Wpn_Sword",
+    "atkBonus": 28,
+    "weaponSubtype": 0,
+    "dropChance": 0.02
+  },
+  {
+    "id": 252,
+    "name": "竜骨の穿槍",
+    "type": "EQUIP",
+    "model": "Wpn_Spear",
+    "atkBonus": 30,
+    "weaponSubtype": 1,
+    "dropChance": 0.02
+  },
+  {
+    "id": 253,
+    "name": "竜骨の砕斧",
+    "type": "EQUIP",
+    "model": "Wpn_Axe",
+    "atkBonus": 36,
+    "weaponSubtype": 2,
+    "dropChance": 0.02
+  },
+  {
+    "id": 255,
+    "name": "竜骨の祈杖",
+    "type": "EQUIP",
+    "model": "Wpn_Wand",
+    "atkBonus": 32,
+    "weaponSubtype": 3,
+    "dropChance": 0.02
+  },
+
   {
     "id": 301,
     "name": "魔鋼鉄の剣",
@@ -276,6 +341,44 @@
     "weaponSubtype": 3,
     "dropChance": 0.015
   },
+
+  {
+    "id": 351,
+    "name": "深淵の断頭剣",
+    "type": "EQUIP",
+    "model": "Wpn_Sword",
+    "atkBonus": 70,
+    "weaponSubtype": 0,
+    "dropChance": 0.008
+  },
+  {
+    "id": 352,
+    "name": "深淵の冥槍",
+    "type": "EQUIP",
+    "model": "Wpn_Spear",
+    "atkBonus": 75,
+    "weaponSubtype": 1,
+    "dropChance": 0.008
+  },
+  {
+    "id": 353,
+    "name": "深淵の崩壊斧",
+    "type": "EQUIP",
+    "model": "Wpn_Axe",
+    "atkBonus": 90,
+    "weaponSubtype": 2,
+    "dropChance": 0.008
+  },
+  {
+    "id": 355,
+    "name": "深淵の虚杖",
+    "type": "EQUIP",
+    "model": "Wpn_Wand",
+    "atkBonus": 80,
+    "weaponSubtype": 3,
+    "dropChance": 0.008
+  },
+
   {
     "id": 401,
     "name": "機神の聖剣",
@@ -312,6 +415,7 @@
     "weaponSubtype": 3,
     "dropChance": 0.005
   },
+
   {
     "id": 500,
     "name": "革の帽子",
@@ -357,6 +461,7 @@
     "speedBonus": 0.01,
     "dropChance": 0
   },
+
   {
     "id": 510,
     "name": "ボーンヘルム",
@@ -402,6 +507,7 @@
     "speedBonus": 0.01,
     "dropChance": 0
   },
+
   {
     "id": 520,
     "name": "封魔の冠",
@@ -447,6 +553,7 @@
     "speedBonus": 0.03,
     "dropChance": 0
   },
+
   {
     "id": 530,
     "name": "オリハルコンヘルム",
@@ -492,6 +599,7 @@
     "speedBonus": 0.05,
     "dropChance": 0
   },
+
   {
     "id": 540,
     "name": "アダマンヘルム",
@@ -535,6 +643,52 @@
     "weaponSubtype": 4,
     "defBonus": 10,
     "speedBonus": 0.02,
+    "dropChance": 0
+  },
+
+  {
+    "id": 550,
+    "name": "深淵の冥冠",
+    "type": "ARMOR",
+    "weaponSubtype": 0,
+    "defBonus": 20,
+    "hpBonus": 120,
+    "dropChance": 0
+  },
+  {
+    "id": 551,
+    "name": "深淵の冥衣",
+    "type": "ARMOR",
+    "weaponSubtype": 1,
+    "defBonus": 35,
+    "hpBonus": 220,
+    "dropChance": 0
+  },
+  {
+    "id": 552,
+    "name": "深淵の冥手",
+    "type": "ARMOR",
+    "weaponSubtype": 2,
+    "defBonus": 18,
+    "atkBonus": 35,
+    "dropChance": 0
+  },
+  {
+    "id": 553,
+    "name": "深淵の冥脚",
+    "type": "ARMOR",
+    "weaponSubtype": 3,
+    "defBonus": 22,
+    "hpBonus": 140,
+    "dropChance": 0
+  },
+  {
+    "id": 554,
+    "name": "深淵の冥靴",
+    "type": "ARMOR",
+    "weaponSubtype": 4,
+    "defBonus": 14,
+    "speedBonus": 0.04,
     "dropChance": 0
   }
 ]

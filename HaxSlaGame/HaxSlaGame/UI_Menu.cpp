@@ -1,4 +1,4 @@
-#include "UI.h"
+ï»¿#include "UI.h"
 #include "Player.h"
 #include "Dungeon.h"
 #include "DataManager.h"
@@ -11,20 +11,25 @@ static std::string T(const std::string& key, const std::string& def) {
     return def;
 }
 
-// ƒƒCƒ“ƒƒjƒ…[‚Ì•`‰æ‚Æ“ü—Í”»’è‚ğs‚¤ŠÖ”
+// ãƒ¡ã‚¤ãƒ³ãƒ¡ãƒ‹ãƒ¥ãƒ¼ã®æç”»ã¨å…¥åŠ›åˆ¤å®šã‚’è¡Œã†é–¢æ•°
+// =============================================================================
+// ãƒ¡ã‚¤ãƒ³ãƒ¡ãƒ‹ãƒ¥ãƒ¼ã®æç”»ã¨å…¥åŠ›åˆ¤å®š
+// =============================================================================
 int UI::DrawMenu(Player& p, Dungeon& d, MenuTab& tab, Font font) {
-    int eventCode = 0; // 1=ƒZ[ƒuÀs, 2=ƒ^ƒCƒgƒ‹‚Ö–ß‚é
+    int eventCode = 0;
 
-    // Œ»İ‚ÌƒEƒBƒ“ƒhƒE(‚Ü‚½‚Íƒ‚ƒjƒ^[)‚Ì‰ğ‘œ“x‚ğæ“¾‚µ‚ÄAUI‚ğ‘Š‘Î“I‚É”z’u‚·‚é
     int sw = GetScreenWidth(), sh = GetScreenHeight();
-    DrawRectangle(100, 50, sw - 200, sh - 100, Fade(DARKGRAY, 0.95f)); // ”wŒi‚Ì”¼“§–¾‚Ì”Â
 
-    // --- ã•”‚Ìƒ^ƒuØ‚è‘Ö‚¦ƒ{ƒ^ƒ“ ---
+    // â˜… ãƒ¡ãƒ‹ãƒ¥ãƒ¼å…¨ä½“ã®èƒŒæ™¯æ ã‚’å°‘ã—åºƒã’ã¦ã‚†ã¨ã‚Šã‚’æŒãŸã›ã‚‹ (X: 50 ã€œ 1230)
+    DrawRectangle(50, 30, sw - 100, sh - 60, Fade(DARKGRAY, 0.95f));
+    DrawRectangleLinesEx({ 50, 30, (float)sw - 100, (float)sh - 60 }, 2, GRAY);
+
+    // --- ä¸Šéƒ¨ã®ã‚¿ãƒ–åˆ‡ã‚Šæ›¿ãˆãƒœã‚¿ãƒ³ (å¹…140pxã§å‡ç­‰é…ç½®) ---
     const char* tKeys[] = { "EQUIP", "SKILL", "MAP", "ITEMS", "SYSTEM", "OPTION", "CONTROL" };
     const char* tDefs[] = { "Equip", "Skill", "Map", "Items", "System", "Option", "Control" };
 
     for (int i = 0; i < 7; i++) {
-        Rectangle r = { 100.0f + (float)i * 140, 70.0f, 125.0f, 40.0f };
+        Rectangle r = { 65.0f + (float)i * 155, 50.0f, 142.0f, 42.0f };
         Color tabColor = (tab == i) ? BLUE : DARKGRAY;
         if (UI::DrawButton(r, T(tKeys[i], tDefs[i]).c_str(), font, tabColor)) { tab = (MenuTab)i; }
     }
@@ -33,134 +38,175 @@ int UI::DrawMenu(Player& p, Dungeon& d, MenuTab& tab, Font font) {
     bool downInput = IsMouseButtonDown(0) || IsGamepadButtonDown(0, GAMEPAD_BUTTON_RIGHT_FACE_DOWN);
     bool rightDownInput = IsMouseButtonDown(MOUSE_BUTTON_RIGHT) || IsGamepadButtonDown(0, GAMEPAD_BUTTON_RIGHT_TRIGGER_2);
 
-    // ==========================================
-    // ƒ^ƒu‚²‚Æ‚Ì‰æ–Ê•`‰æˆ—
-    // ==========================================
+    // =========================================================================
+    // ã‚¿ãƒ–: EQUIPï¼ˆå®Œå…¨ç²¾å¯†é…ç½®ãƒ»ã¯ã¿å‡ºã—ï¼†è¢«ã‚Šã‚¼ãƒ­è¨­è¨ˆï¼‰
+    // =========================================================================
     if (tab == EQUIP) {
-        // --- ‘•”õƒ^ƒu (¶FŒ»İ‘•”õA’†‰›F–h‹ïA‰EFŠ‘•”õ) ---
-        float leftX = 120.0f;
-        float midX = (float)sw / 2.0f - 160.0f; // ‰æ–Ê’†‰›•t‹ß
-        float rightX = (float)sw - 560.0f;      // ‰æ–Ê‰E‘¤•t‹ß
+        float leftX = 75.0f;   // å·¦ã‚«ãƒ©ãƒ ï¼ˆæ­¦å™¨ã‚¹ãƒ­ãƒƒãƒˆï¼šå¹…320pxï¼‰ -> å³ç«¯ 395px
+        float labelX = 420.0f;  // é˜²å…·ãƒ©ãƒ™ãƒ«ï¼ˆé ­ã€èƒ´ã€è…•ã€è„šã€è¶³ï¼‰  -> 420px ã€œ 455px
+        float midX = 465.0f;  // ä¸­å¤®ã‚«ãƒ©ãƒ ï¼ˆé˜²å…·ã‚¹ãƒ­ãƒƒãƒˆï¼šå¹…315pxï¼‰ -> å³ç«¯ 780px
+        float rightX = 805.0f;  // å³ã‚«ãƒ©ãƒ ï¼ˆæ‰€æŒå“ãƒªã‚¹ãƒˆï¼šå¹…385pxï¼‰   -> å³ç«¯ 1190px (æ å†…å®Œå…¨åå®¹)
 
-        // y¶‘¤z•ŠíƒXƒƒbƒg (2‚Â)
-        DrawTextEx(font, T("ACTIVE_SLOTS", "Equipped").c_str(), { leftX, 130 }, 20, 1, GOLD);
+        // ---------------------------------------------------------------------
+        // ã€å·¦å´ã€‘æ­¦å™¨ã‚¹ãƒ­ãƒƒãƒˆ (2æ ) - å¹…320px (ä¸­å¤®ãƒ©ãƒ™ãƒ«ã¨çµ¶å¯¾ã«è¢«ã‚‰ãªã„)
+        // ---------------------------------------------------------------------
+        DrawTextEx(font, T("ACTIVE_SLOTS", "Equipped Weapons").c_str(), { leftX, 115 }, 22, 1, GOLD);
         for (int i = 0; i < 2; i++) {
-            int y = 160 + i * 105; bool isEmpty = (p.equippedData[i].id == -1);
-            Rectangle slotRect = { leftX, (float)y, 260, 95 }; Rectangle btnRect = { leftX + 180, (float)y + 25, 70, 40 };
-            Color slotCol = (p.activeSlot == i) ? MAROON : BLACK; if (showDetail) slotCol = ColorBrightness(slotCol, -0.4f);
+            int y = 150 + i * 115;
+            bool isEmpty = (p.equippedData[i].id == -1);
+
+            Rectangle slotRect = { leftX, (float)y, 320, 100 };
+            Rectangle btnRect = { leftX + 235, (float)y + 28, 72, 44 }; // ã¯ãšã™ãƒœã‚¿ãƒ³
+            Color slotCol = (p.activeSlot == i) ? MAROON : BLACK;
+            if (showDetail) slotCol = ColorBrightness(slotCol, -0.4f);
 
             UI::RegisterInteractable(slotRect);
-
             DrawRectangleRec(slotRect, slotCol);
+            DrawRectangleLinesEx(slotRect, 2, (p.activeSlot == i) ? GOLD : DARKGRAY);
+
             if (!showDetail && !isEmpty && CheckCollisionPointRec(GetMousePosition(), slotRect)) {
-                // ƒ{ƒ^ƒ“•”•ªˆÈŠO‚Ì—Ìˆæ‚ğƒNƒŠƒbƒN‚µ‚½‚çÚ×‰æ–Ê(Detail)‚ğŠJ‚­
-                if (!CheckCollisionPointRec(GetMousePosition(), btnRect)) { if (clickInput) OpenDetail(p.equippedData[i]); }
+                if (!CheckCollisionPointRec(GetMousePosition(), btnRect)) {
+                    if (clickInput) OpenDetail(p.equippedData[i]);
+                }
             }
+
             if (!isEmpty) {
-                DrawTextEx(font, Player::GetFullItemName(p.equippedData[i]).c_str(), { leftX + 10, (float)y + 25 }, 20, 1, Player::GetItemRarityColor(p.equippedData[i]));
+                // æ­¦å™¨åï¼ˆ20pxï¼šå¹…215pxä½¿ãˆã‚‹ãŸã‚ãƒœã‚¿ãƒ³ã«è¢«ã‚‰ãªã„ï¼‰
+                DrawTextEx(font, Player::GetFullItemName(p.equippedData[i]).c_str(), { leftX + 12, (float)y + 20 }, 20, 1, Player::GetItemRarityColor(p.equippedData[i]));
                 float totalBonus = Player::GetItemTotalAtkBonus(p.equippedData[i]);
-                DrawTextEx(font, TextFormat("%s +%.1f", T("ATK", "ATK").c_str(), totalBonus), { leftX + 10, (float)y + 50 }, 14, 1, YELLOW);
-                if (UI::DrawButton(btnRect, T("OFF", "OFF").c_str(), font, RED)) p.UnequipWeapon(i); // ŠO‚·ƒ{ƒ^ƒ“
+                DrawTextEx(font, TextFormat("%s +%.1f", T("ATK", "ATK").c_str(), totalBonus), { leftX + 12, (float)y + 55 }, 16, 1, YELLOW);
+
+                if (UI::DrawButton(btnRect, T("OFF", "OFF").c_str(), font, RED)) p.UnequipWeapon(i);
             }
-            else DrawTextEx(font, T("EMPTY", "EMPTY").c_str(), { leftX + 10, (float)y + 35 }, 20, 1, DARKGRAY);
+            else {
+                DrawTextEx(font, T("EMPTY", "EMPTY").c_str(), { leftX + 15, (float)y + 38 }, 20, 1, DARKGRAY);
+            }
         }
 
-        // y’†‰›z–h‹ïƒXƒƒbƒg (“ªA“·A˜rA‹rA‘«‚Ì5•”ˆÊ)
+        // ---------------------------------------------------------------------
+        // ã€ä¸­å¤®ã€‘é˜²å…·ã‚¹ãƒ­ãƒƒãƒˆ (5éƒ¨ä½) - å¹…315px (å·¦ã®æ­¦å™¨æ ã¨ã®é–“ã«ååˆ†ãªéš™é–“ã‚’ç¢ºä¿)
+        // ---------------------------------------------------------------------
         const char* armorKeys[] = { "HEAD", "CHEST", "HANDS", "LEGS", "FEET" };
         const char* armorNames[] = { "Head", "Chest", "Hands", "Legs", "Feet" };
+
         for (int i = 0; i < 5; i++) {
-            int y = 160 + i * 70; DrawTextEx(font, T(armorKeys[i], armorNames[i]).c_str(), { midX - 60, (float)y + 20 }, 16, 1, LIGHTGRAY);
+            int y = 150 + i * 74;
+
+            // â˜… é˜²å…·ãƒ©ãƒ™ãƒ«ï¼ˆæ­¦å™¨æ ã®å³ç«¯395pxã‹ã‚‰é›¢ã‚ŒãŸ420pxã«é…ç½®ã—ã¦å®Œå…¨ç‹¬ç«‹ï¼ï¼‰
+            DrawTextEx(font, T(armorKeys[i], armorNames[i]).c_str(), { labelX, (float)y + 22 }, 18, 1, LIGHTGRAY);
+
             bool isEmpty = (p.equippedArmor[i].id == -1);
-            Rectangle slotRect = { midX, (float)y, 200, 60 }; Rectangle btnRect = { midX + 130, (float)y + 10, 70, 40 };
+            Rectangle slotRect = { midX, (float)y, 315, 64 };
+            Rectangle btnRect = { midX + 238, (float)y + 11, 65, 42 };
 
             UI::RegisterInteractable(slotRect);
+            DrawRectangleRec(slotRect, showDetail ? ColorBrightness(BLACK, -0.4f) : BLACK);
+            DrawRectangleLinesEx(slotRect, 1, showDetail ? GRAY : DARKGRAY);
 
-            DrawRectangleRec(slotRect, showDetail ? ColorBrightness(BLACK, -0.4f) : BLACK); DrawRectangleLinesEx(slotRect, 1, showDetail ? GRAY : DARKGRAY);
             if (!showDetail && !isEmpty && CheckCollisionPointRec(GetMousePosition(), slotRect)) {
-                if (!CheckCollisionPointRec(GetMousePosition(), btnRect)) { if (clickInput) OpenDetail(p.equippedArmor[i]); }
+                if (!CheckCollisionPointRec(GetMousePosition(), btnRect)) {
+                    if (clickInput) OpenDetail(p.equippedArmor[i]);
+                }
             }
+
             if (!isEmpty) {
-                DrawTextEx(font, Player::GetFullItemName(p.equippedArmor[i]).c_str(), { midX + 10, (float)y + 10 }, 14, 1, Player::GetItemRarityColor(p.equippedArmor[i]));
+                // é˜²å…·åï¼ˆ18pxï¼‰
+                DrawTextEx(font, Player::GetFullItemName(p.equippedArmor[i]).c_str(), { midX + 10, (float)y + 12 }, 18, 1, Player::GetItemRarityColor(p.equippedArmor[i]));
                 float def = p.equippedArmor[i].defBonus + DataManager::GetModifier(p.equippedArmor[i].modifierId).def;
-                DrawTextEx(font, TextFormat("%s +%.1f", T("DEF", "DEF").c_str(), def), { midX + 10, (float)y + 35 }, 12, 1, BLUE);
+                DrawTextEx(font, TextFormat("%s +%.1f", T("DEF", "DEF").c_str(), def), { midX + 10, (float)y + 36 }, 14, 1, BLUE);
+
                 if (UI::DrawButton(btnRect, T("OFF", "OUT").c_str(), font, RED)) p.UnequipArmor(i);
             }
-            else { DrawTextEx(font, T("EMPTY", "EMPTY").c_str(), { midX + 10, (float)y + 20 }, 14, 1, DARKGRAY); }
+            else {
+                DrawTextEx(font, T("EMPTY", "EMPTY").c_str(), { midX + 12, (float)y + 22 }, 18, 1, DARKGRAY);
+            }
         }
 
-        // y‰E‘¤zè‚¿‚Ì–¢‘•”õ•iƒŠƒXƒg (ƒy[ƒW‚ß‚­‚è‘Î‰)
-        DrawTextEx(font, T("OWNED_EQUIP", "Owned Equipment").c_str(), { rightX, 130 }, 18, 1, GOLD);
-        const int perP = 8; int maxP = (int)ceil((float)p.inventoryEquip.size() / perP); if (maxP < 1) maxP = 1;
+        // ---------------------------------------------------------------------
+        // ã€å³å´ã€‘æ‰€æŒè£…å‚™ä¸€è¦§ - å¹…385px (å³ç«¯1190pxã§ãƒ¡ãƒ‹ãƒ¥ãƒ¼èƒŒæ™¯å†…ã«100%å®Œå…¨åå®¹)
+        // ---------------------------------------------------------------------
+        DrawTextEx(font, T("OWNED_EQUIP", "Owned Equipment").c_str(), { rightX, 115 }, 22, 1, GOLD);
+        const int perP = 8;
+        int maxP = (int)ceil((float)p.inventoryEquip.size() / perP);
+        if (maxP < 1) maxP = 1;
+
         for (int i = 0; i < perP; i++) {
-            int idx = equipPage * perP + i; if (idx >= (int)p.inventoryEquip.size()) break;
-            int y = 160 + i * 45; Rectangle r = { rightX, (float)y, 300, 40 };
+            int idx = equipPage * perP + i;
+            if (idx >= (int)p.inventoryEquip.size()) break;
+
+            int y = 150 + i * 48;
+            Rectangle r = { rightX, (float)y, 385, 44 }; // å¹…385pxã«åã‚ã‚‹
 
             UI::RegisterInteractable(r);
-
             DrawRectangleRec(r, showDetail ? ColorBrightness(BLACK, -0.4f) : BLACK);
-            if (!showDetail && CheckCollisionPointRec(GetMousePosition(), r)) { if (GetMouseX() < rightX + 210) { if (clickInput) OpenDetail(p.inventoryEquip[idx]); } }
+            DrawRectangleLinesEx(r, 1, DARKGRAY);
 
-            // =================================================================
-           // š Œ»İ‘•”õ‚Æ‚Ì«”\”äŠrƒCƒ“ƒWƒP[ƒ^[i— –ÊƒJƒŠƒ“ƒO–h~E—¼–Ê•`‰æ‘Î‰j
-           // =================================================================
+            if (!showDetail && CheckCollisionPointRec(GetMousePosition(), r)) {
+                if (GetMouseX() < rightX + 280) {
+                    if (clickInput) OpenDetail(p.inventoryEquip[idx]);
+                }
+            }
+
+            // æ€§èƒ½æ¯”è¼ƒã‚¤ãƒ³ã‚¸ã‚±ãƒ¼ã‚¿ãƒ¼ï¼ˆç·‘â–² / èµ¤â–¼ï¼‰
             int comp = Player::CompareWithEquipped(p.inventoryEquip[idx], p);
-            float cx = rightX + 16.0f; // OŠpŒ`‚Ì’†SX
-            float cy = (float)y + 20.0f; // OŠpŒ`‚Ì’†SY
+            float cx = rightX + 12.0f;
+            float cy = (float)y + 22.0f;
 
             if (comp == 1) {
-                // ãŒü‚«—ÎOŠp £i”½Œv‰ñ‚è CCW ‚ÅŠmÀ‚É•`‰æj
                 Vector2 pTop = { cx, cy - 6.0f };
                 Vector2 pRight = { cx + 6.0f, cy + 6.0f };
                 Vector2 pLeft = { cx - 6.0f, cy + 6.0f };
                 DrawTriangle(pTop, pRight, pLeft, LIME);
-                DrawTriangle(pTop, pLeft, pRight, LIME); // ”O‚Ì‚½‚ß‚Ì—¼–Ê•`‰æ
+                DrawTriangle(pTop, pLeft, pRight, LIME);
             }
             else if (comp == -1) {
-                // ‰ºŒü‚«ÔOŠp ¥i”½Œv‰ñ‚è CCW ‚ÅŠmÀ‚É•`‰æj
                 Vector2 pBottom = { cx, cy + 6.0f };
                 Vector2 pLeft = { cx - 6.0f, cy - 6.0f };
                 Vector2 pRight = { cx + 6.0f, cy - 6.0f };
                 DrawTriangle(pBottom, pLeft, pRight, RED);
-                DrawTriangle(pBottom, pRight, pLeft, RED); // ”O‚Ì‚½‚ß‚Ì—¼–Ê•`‰æ
+                DrawTriangle(pBottom, pRight, pLeft, RED);
             }
 
-            // ƒAƒCƒeƒ€–¼‚ÍOŠpƒAƒCƒRƒ“‚Ì‰E‘¤‚©‚ç•`‰æ
-            DrawTextEx(font, Player::GetFullItemName(p.inventoryEquip[idx]).c_str(), { rightX + 30.0f, (float)y + 10 }, 14, 1, Player::GetItemRarityColor(p.inventoryEquip[idx]));
+            
+            DrawTextEx(font, Player::GetFullItemName(p.inventoryEquip[idx]).c_str(), { rightX + 26.0f, (float)y + 12 }, 18, 1, Player::GetItemRarityColor(p.inventoryEquip[idx]));
 
-            // ‘•”õƒ{ƒ^ƒ“i•Ší‚ÍW1/W2A–h‹ï‚ÍEQUIPj
+            
             if (p.inventoryEquip[idx].type == "EQUIP") {
-                if (UI::DrawButton({ rightX + 215, (float)y, 40, 40 }, T("W1", "W1").c_str(), font, DARKGRAY)) { p.EquipWeapon(idx, 0); break; }
-                if (UI::DrawButton({ rightX + 260, (float)y, 40, 40 }, T("W2", "W2").c_str(), font, DARKGRAY)) { p.EquipWeapon(idx, 1); break; }
+                if (UI::DrawButton({ rightX + 292, (float)y + 4, 42, 36 }, T("W1", "W1").c_str(), font, DARKGRAY)) { p.EquipWeapon(idx, 0); break; }
+                if (UI::DrawButton({ rightX + 338, (float)y + 4, 42, 36 }, T("W2", "W2").c_str(), font, DARKGRAY)) { p.EquipWeapon(idx, 1); break; }
             }
             else if (p.inventoryEquip[idx].type == "ARMOR") {
                 int subtype = p.inventoryEquip[idx].weaponSubtype;
                 if (subtype >= 0 && subtype < 5) {
-                    if (UI::DrawButton({ rightX + 215, (float)y, 85, 40 }, T("EQUIP", "EQUIP").c_str(), font, DARKGREEN)) { p.EquipArmor(idx, subtype); break; }
+                    if (UI::DrawButton({ rightX + 292, (float)y + 4, 88, 36 }, T("EQUIP", "EQUIP").c_str(), font, DARKGREEN)) { p.EquipArmor(idx, subtype); break; }
                 }
             }
         }
-        if (UI::DrawButton({ rightX, 530, 80, 30 }, "<<", font, GRAY) && equipPage > 0) equipPage--;
-        if (UI::DrawButton({ rightX + 90, 530, 80, 30 }, ">>", font, GRAY) && equipPage < maxP - 1) equipPage++;
+
+        // ãƒšãƒ¼ã‚¸ã‚ãã‚Šãƒœã‚¿ãƒ³
+        float pageBtnY = 550.0f;
+        if (UI::DrawButton({ rightX + 40, pageBtnY, 80, 35 }, "<<", font, GRAY) && equipPage > 0) equipPage--;
+        if (UI::DrawButton({ rightX + 240, pageBtnY, 80, 35 }, ">>", font, GRAY) && equipPage < maxP - 1) equipPage++;
     }
     else if (tab == SKILL) {
-        // --- ƒXƒLƒ‹ƒcƒŠ[ƒ^ƒu ---
-        Rectangle viewArea = { 100, 120, (float)sw - 200, (float)sh - 170 }; // ƒcƒŠ[‚ğ•`‰æ‚·‚é˜g
+        // --- ã‚¹ã‚­ãƒ«ãƒ„ãƒªãƒ¼ã‚¿ãƒ– ---
+        Rectangle viewArea = { 100, 120, (float)sw - 200, (float)sh - 170 }; // ãƒ„ãƒªãƒ¼ã‚’æç”»ã™ã‚‹æ 
         DrawTextEx(font, T("CAM_CONTROL", "Right Click & Drag to Move").c_str(), { 120, 620 }, 16, 1, LIGHTGRAY);
 
-        // ‰Eƒhƒ‰ƒbƒO‚ÅƒXƒLƒ‹ƒcƒŠ[‚Ì‰æ–Ê‘S‘Ì‚ğˆÚ“®‚³‚¹‚é
+        // å³ãƒ‰ãƒ©ãƒƒã‚°ã§ã‚¹ã‚­ãƒ«ãƒ„ãƒªãƒ¼ã®ç”»é¢å…¨ä½“ã‚’ç§»å‹•ã•ã›ã‚‹
         if (rightDownInput && !showDetail) {
             Vector2 delta = GetMouseDelta();
-            if (IsGamepadAvailable(0)) { // ƒpƒbƒh‘€ì
+            if (IsGamepadAvailable(0)) { // ãƒ‘ãƒƒãƒ‰æ“ä½œæ™‚
                 delta.x = GetGamepadAxisMovement(0, GAMEPAD_AXIS_RIGHT_X) * 10.0f;
                 delta.y = GetGamepadAxisMovement(0, GAMEPAD_AXIS_RIGHT_Y) * 10.0f;
             }
             skillOffset = Vector2Add(skillOffset, delta);
         }
 
-        // ScissorMode‚ğg‚Á‚ÄA˜g(viewArea)‚ÌŠO‚É‚Í‚İo‚½—v‘f‚ğ•`‰æ‚³‚¹‚È‚¢‚æ‚¤‚É‚·‚é
+        // ScissorModeã‚’ä½¿ã£ã¦ã€æ (viewArea)ã®å¤–ã«ã¯ã¿å‡ºãŸè¦ç´ ã‚’æç”»ã•ã›ãªã„ã‚ˆã†ã«ã™ã‚‹
         BeginScissorMode((int)viewArea.x, (int)viewArea.y, (int)viewArea.width, (int)viewArea.height);
 
-        // ƒm[ƒh“¯m‚ğŒq‚®ü(‘O’ñƒXƒLƒ‹ƒ‰ƒCƒ“)‚ğæ‚É•`‰æ
+        // ãƒãƒ¼ãƒ‰åŒå£«ã‚’ç¹‹ãç·š(å‰æã‚¹ã‚­ãƒ«ãƒ©ã‚¤ãƒ³)ã‚’å…ˆã«æç”»
         for (auto& node : p.skillTree) {
             Vector2 startPos = Vector2Add(node.uiPos, skillOffset);
             for (int reqId : node.reqIds) {
@@ -177,19 +223,19 @@ int UI::DrawMenu(Player& p, Dungeon& d, MenuTab& tab, Font font) {
 
         int hoveredSkillId = -1;
 
-        // ƒm[ƒh(˜ZŠpŒ`ƒAƒCƒRƒ“)–{‘Ì‚Ì•`‰æ
+        // ãƒãƒ¼ãƒ‰(å…­è§’å½¢ã‚¢ã‚¤ã‚³ãƒ³)æœ¬ä½“ã®æç”»
         for (int i = 0; i < (int)p.skillTree.size(); i++) {
             auto& node = p.skillTree[i];
             bool available = p.IsSkillAvailable(node.id);
             Vector2 drawPos = Vector2Add(node.uiPos, skillOffset);
             Color nodeColor = node.unlocked ? YELLOW : (available ? GREEN : DARKGRAY);
 
-            if (node.type != SKILL_PASSIVE) { // ƒAƒNƒeƒBƒuƒXƒLƒ‹‚ÍF‚ğ•Ï‚¦‚é
+            if (node.type != SKILL_PASSIVE) { // ã‚¢ã‚¯ãƒ†ã‚£ãƒ–ã‚¹ã‚­ãƒ«ã¯è‰²ã‚’å¤‰ãˆã‚‹
                 nodeColor = node.unlocked ? ORANGE : (available ? PURPLE : DARKGRAY);
             }
 
             Rectangle nodeRect = { drawPos.x - 35, drawPos.y - 35, 70, 70 };
-            UI::RegisterInteractable(nodeRect); // ƒpƒbƒh‚ÌƒXƒiƒbƒv—p
+            UI::RegisterInteractable(nodeRect); // ãƒ‘ãƒƒãƒ‰ã®ã‚¹ãƒŠãƒƒãƒ—ç”¨
 
             DrawPoly(drawPos, 6, 35, 0, nodeColor);
             DrawPolyLines(drawPos, 6, 35, 0, RAYWHITE);
@@ -197,7 +243,7 @@ int UI::DrawMenu(Player& p, Dungeon& d, MenuTab& tab, Font font) {
 
             if (!node.unlocked) { DrawTextEx(font, TextFormat("SP:%d", node.cost), { drawPos.x - 15, drawPos.y + 15 }, 10, 1, WHITE); }
 
-            // ƒNƒŠƒbƒN”»’è
+            // ã‚¯ãƒªãƒƒã‚¯åˆ¤å®š
             if (!showDetail && CheckCollisionPointRec(GetMousePosition(), viewArea)) {
                 if (CheckCollisionPointCircle(GetMousePosition(), drawPos, 35)) {
                     hoveredSkillId = i;
@@ -205,9 +251,9 @@ int UI::DrawMenu(Player& p, Dungeon& d, MenuTab& tab, Font font) {
                 }
             }
         }
-        EndScissorMode(); // ˜g‚Ì§ŒÀ‚ğ‰ğœ
+        EndScissorMode(); // æ ã®åˆ¶é™ã‚’è§£é™¤
 
-        // ƒXƒLƒ‹‚Éƒ}ƒEƒX‚ğæ‚¹‚Ä‚¢‚éAƒ|ƒbƒvƒAƒbƒv‚Åà–¾‚ğ•\¦‚·‚é
+        // ã‚¹ã‚­ãƒ«ã«ãƒã‚¦ã‚¹ã‚’ä¹—ã›ã¦ã„ã‚‹æ™‚ã€ãƒãƒƒãƒ—ã‚¢ãƒƒãƒ—ã§èª¬æ˜ã‚’è¡¨ç¤ºã™ã‚‹
         if (hoveredSkillId != -1) {
             auto& node = p.skillTree[hoveredSkillId];
             Vector2 mPos = GetMousePosition();
@@ -223,21 +269,21 @@ int UI::DrawMenu(Player& p, Dungeon& d, MenuTab& tab, Font font) {
         }
     }
     else if (tab == INVENTORY) {
-        // --- è‚¿ƒAƒCƒeƒ€(Á–Õ•iE‘fŞ)ƒ^ƒu ---
+        // --- æ‰‹æŒã¡ã‚¢ã‚¤ãƒ†ãƒ (æ¶ˆè€—å“ãƒ»ç´ æ)ã‚¿ãƒ– ---
         const char* subK[] = { "CONSUMABLE", "MATERIAL" };
-        for (int i = 0; i < 2; i++) { // ƒTƒuƒ^ƒu‚ÌØ‚è‘Ö‚¦ƒ{ƒ^ƒ“
+        for (int i = 0; i < 2; i++) { // ã‚µãƒ–ã‚¿ãƒ–ã®åˆ‡ã‚Šæ›¿ãˆãƒœã‚¿ãƒ³
             Rectangle r = { 120.0f + (float)i * 210, 120, 200, 35 }; Color c = (itemSubTab == i) ? GREEN : BLACK; if (showDetail) c = ColorBrightness(c, -0.4f);
             if (!showDetail && CheckCollisionPointRec(GetMousePosition(), r) && clickInput) { itemSubTab = i; itemPage = 0; }
             DrawRectangleRec(r, c); std::string label = T(subK[i], subK[i]); DrawTextEx(font, label.c_str(), { r.x + 10, r.y + 8 }, 16, 1, WHITE);
             UI::RegisterInteractable(r);
         }
 
-        // •\¦‚·‚éƒJƒeƒSƒŠ‚ÅƒŠƒXƒg‚ği‚è‚Ş
+        // è¡¨ç¤ºã™ã‚‹ã‚«ãƒ†ã‚´ãƒªã§ãƒªã‚¹ãƒˆã‚’çµã‚Šè¾¼ã‚€
         std::vector<int> filtered; std::string target = (itemSubTab == 0) ? "CONSUMABLE" : "MATERIAL"; for (int i = 0; i < (int)p.inventoryItems.size(); i++) if (p.inventoryItems[i].type == target) filtered.push_back(i);
         const int perP = 10; int maxP = (int)ceil((float)filtered.size() / perP); if (maxP < 1) maxP = 1;
         DrawTextEx(font, TextFormat(T("PAGE_INFO", "Page %d/%d").c_str(), itemPage + 1, maxP), { (float)sw / 2.0f, 125 }, 18, 1, WHITE);
 
-        float listW = (float)sw / 2.0f - 100.0f; // ƒEƒBƒ“ƒhƒEƒTƒCƒY‚É‰‚¶‚½ƒŠƒXƒg‚Ì•
+        float listW = (float)sw / 2.0f - 100.0f; // ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ã‚µã‚¤ã‚ºã«å¿œã˜ãŸãƒªã‚¹ãƒˆã®å¹…
         for (int i = 0; i < perP; i++) {
             int lIdx = itemPage * perP + i; if (lIdx >= (int)filtered.size()) break;
             int invIdx = filtered[lIdx]; auto& item = p.inventoryItems[invIdx];
@@ -250,7 +296,7 @@ int UI::DrawMenu(Player& p, Dungeon& d, MenuTab& tab, Font font) {
             if (!showDetail && CheckCollisionPointRec(GetMousePosition(), itemRect)) { if (clickInput) OpenDetail(item); }
 
             if (itemSubTab == 0 && UI::DrawButton({ 120 + listW + 10, (float)y, 80, 38 }, T("USE", "Use").c_str(), font, GREEN)) {
-                p.UseItem(invIdx); // ‰ñ•œƒAƒCƒeƒ€‚ğg‚¤
+                p.UseItem(invIdx); // å›å¾©ã‚¢ã‚¤ãƒ†ãƒ ã‚’ä½¿ã†
                 break;
             }
         }
@@ -258,7 +304,7 @@ int UI::DrawMenu(Player& p, Dungeon& d, MenuTab& tab, Font font) {
         if (UI::DrawButton({ 230, (float)sh - 120, 100, 30 }, ">>", font, GRAY) && itemPage < maxP - 1) itemPage++;
     }
     else if (tab == MAP_TAB) {
-        // --- ‘S‘Ìƒ}ƒbƒvƒ^ƒu ---
+        // --- å…¨ä½“ãƒãƒƒãƒ—ã‚¿ãƒ– ---
         Rectangle viewArea = { 110, 120, (float)sw - 220, (float)sh - 170 };
         DrawTextEx(font, T("MAP_CONTROL", "Right Click & Drag to Move").c_str(), { 120, (float)sh - 100 }, 16, 1, LIGHTGRAY);
         if (!showDetail && CheckCollisionPointRec(GetMousePosition(), viewArea) && rightDownInput) {
@@ -267,12 +313,12 @@ int UI::DrawMenu(Player& p, Dungeon& d, MenuTab& tab, Font font) {
                 delta.x = GetGamepadAxisMovement(0, GAMEPAD_AXIS_RIGHT_X) * 10.0f;
                 delta.y = GetGamepadAxisMovement(0, GAMEPAD_AXIS_RIGHT_Y) * 10.0f;
             }
-            mapOffset = Vector2Add(mapOffset, delta); // ƒ}ƒbƒv‚ğƒhƒ‰ƒbƒO‚Å“®‚©‚·
+            mapOffset = Vector2Add(mapOffset, delta); // ãƒãƒƒãƒ—ã‚’ãƒ‰ãƒ©ãƒƒã‚°ã§å‹•ã‹ã™
         }
         BeginScissorMode((int)viewArea.x, (int)viewArea.y, (int)viewArea.width, (int)viewArea.height);
-        float sc = 12.0f; // ƒ}ƒX–Ú‚ÌƒTƒCƒY
+        float sc = 12.0f; // ãƒã‚¹ç›®ã®ã‚µã‚¤ã‚º
         float offX = (viewArea.x + viewArea.width / 2.0f) - (d.currentWidth * sc / 2.0f) + mapOffset.x; float offY = (viewArea.y + viewArea.height / 2.0f) - (d.currentHeight * sc / 2.0f) + mapOffset.y;
-        DrawRectangle(offX - 5, offY - 5, d.currentWidth * sc + 10, d.currentHeight * sc + 10, BLACK); // ƒ}ƒbƒv”wŒi
+        DrawRectangle(offX - 5, offY - 5, d.currentWidth * sc + 10, d.currentHeight * sc + 10, BLACK); // ãƒãƒƒãƒ—èƒŒæ™¯
 
         for (int y = 0; y < d.currentHeight; y++) {
             for (int x = 0; x < d.currentWidth; x++) {
@@ -281,25 +327,25 @@ int UI::DrawMenu(Player& p, Dungeon& d, MenuTab& tab, Font font) {
                 }
             }
         }
-        DrawCircle(offX + (p.position.x / TILE_SIZE) * sc, offY + (p.position.z / TILE_SIZE) * sc, 5, RED); // ƒvƒŒƒCƒ„[ˆÊ’u
+        DrawCircle(offX + (p.position.x / TILE_SIZE) * sc, offY + (p.position.z / TILE_SIZE) * sc, 5, RED); // ãƒ—ãƒ¬ã‚¤ãƒ¤ãƒ¼ä½ç½®
         EndScissorMode();
     }
     else if (tab == SYSTEM_TAB) {
-        // --- ƒVƒXƒeƒ€ƒ^ƒu(ƒZ[ƒuEƒ^ƒCƒgƒ‹‚Ö–ß‚é) ---
+        // --- ã‚·ã‚¹ãƒ†ãƒ ã‚¿ãƒ–(ã‚»ãƒ¼ãƒ–ãƒ»ã‚¿ã‚¤ãƒˆãƒ«ã¸æˆ»ã‚‹) ---
         float centerX = sw / 2.0f;
         DrawTextEx(font, T("SYS_MENU", "System Menu").c_str(), { centerX - 100, 130 }, 24, 1, WHITE);
 
         Rectangle saveBtn = { centerX - 100, 200, 200, 60 };
-        if (!d.isHome) { DrawRectangleRec(saveBtn, GRAY); DrawTextEx(font, T("SAVE_HOME_ONLY", "Save (Home Only)").c_str(), { centerX - 90, 220 }, 18, 1, DARKGRAY); } // ƒ_ƒ“ƒWƒ‡ƒ““à‚Å‚ÍƒZ[ƒu•s‰Â
+        if (!d.isHome) { DrawRectangleRec(saveBtn, GRAY); DrawTextEx(font, T("SAVE_HOME_ONLY", "Save (Home Only)").c_str(), { centerX - 90, 220 }, 18, 1, DARKGRAY); } // ãƒ€ãƒ³ã‚¸ãƒ§ãƒ³å†…ã§ã¯ã‚»ãƒ¼ãƒ–ä¸å¯
         else { if (UI::DrawButton(saveBtn, T("SAVE_GAME", "Save Game").c_str(), font, BLUE)) { eventCode = 1; } DrawTextEx(font, T("SAVE_DESC", "Save your progress").c_str(), { centerX + 120, 220 }, 18, 1, LIGHTGRAY); }
 
         Rectangle titleBtn = { centerX - 100, 300, 200, 60 }; if (UI::DrawButton(titleBtn, T("RETURN_TITLE", "Return to Title").c_str(), font, RED)) { eventCode = 2; }
     }
     else if (tab == OPTION_TAB) {
-        // --- ƒIƒvƒVƒ‡ƒ“ƒ^ƒu (ƒTƒEƒ“ƒhE‰æ–ÊEŠ´“x) ---
+        // --- ã‚ªãƒ—ã‚·ãƒ§ãƒ³ã‚¿ãƒ– (ã‚µã‚¦ãƒ³ãƒ‰ãƒ»ç”»é¢ãƒ»æ„Ÿåº¦) ---
         float rightColX = (float)sw - 630.0f;
 
-        // y¶ƒJƒ‰ƒ€: ƒTƒEƒ“ƒhİ’èz
+        // ã€å·¦ã‚«ãƒ©ãƒ : ã‚µã‚¦ãƒ³ãƒ‰è¨­å®šã€‘
         DrawTextEx(font, T("SOUND_SETTING", "Sound Settings").c_str(), { 150, 130 }, 24, 1, WHITE);
 
         int bgmVolInt = (int)roundf(AudioManager::bgmVolume * 100.0f);
@@ -331,13 +377,13 @@ int UI::DrawMenu(Player& p, Dungeon& d, MenuTab& tab, Font font) {
         if (!showDetail && CheckCollisionPointRec(GetMousePosition(), { 150, 290, 300, 40 }) && downInput) {
             float newVol = (GetMouseX() - 150) / 300.0f;
             AudioManager::SetSEVolume(newVol); DataManager::SaveConfig();
-            if (clickInput) AudioManager::PlaySE(SE_CLICK); // ’²®‚É‰¹‚ğ–Â‚ç‚·
+            if (clickInput) AudioManager::PlaySE(SE_CLICK); // èª¿æ•´æ™‚ã«éŸ³ã‚’é³´ã‚‰ã™
         }
 
         if (UI::DrawButton({ 470, 290, 40, 40 }, "-", font, GRAY)) { AudioManager::SetSEVolume(AudioManager::seVolume - 0.05f); DataManager::SaveConfig(); AudioManager::PlaySE(SE_CLICK); }
         if (UI::DrawButton({ 520, 290, 40, 40 }, "+", font, GRAY)) { AudioManager::SetSEVolume(AudioManager::seVolume + 0.05f); DataManager::SaveConfig(); AudioManager::PlaySE(SE_CLICK); }
 
-        // y‰EƒJƒ‰ƒ€: ‹“_Š´“x‚Æ‰æ–Êİ’èz
+        // ã€å³ã‚«ãƒ©ãƒ : è¦–ç‚¹æ„Ÿåº¦ã¨ç”»é¢è¨­å®šã€‘
         DrawTextEx(font, T("CTRL_SCREEN_SETTING", "Control & Screen").c_str(), { rightColX, 130 }, 24, 1, WHITE);
 
         DrawTextEx(font, TextFormat(T("SENS_MOUSE", "Mouse Sensitivity: %.1f").c_str(), DataManager::keyConfig.mouseSensitivity), { rightColX, 180 }, 20, 1, WHITE);
@@ -368,39 +414,39 @@ int UI::DrawMenu(Player& p, Dungeon& d, MenuTab& tab, Font font) {
         if (UI::DrawButton({ rightColX + 320, 290, 40, 40 }, "-", font, GRAY)) { DataManager::keyConfig.padSensitivity -= 0.1f; if (DataManager::keyConfig.padSensitivity < 0.1f) DataManager::keyConfig.padSensitivity = 0.1f; DataManager::SaveConfig(); }
         if (UI::DrawButton({ rightColX + 370, 290, 40, 40 }, "+", font, GRAY)) { DataManager::keyConfig.padSensitivity += 0.1f; if (DataManager::keyConfig.padSensitivity > 5.0f) DataManager::keyConfig.padSensitivity = 5.0f; DataManager::SaveConfig(); }
 
-        // --- ‰æ–Êƒ‚[ƒhiƒtƒ‹ƒXƒNƒŠ[ƒ“Ø‘Öj ---
+        // --- ç”»é¢ãƒ¢ãƒ¼ãƒ‰ï¼ˆãƒ•ãƒ«ã‚¹ã‚¯ãƒªãƒ¼ãƒ³åˆ‡æ›¿ï¼‰ ---
         DrawTextEx(font, T("SCREEN_MODE", "Screen Mode").c_str(), { rightColX, 370 }, 20, 1, WHITE);
         bool isFS = DataManager::keyConfig.isFullscreen;
         if (UI::DrawButton({ rightColX, 410, 150, 40 }, T("WINDOWED", "Windowed").c_str(), font, isFS ? DARKGRAY : BLUE)) {
             if (isFS) {
-                ToggleFullscreen(); SetWindowSize(1280, 720); // ƒEƒBƒ“ƒhƒEƒTƒCƒY‚ğ–ß‚·
+                ToggleFullscreen(); SetWindowSize(1280, 720); // ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ã‚µã‚¤ã‚ºã‚’æˆ»ã™
                 DataManager::keyConfig.isFullscreen = false; DataManager::SaveConfig(); AudioManager::PlaySE(SE_CLICK);
             }
         }
         if (UI::DrawButton({ rightColX + 170, 410, 150, 40 }, T("FULLSCREEN", "Fullscreen").c_str(), font, isFS ? BLUE : DARKGRAY)) {
             if (!isFS) {
-                int monitor = GetCurrentMonitor(); SetWindowSize(GetMonitorWidth(monitor), GetMonitorHeight(monitor)); // ƒlƒCƒeƒBƒu‰ğ‘œ“x‚É‡‚í‚¹‚é
+                int monitor = GetCurrentMonitor(); SetWindowSize(GetMonitorWidth(monitor), GetMonitorHeight(monitor)); // ãƒã‚¤ãƒ†ã‚£ãƒ–è§£åƒåº¦ã«åˆã‚ã›ã‚‹
                 ToggleFullscreen();
                 DataManager::keyConfig.isFullscreen = true; DataManager::SaveConfig(); AudioManager::PlaySE(SE_CLICK);
             }
         }
 
-        // ‰Šú‰»(ƒŠƒZƒbƒg)ƒ{ƒ^ƒ“
+        // åˆæœŸåŒ–(ãƒªã‚»ãƒƒãƒˆ)ãƒœã‚¿ãƒ³
         if (UI::DrawButton({ (float)sw - 350, (float)sh - 170, 200, 50 }, T("RESET_CONFIG", "Reset Settings").c_str(), font, MAROON)) {
             DataManager::ResetConfig();
-            if (IsWindowFullscreen()) { ToggleFullscreen(); SetWindowSize(1280, 720); } // ƒtƒ‹ƒXƒNƒŠ[ƒ“‰ğœ
+            if (IsWindowFullscreen()) { ToggleFullscreen(); SetWindowSize(1280, 720); } // ãƒ•ãƒ«ã‚¹ã‚¯ãƒªãƒ¼ãƒ³è§£é™¤
             AudioManager::PlaySE(SE_SAVE);
         }
     }
     else if (tab == CONTROL_TAB) {
-        // --- ƒL[ƒRƒ“ƒtƒBƒOƒ^ƒu ---
-        static int waitingForKeyIndex = -1; // -1: ‘Ò‹@‚µ‚Ä‚¢‚È‚¢, ‚»‚êˆÈŠO: Š„‚è“–‚Ä“ü—Í‘Ò‚¿‚ÌƒL[ƒCƒ“ƒfƒbƒNƒX
+        // --- ã‚­ãƒ¼ã‚³ãƒ³ãƒ•ã‚£ã‚°ã‚¿ãƒ– ---
+        static int waitingForKeyIndex = -1; // -1: å¾…æ©Ÿã—ã¦ã„ãªã„, ãã‚Œä»¥å¤–: å‰²ã‚Šå½“ã¦å…¥åŠ›å¾…ã¡ã®ã‚­ãƒ¼ã‚¤ãƒ³ãƒ‡ãƒƒã‚¯ã‚¹
         static bool waitingForPad = false;
 
         float centerX = sw / 2.0f;
         DrawTextEx(font, T("KEY_CONFIG", "Key Configuration").c_str(), { centerX - 250, 130 }, 24, 1, WHITE);
 
-        // ƒRƒ“ƒtƒBƒO‚Æ‚µ‚Ä•ÏX‰Â”\‚ÈƒL[ˆê——
+        // ã‚³ãƒ³ãƒ•ã‚£ã‚°ã¨ã—ã¦å¤‰æ›´å¯èƒ½ãªã‚­ãƒ¼ä¸€è¦§
         struct BindInfo { const char* label; const char* tKey; int* keyPtr; int* padPtr; };
         BindInfo binds[] = {
             {"Move Forward", "KEY_FWD", &DataManager::keyConfig.moveForward, nullptr},
@@ -418,19 +464,19 @@ int UI::DrawMenu(Player& p, Dungeon& d, MenuTab& tab, Font font) {
         };
 
         if (waitingForKeyIndex != -1) {
-            // ƒL[‚âƒ{ƒ^ƒ“‚Ì“ü—Í‘Ò‚¿ó‘Ô
+            // ã‚­ãƒ¼ã‚„ãƒœã‚¿ãƒ³ã®å…¥åŠ›å¾…ã¡çŠ¶æ…‹
             DrawRectangle(0, 0, sw, sh, Fade(BLACK, 0.8f));
             DrawTextEx(font, T("PRESS_ANY_KEY", "Press any key to assign...").c_str(), { (float)sw / 2 - 200, (float)sh / 2 - 20 }, 24, 1, YELLOW);
 
             if (waitingForPad) {
-                for (int i = 1; i < 32; i++) { // ƒpƒbƒh‚Ìƒ{ƒ^ƒ“‘–¸
+                for (int i = 1; i < 32; i++) { // ãƒ‘ãƒƒãƒ‰ã®ãƒœã‚¿ãƒ³èµ°æŸ»
                     if (IsGamepadButtonPressed(0, i)) {
                         *binds[waitingForKeyIndex].padPtr = i; waitingForKeyIndex = -1; DataManager::SaveConfig(); AudioManager::PlaySE(SE_CLICK); break;
                     }
                 }
             }
             else {
-                int keyPressed = GetKeyPressed(); // ƒL[ƒ{[ƒh‘–¸
+                int keyPressed = GetKeyPressed(); // ã‚­ãƒ¼ãƒœãƒ¼ãƒ‰èµ°æŸ»
                 if (keyPressed > 0) {
                     *binds[waitingForKeyIndex].keyPtr = keyPressed; waitingForKeyIndex = -1; DataManager::SaveConfig(); AudioManager::PlaySE(SE_CLICK);
                 }
@@ -462,7 +508,7 @@ int UI::DrawMenu(Player& p, Dungeon& d, MenuTab& tab, Font font) {
                 else { DrawTextEx(font, T("LSTICK", "L-Stick").c_str(), { x + 275, y + 10 }, 16, 1, GRAY); }
             }
 
-            // ƒIƒvƒVƒ‡ƒ“ƒ^ƒu‚Æ“¯‚¶ƒŠƒZƒbƒgƒ{ƒ^ƒ“
+            // ã‚ªãƒ—ã‚·ãƒ§ãƒ³ã‚¿ãƒ–ã¨åŒã˜ãƒªã‚»ãƒƒãƒˆãƒœã‚¿ãƒ³
             if (UI::DrawButton({ (float)sw - 350, (float)sh - 170, 200, 50 }, T("RESET_CONFIG", "Reset Settings").c_str(), font, MAROON)) {
                 DataManager::ResetConfig();
                 if (IsWindowFullscreen()) { ToggleFullscreen(); SetWindowSize(1280, 720); }

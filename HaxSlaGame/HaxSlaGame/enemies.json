@@ -11,7 +11,8 @@
     "atkRange": 1.5,
     "gold": 5,
     "drops": [ 2, 4 ],
-    "element": 2
+    "element": 2,
+    "tint": [ 255, 255, 255 ]
   },
   {
     "id": 1,
@@ -25,7 +26,23 @@
     "atkRange": 1.5,
     "gold": 10,
     "drops": [ 5, 1 ],
-    "element": 3
+    "element": 3,
+    "tint": [ 255, 255, 255 ]
+  },
+  {
+    "id": 2,
+    "name": "アシッドスライム",
+    "model": "Slime",
+    "type": 0,
+    "hp": 45,
+    "speed": 0.06,
+    "minFloor": 4,
+    "exp": 22,
+    "atkRange": 1.5,
+    "gold": 15,
+    "drops": [ 26, 4 ],
+    "element": 2,
+    "tint": [ 100, 255, 120 ]
   },
   {
     "id": 3,
@@ -39,7 +56,8 @@
     "atkRange": 1.5,
     "gold": 20,
     "drops": [ 24, 23 ],
-    "element": 2
+    "element": 2,
+    "tint": [ 255, 255, 255 ]
   },
   {
     "id": 4,
@@ -53,7 +71,8 @@
     "atkRange": 1.5,
     "gold": 25,
     "drops": [ 8, 4 ],
-    "element": 2
+    "element": 2,
+    "tint": [ 255, 255, 255 ]
   },
   {
     "id": 5,
@@ -67,7 +86,8 @@
     "atkRange": 2.0,
     "gold": 30,
     "drops": [ 22, 2 ],
-    "element": 2
+    "element": 2,
+    "tint": [ 255, 255, 255 ]
   },
   {
     "id": 6,
@@ -82,7 +102,8 @@
     "atkRange": 2.2,
     "gold": 35,
     "drops": [ 6, 7, 100 ],
-    "element": 3
+    "element": 3,
+    "tint": [ 255, 255, 255 ]
   },
   {
     "id": 7,
@@ -97,7 +118,8 @@
     "atkRange": 2.5,
     "gold": 50,
     "drops": [ 13, 10, 103 ],
-    "element": 1
+    "element": 1,
+    "tint": [ 255, 255, 255 ]
   },
   {
     "id": 8,
@@ -112,7 +134,8 @@
     "atkRange": 3.0,
     "gold": 60,
     "drops": [ 5, 102 ],
-    "element": 1
+    "element": 1,
+    "tint": [ 255, 255, 255 ]
   },
   {
     "id": 9,
@@ -126,7 +149,8 @@
     "atkRange": 2.0,
     "gold": 70,
     "drops": [ 7, 16 ],
-    "element": 2
+    "element": 2,
+    "tint": [ 255, 255, 255 ]
   },
   {
     "id": 10,
@@ -140,7 +164,8 @@
     "atkRange": 2.0,
     "gold": 80,
     "drops": [ 16, 20 ],
-    "element": 2
+    "element": 2,
+    "tint": [ 255, 255, 255 ]
   },
   {
     "id": 11,
@@ -155,7 +180,8 @@
     "atkRange": 10.0,
     "gold": 100,
     "drops": [ 1, 15, 9 ],
-    "element": 3
+    "element": 3,
+    "tint": [ 255, 255, 255 ]
   },
   {
     "id": 12,
@@ -169,7 +195,8 @@
     "atkRange": 2.0,
     "gold": 110,
     "drops": [ 5, 14 ],
-    "element": 1
+    "element": 1,
+    "tint": [ 255, 255, 255 ]
   },
   {
     "id": 13,
@@ -183,7 +210,23 @@
     "atkRange": 12.0,
     "gold": 150,
     "drops": [ 15, 17, 12 ],
-    "element": 4
+    "element": 4,
+    "tint": [ 255, 255, 255 ]
+  },
+  {
+    "id": 14,
+    "name": "ブラッドバット",
+    "model": "Bat",
+    "type": 0,
+    "hp": 90,
+    "speed": 0.10,
+    "minFloor": 10,
+    "exp": 65,
+    "atkRange": 1.8,
+    "gold": 45,
+    "drops": [ 5, 27 ],
+    "element": 1,
+    "tint": [ 255, 80, 80 ]
   },
   {
     "id": 15,
@@ -198,7 +241,8 @@
     "atkRange": 3.0,
     "gold": 250,
     "drops": [ 16, 20, 201 ],
-    "element": 1
+    "element": 1,
+    "tint": [ 255, 255, 255 ]
   },
   {
     "id": 16,
@@ -213,7 +257,8 @@
     "atkRange": 4.0,
     "gold": 300,
     "drops": [ 16, 20, 302 ],
-    "element": 3
+    "element": 3,
+    "tint": [ 255, 255, 255 ]
   },
   {
     "id": 17,
@@ -227,7 +272,8 @@
     "atkRange": 4.0,
     "gold": 400,
     "drops": [ 20, 21, 303 ],
-    "element": 1
+    "element": 1,
+    "tint": [ 255, 255, 255 ]
   },
   {
     "id": 18,
@@ -241,7 +287,23 @@
     "atkRange": 10.0,
     "gold": 450,
     "drops": [ 14, 21, 18 ],
-    "element": 4
+    "element": 4,
+    "tint": [ 255, 255, 255 ]
+  },
+  {
+    "id": 19,
+    "name": "マグマスライム",
+    "model": "Slime",
+    "type": 0,
+    "hp": 160,
+    "speed": 0.07,
+    "minFloor": 16,
+    "exp": 130,
+    "atkRange": 1.8,
+    "gold": 90,
+    "drops": [ 27, 16 ],
+    "element": 1,
+    "tint": [ 255, 90, 40 ]
   },
   {
     "id": 20,
@@ -255,7 +317,8 @@
     "atkRange": 3.0,
     "gold": 600,
     "drops": [ 25, 14, 22 ],
-    "element": 2
+    "element": 2,
+    "tint": [ 255, 255, 255 ]
   },
   {
     "id": 21,
@@ -269,7 +332,8 @@
     "atkRange": 5.0,
     "gold": 1000,
     "drops": [ 20, 21, 401 ],
-    "element": 1
+    "element": 1,
+    "tint": [ 255, 255, 255 ]
   },
   {
     "id": 22,
@@ -284,7 +348,8 @@
     "atkRange": 15.0,
     "gold": 5000,
     "drops": [ 18, 19, 405 ],
-    "element": 4
+    "element": 4,
+    "tint": [ 255, 255, 255 ]
   },
   {
     "id": 23,
@@ -298,6 +363,54 @@
     "atkRange": 1.5,
     "gold": 1000,
     "drops": [ 101, 102, 103, 104, 105 ],
-    "element": 4
+    "element": 4,
+    "tint": [ 255, 255, 255 ]
+  },
+  {
+    "id": 24,
+    "name": "オークバーサーカー",
+    "model": "Orc",
+    "weaponModel": "Axe",
+    "type": 2,
+    "hp": 350,
+    "speed": 0.08,
+    "minFloor": 17,
+    "exp": 220,
+    "atkRange": 2.8,
+    "gold": 180,
+    "drops": [ 13, 27, 203 ],
+    "element": 1,
+    "tint": [ 240, 70, 70 ]
+  },
+  {
+    "id": 25,
+    "name": "ファントムボーン",
+    "model": "Skeleton",
+    "weaponModel": "Blade",
+    "type": 0,
+    "hp": 220,
+    "speed": 0.09,
+    "minFloor": 15,
+    "exp": 160,
+    "atkRange": 2.2,
+    "gold": 140,
+    "drops": [ 7, 28, 201 ],
+    "element": 3,
+    "tint": [ 120, 200, 255 ]
+  },
+  {
+    "id": 26,
+    "name": "カオスドラゴン",
+    "model": "dragon",
+    "type": 2,
+    "hp": 4500,
+    "speed": 0.10,
+    "minFloor": 45,
+    "exp": 3500,
+    "atkRange": 5.5,
+    "gold": 2500,
+    "drops": [ 21, 29, 403 ],
+    "element": 4,
+    "tint": [ 160, 60, 240 ]
   }
 ]
