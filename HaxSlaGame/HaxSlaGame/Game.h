@@ -11,7 +11,13 @@
 #include "imgui.h"
 #include "rlImGui.h"
 
+class DebugMenu;
+
+
 class Game {
+
+    friend class DebugMenu;
+
 public:
     Game();
     ~Game();

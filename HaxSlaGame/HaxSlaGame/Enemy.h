@@ -1,6 +1,7 @@
 #pragma once
 #include "Definitions.h"
 #include "raymath.h"
+#include "StatusEffect.h"
 
 class Player;
 class Dungeon;
@@ -14,6 +15,7 @@ public:
     EnemyData data;   // JSONから読み込んだマスターデータ
     float hp, maxHp, speed, radius, detectRange, attackRange, attackTimer, hudTimer;
     int level, expValue;
+    StatusManager status;
 
     Vector3 lastPos;
     int stuckCount; // 壁に引っかかって動けない状態を検知するカウンター

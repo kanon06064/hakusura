@@ -23,6 +23,7 @@ Game::Game()
     InitWindow(screenWidth, screenHeight, "3D Hack and Slash RPG Refactored");
 
     rlImGuiSetup(true);
+
     AudioManager::Init();
     SetTargetFPS(60);
     DataManager::LoadAllData();

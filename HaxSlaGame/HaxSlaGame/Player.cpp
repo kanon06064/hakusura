@@ -371,13 +371,14 @@ void Player::PerformAttack(Vector3 ad, std::vector<Enemy>& enemies, Dungeon& d, 
 	AudioManager::PlaySE(SE_ATTACK);
 	Vector3 origin = Vector3Add(position, { 0, 0.8f, 0 });
 
+	// 杖の場合はプロジェクタイル(弾)を飛ばす
 	if (currentWeapon == WAND) {
 		fx.SpawnProjectile(origin, ad, 15.0f, 1, true);
 	}
 	else {
 		EffectType type = FX_SLASH;
 		Color fxCol = SKYBLUE;
-		float atkRange = 2.7f; // 剣の射程：2.7m
+		float atkRange = 2.7f; // 剣の射程：2.7m（手元でキレよく振れる長さ）
 
 		if (currentWeapon == SPEAR) {
 			type = FX_THRUST;
@@ -396,6 +397,7 @@ void Player::PerformAttack(Vector3 ad, std::vector<Enemy>& enemies, Dungeon& d, 
 			fxCol = GetElementColor(weaponElem);
 		}
 
+		// エフェクトに射程を渡して見た目の長さを合わせる
 		fx.SpawnEffect(origin, ad, type, fxCol, atkRange);
 
 		bool hitAny = false;
@@ -404,37 +406,70 @@ void Player::PerformAttack(Vector3 ad, std::vector<Enemy>& enemies, Dungeon& d, 
 		for (auto& e : enemies) {
 			float dist = Vector3Distance(e.position, position);
 			if (dist <= atkRange + e.radius) {
-				// 壁貫通防止
+				// ★ 壁貫通防止：壁越しの敵には当たらない
 				if (!d.HasLineOfSight(position, e.position)) continue;
 
+				// 前方判定：プレイヤーの正面側にいる敵のみヒット
 				Vector3 toEnemy = Vector3Normalize(Vector3Subtract(e.position, position));
 				float dot = Vector3DotProduct(ad, toEnemy);
 				float requiredDot = (currentWeapon == SPEAR) ? 0.6f : 0.0f;
 
 				if (dot >= requiredDot) {
+					// 15% の確率でクリティカルヒット
 					bool isCrit = (GetRandomValue(1, 100) <= 15);
 					if (isCrit) anyCrit = true;
 
 					float baseAtk = attackPower + GetItemTotalAtkBonus(equippedData[activeSlot]);
+
+					// 属性相性倍率の適用（特効 1.4倍 / 同属性 0.6倍 / 不利 0.75倍）
 					float elemMulti = GetElementMultiplier(weaponElem, e.data.element);
-					int dmg = (int)(baseAtk * elemMulti) + GetRandomValue(0, 3);
+
+					// ★ 腐蝕（溶解）デバフがかかっている敵へのダメージ増加補正
+					float defReduction = e.status.GetDefenseReductionRate();
+					float effectiveMulti = elemMulti * (1.0f + defReduction);
+
+					int dmg = (int)(baseAtk * effectiveMulti) + GetRandomValue(0, 3);
 					if (isCrit) dmg = (int)((float)dmg * 1.75f);
 
 					e.hp -= dmg;
 					e.ApplyKnockback(ad, isCrit ? 1.8f : 1.0f, d);
 
+					// ダメージ数値とヒットエフェクトの発生
 					Color hitCol = (weaponElem != ELEM_NONE) ? GetElementColor(weaponElem) : (isCrit ? GOLD : RED);
 					fx.SpawnDamageText(e.position, dmg, isCrit);
 					fx.SpawnEffect(e.position, { 0,0,0 }, FX_HIT, hitCol);
 
-					// ★ 文字化け防止：安全なログ出力
+					// =========================================================
+					// ★ 属性状態異常の付与判定（通常35%、弱点特効時は60%の高確率！）
+					// =========================================================
+					if (weaponElem != ELEM_NONE) {
+						int statusChance = (elemMulti > 1.1f) ? 60 : 35;
+						if (GetRandomValue(1, 100) <= statusChance) {
+							// 敵に3.5秒間のデバフを付与（炎上・溶解・凍傷・衰弱）
+							e.status.ApplyStatus(weaponElem, 3.5f, (float)dmg);
+
+							// 状態異常付与ログ（文字化けしない安全な組み合わせ）
+							std::string logKey = "";
+							if (weaponElem == ELEM_HELLFIRE) logKey = "LOG_STATUS_BURN";
+							else if (weaponElem == ELEM_ROT) logKey = "LOG_STATUS_ROT";
+							else if (weaponElem == ELEM_SOUL) logKey = "LOG_STATUS_CHILL";
+							else if (weaponElem == ELEM_ABYSS) logKey = "LOG_STATUS_CURSE";
+
+							if (!logKey.empty() && DataManager::uiStrings.count(logKey)) {
+								UI::AddSystemLog(TextFormat(DataManager::uiStrings[logKey].c_str(), e.data.name.c_str()), hitCol);
+							}
+						}
+					}
+
+					// =========================================================
+					// ダメージログの出力（特効・耐性レジスト・会心・通常）
+					// =========================================================
 					if (elemMulti > 1.1f) {
 						std::string weakFmt = DataManager::uiStrings.count("LOG_WEAKNESS_HIT") ? DataManager::uiStrings["LOG_WEAKNESS_HIT"] : "★ %s WEAKNESS! %d DMG! ★";
 						UI::AddSystemLog(TextFormat(weakFmt.c_str(), e.data.name.c_str(), dmg), hitCol);
 					}
 					else if (elemMulti < 0.9f) {
-						// ★ ここを追加：不利属性・同属性耐性で軽減された時（レジスト！）
-						std::string resFmt = DataManager::uiStrings.count("LOG_RESISTED_ATTACK") ? DataManager::uiStrings["LOG_RESISTED_ATTACK"] : "【耐性】%s に攻撃を軽減された！ (%d ダメージ)";
+						std::string resFmt = DataManager::uiStrings.count("LOG_RESISTED_ATTACK") ? DataManager::uiStrings["LOG_RESISTED_ATTACK"] : "[RESIST] %s: %d DMG";
 						UI::AddSystemLog(TextFormat(resFmt.c_str(), e.data.name.c_str(), dmg), LIGHTGRAY);
 					}
 					else if (isCrit) {
@@ -451,20 +486,21 @@ void Player::PerformAttack(Vector3 ad, std::vector<Enemy>& enemies, Dungeon& d, 
 			}
 		}
 
+		// 命中時のヒットストップと画面揺れ
 		if (hitAny) {
 			if (anyCrit) {
 				fx.TriggerHitStop(0.08f);
 				fx.ShakeScreen(0.18f, 0.35f);
 			}
 			else if (currentWeapon == AXE) {
-				fx.TriggerHitStop(0.08f);
-				fx.ShakeScreen(0.12f, 0.25f);
+				fx.TriggerHitStop(0.08f);       // 斧：重いヒットストップ
+				fx.ShakeScreen(0.12f, 0.25f);   // 斧：画面揺れ
 			}
 			else if (currentWeapon == SPEAR) {
-				fx.TriggerHitStop(0.05f);
+				fx.TriggerHitStop(0.05f);       // 槍
 			}
 			else if (currentWeapon == SWORD) {
-				fx.TriggerHitStop(0.04f);
+				fx.TriggerHitStop(0.04f);       // 剣
 			}
 		}
 	}

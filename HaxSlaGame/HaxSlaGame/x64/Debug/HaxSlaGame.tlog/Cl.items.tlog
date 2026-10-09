@@ -1,5 +1,6 @@
 C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\AudioManager.cpp;C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\x64\Debug\AudioManager.obj
 C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\DataManager.cpp;C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\x64\Debug\DataManager.obj
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\DebugMenu.cpp;C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\x64\Debug\DebugMenu.obj
 C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\Dungeon.cpp;C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\x64\Debug\Dungeon.obj
 C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\EffectManager.cpp;C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\x64\Debug\EffectManager.obj
 C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\Enemy.cpp;C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\x64\Debug\Enemy.obj
@@ -13,6 +14,7 @@ C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\imgui\imgui_widge
 C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\imgui\rlImGui.cpp;C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\x64\Debug\rlImGui.obj
 C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\main.cpp;C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\x64\Debug\main.obj
 C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\Player.cpp;C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\x64\Debug\Player.obj
+C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\StatusEffect.cpp;C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\x64\Debug\StatusEffect.obj
 C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\UI_Facilities.cpp;C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\x64\Debug\UI_Facilities.obj
 C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\UI_Main.cpp;C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\x64\Debug\UI_Main.obj
 C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\UI_Menu.cpp;C:\Users\G2343\Documents\GitHub\hakusura\HaxSlaGame\HaxSlaGame\x64\Debug\UI_Menu.obj

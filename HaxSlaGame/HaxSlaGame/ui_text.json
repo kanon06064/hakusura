@@ -261,6 +261,11 @@
   "LOG_RESISTED_HIT": "★ 攻撃を耐性で軽減！ (-%d%%) ★",
   "LOG_RESISTED_PROJ": "★ 魔法攻撃を耐性で軽減！ (-%d%%) ★",
   "LOG_ENEMY_HIT": "敵の攻撃！ %d のダメージを受けた！",
-  "LOG_RESISTED_ATTACK": "【耐性】%s に攻撃を軽減された！ (%d ダメージ)"
+  "LOG_RESISTED_ATTACK": "【耐性】%s に攻撃を軽減された！ (%d ダメージ)",
+
+  "LOG_STATUS_BURN": "【炎上】%s が燃え盛っている！",
+  "LOG_STATUS_ROT": "【溶解】%s の装甲が溶け崩れた！",
+  "LOG_STATUS_CHILL": "【凍傷】%s が凍りつき鈍足化した！",
+  "LOG_STATUS_CURSE": "【衰弱】%s の力が吸い取られた！"
 
 }

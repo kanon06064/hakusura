@@ -6,6 +6,7 @@
 #include "imgui.h"
 #include "rlImGui.h"
 #include "UI.h"
+#include "DebugMenu.h"
 
 static std::string T(const std::string& key, const std::string& def) {
     if (DataManager::uiStrings.count(key)) return DataManager::uiStrings[key];
@@ -219,84 +220,10 @@ void Game::Draw() {
         }
 
         rlImGuiBegin();
+        // ★ 独立した DebugMenu を呼び出すだけになり、Game_Draw.cpp が超スッキリ！
         if (debugMode && state != STATE_TITLE) {
-            ImGui::Begin("Developer Tools (F1 to toggle)");
-            ImGui::Text("FPS: %d", GetFPS());
-            ImGui::Separator();
-
-            if (DataManager::loadedModels.count("Player") > 0) {
-                GameModel& pm = DataManager::loadedModels["Player"];
-                ImGui::TextColored(ImVec4(1, 1, 0, 1), "Player Model Status:");
-                ImGui::Text("Format: %s", pm.animCount > 0 ? "IQM (Animated)" : "OBJ (Static Mesh)");
-                ImGui::Text("Bones: %d", pm.model.boneCount);
-                ImGui::Text("Animations: %d", pm.animCount);
-                ImGui::Separator();
-            }
-
-            if (player) {
-                ImGui::Text("Player POS: (%.1f, %.1f, %.1f)", player->position.x, player->position.y, player->position.z);
-                ImGui::Text("Dungeon: %d  Floor: %d", currentDungeonId, floor);
-                ImGui::Text("HP: %.0f / %.0f", player->hp, player->maxHp);
-                ImGui::Text("Level: %d  EXP: %d", player->level, player->exp);
-                ImGui::Separator();
-
-                ImGui::TextColored(ImVec4(1, 0.5f, 0, 1), "Weapon Offset Tweaker");
-                ImGui::DragFloat("Scale (Size)", &Player::customWeaponScale, 0.01f, 0.01f, 100.0f);
-                ImGui::DragFloat3("Position", &Player::customWeaponOffsetPos.x, 0.01f);
-                ImGui::DragFloat3("Rotation", &Player::customWeaponOffsetRot.x, 1.0f);
-                ImGui::Separator();
-            }
-
-            ImGui::Text("Enemies Count: %d", (int)enemies.size());
-            ImGui::BeginChild("EnemyList", ImVec2(0, 150), true);
-            for (size_t i = 0; i < enemies.size(); i++) {
-                ImGui::Text("[%d] %s  HP: %.1f/%.1f", (int)i, enemies[i].data.modelName.c_str(), enemies[i].hp, enemies[i].maxHp);
-            }
-            ImGui::EndChild();
-
-            if (ImGui::Button("Heal Player")) { if (player) player->hp = player->maxHp; }
-            ImGui::SameLine();
-            if (ImGui::Button("Kill All Enemies")) { for (auto& e : enemies) e.hp = 0; }
-
-            ImGui::Separator();
-            if (ImGui::Button("Level +99")) {
-                if (player) {
-                    player->level += 99;
-                    player->skillPoints += 99 * 3;
-                    player->RecalculateStats();
-                    player->hp = player->maxHp;
-                }
-            }
-            ImGui::SameLine();
-            if (ImGui::Button("SP +999")) {
-                if (player) player->skillPoints += 999;
-            }
-
-            ImGui::Separator();
-            ImGui::TextColored(ImVec4(0, 1, 0, 1), "Item Spawner");
-            ImGui::BeginChild("ItemSpawner", ImVec2(0, 200), true);
-            for (auto& cfg : DataManager::itemConfigs) {
-                ImGui::PushID(cfg.id);
-
-                std::string engName = cfg.modelName;
-                if (engName.empty()) {
-                    if (cfg.type == "MATERIAL") engName = "Material_" + std::to_string(cfg.id);
-                    else if (cfg.type == "CONSUMABLE") engName = "Consumable_" + std::to_string(cfg.id);
-                    else engName = "Item_" + std::to_string(cfg.id);
-                }
-                ImGui::Text("[%s] %s", cfg.type.c_str(), engName.c_str());
-
-                ImGui::SameLine(ImGui::GetWindowWidth() - 60);
-                if (ImGui::Button("Get")) {
-                    if (player) player->AddToInventory(cfg);
-                }
-                ImGui::PopID();
-            }
-            ImGui::EndChild();
-
-            ImGui::End();
+            DebugMenu::Draw(this);
         }
-
         rlImGuiEnd();
 
         EndDrawing();

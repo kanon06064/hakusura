@@ -84,7 +84,8 @@ bool Enemy::MoveSmart(Vector3 target, Dungeon& d) {
     if (eType == E_TRAP) return false;
 
     Vector3 dir = Vector3Normalize(Vector3Subtract(target, position));
-    Vector3 vel = Vector3Scale(dir, speed);
+    float currentSpeed = speed * status.GetSpeedMultiplier();
+    Vector3 vel = Vector3Scale(dir, currentSpeed);
     bool hitWall = false;
 
     if (!d.CheckCollisionRadius(Vector3Add(position, { vel.x, 0, 0 }), radius)) { position.x += vel.x; }
@@ -114,6 +115,8 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
     if (attackTimer > 0) attackTimer -= dt;
     if (attackAnimTimer > 0) attackAnimTimer -= dt;
     animFrameCounter++;
+
+    status.Update(dt, hp, fx, position);
 
     float dist = Vector3Distance(position, p.position);
     bool canSee = d.HasLineOfSight(position, p.position);
@@ -340,6 +343,7 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
 
                         if (Vector3Distance(hitCenter, p.position) < aoeRadius) {
                             float rawDmg = 10.0f + level * 2;
+                            rawDmg *= (1.0f - status.GetAttackReductionRate());
                             float defDmg = fmaxf(1.0f, rawDmg - p.defense);
 
                             float resist = p.GetPlayerElementResistance(data.element);
@@ -480,6 +484,11 @@ void Enemy::Draw(bool debug, Camera3D cam, Font font, Vector3 playerPos) {
         gm.model.transform = MatrixMultiply(gm.model.transform, matRotY);
 
         DrawModel(gm.model, drawPos, scale, WHITE);
+
+        if (!isDying && status.HasAnyStatus()) {
+            status.DrawAura(position, radius);
+        }
+
 
         // 武器ボーン追従
         int handBoneIndex = -1; int weaponBoneIndex = -1;
