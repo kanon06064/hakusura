@@ -238,8 +238,6 @@
   "MODIFIER_TITLE": "モディファイア:",
   "ELEM_ATK_LABEL": "付与属性 (特効 1.4倍):",
   "ELEM_RES_LABEL": "属性耐性 (被ダメ15%軽減):",
-  "ELEM_ATK_LABEL": "付与属性 (特効 1.4倍):",
-  "ELEM_RES_LABEL": "属性耐性 (被ダメ15%軽減):",
   "ELEM_NAME_HELLFIRE": "【業火属性】",
   "ELEM_NAME_ROT": "【腐蝕属性】",
   "ELEM_NAME_SOUL": "【霊怨属性】",
@@ -266,6 +264,18 @@
   "LOG_STATUS_BURN": "【炎上】%s が燃え盛っている！",
   "LOG_STATUS_ROT": "【溶解】%s の装甲が溶け崩れた！",
   "LOG_STATUS_CHILL": "【凍傷】%s が凍りつき鈍足化した！",
-  "LOG_STATUS_CURSE": "【衰弱】%s の力が吸い取られた！"
+  "LOG_STATUS_CURSE": "【衰弱】%s の力が吸い取られた！",
 
+  "BOSS_BANNER_TITLE": "ボス討伐完了",
+  "BOSS_BANNER_SUB_NORMAL": "階層の主を討ち滅ぼした",
+  "BOSS_BANNER_SUB_FINAL": "深淵の魔王を完全に討ち滅ぼした",
+  "BOSS_HP_TEXT": "HP",
+  "LOG_POISON_SWAMP": "毒沼の浸食！ %d のダメージを受けた！",
+  "LOG_PLANT_POISON": "★ 毒胞子に侵された！ ★",
+
+  "LOG_PLAYER_BURN": "【炎上】業火に焼かれ持続ダメージを受けている！",
+  "LOG_PLAYER_ROT": "【溶解】防具が腐蝕し防御力が低下した！",
+  "LOG_PLAYER_CHILL": "【凍傷】足元が凍りつき移動速度が低下した！",
+  "LOG_PLAYER_CURSE": "【衰弱】深淵の呪いで攻撃力が低下した！",
+  "LOG_STATUS_IMMUNE": "★ 耐性モディファイアで状態異常を無効化した！ ★"
 }

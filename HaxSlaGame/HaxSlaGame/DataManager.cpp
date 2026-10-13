@@ -9,7 +9,6 @@
 
 using json = nlohmann::json;
 
-// 実体の定義
 std::vector<EnemyData> DataManager::allEnemyData;
 std::vector<ItemData> DataManager::itemConfigs;
 std::map<std::string, std::string> DataManager::uiStrings;
@@ -23,14 +22,12 @@ Texture2D DataManager::titleBg = { 0 };
 Model DataManager::fallbackWeaponModel = { 0 };
 KeyConfig DataManager::keyConfig;
 
-// サブディレクトリ内も検索してパスを返すヘルパー関数
 static std::string FindRes(const std::string& name, const std::string& ext, const std::string& subDir) {
     std::string path1 = "resources/" + subDir + "/" + name + ext;
     if (FileExists(path1.c_str())) return path1;
     return "resources/" + name + ext;
 }
 
-// アイテム構造体 ↔ JSON変換ヘルパー
 static json ItemToJson(const ItemData& item) {
     return { {"id", item.id}, {"name", item.name}, {"type", item.type}, {"model", item.modelName}, {"heal", item.heal}, {"atkBonus", item.atkBonus}, {"defBonus", item.defBonus}, {"hpBonus", item.hpBonus}, {"speedBonus", item.speedBonus}, {"weaponSubtype", item.weaponSubtype}, {"count", item.count}, {"modifierId", item.modifierId}, {"dropChance", item.dropChance},{"element", item.element} };
 }
@@ -109,9 +106,8 @@ void DataManager::SaveConfig() {
     o << j.dump(4);
 }
 
-// コンフィグをデフォルト状態(初期化)に戻して保存する
 void DataManager::ResetConfig() {
-    keyConfig = KeyConfig(); // 構造体のデフォルト値で上書き
+    keyConfig = KeyConfig();
     AudioManager::SetBGMVolume(0.5f);
     AudioManager::SetSEVolume(0.5f);
     SaveConfig();
@@ -119,22 +115,36 @@ void DataManager::ResetConfig() {
 
 void DataManager::LoadAllData() {
     LoadConfig();
-
-    // 武器モデルが見つからなかった時に表示する「赤い棒」の生成
     fallbackWeaponModel = LoadModelFromMesh(GenMeshCube(0.1f, 1.2f, 0.2f));
 
-    // 各種マスターデータ(JSON)の読み込み
     try {
         std::ifstream iF("items.json"); if (iF.is_open()) { json j; iF >> j; itemConfigs.clear(); for (auto& i : j) itemConfigs.push_back(JsonToItem(i)); }
         std::ifstream rF("recipes.json"); if (rF.is_open()) { json j; rF >> j; recipes.clear(); for (auto& r : j) { CraftRecipe cr; cr.resultItemId = r.value("resultId", 0); cr.cost = r.value("cost", 0); if (r.contains("materials")) for (auto& m : r["materials"]) cr.materials.push_back({ m.value("id", 0), m.value("count", 1) }); recipes.push_back(cr); } }
-        std::ifstream eF("enemies.json"); if (eF.is_open()) { json j; eF >> j; allEnemyData.clear(); for (auto& i : j) { EnemyData d; d.id = i.value("id", 0); d.name = i.value("name", ""); d.modelName = i.value("model", ""); d.weaponModelName = i.value("weaponModel", ""); d.type = i.value("type", 0); d.hp = i.value("hp", 0.0f); d.speed = i.value("speed", 0.0f); d.minFloor = i.value("minFloor", 1); d.atkRange = i.value("atkRange", 2.0f); d.exp = i.value("exp", 0); d.gold = i.value("gold", 0); if (i.contains("drops")) d.drops = i["drops"].get<std::vector<int>>(); d.element = i.value("element", 0);    if (i.contains("tint") && i["tint"].is_array() && i["tint"].size() >= 3) { d.tint = Color{ (unsigned char)i["tint"][0], (unsigned char)i["tint"][1], (unsigned char)i["tint"][2],  255};} else { d.tint = WHITE;} allEnemyData.push_back(d); } }
+        std::ifstream eF("enemies.json"); if (eF.is_open()) { json j; eF >> j; allEnemyData.clear(); for (auto& i : j) { EnemyData d; d.id = i.value("id", 0); d.name = i.value("name", ""); d.modelName = i.value("model", ""); d.weaponModelName = i.value("weaponModel", ""); d.type = i.value("type", 0); d.hp = i.value("hp", 0.0f); d.speed = i.value("speed", 0.0f); d.minFloor = i.value("minFloor", 1); d.atkRange = i.value("atkRange", 2.0f); d.exp = i.value("exp", 0); d.gold = i.value("gold", 0); if (i.contains("drops")) d.drops = i["drops"].get<std::vector<int>>(); d.element = i.value("element", 0); if (i.contains("tint") && i["tint"].is_array() && i["tint"].size() >= 3) { d.tint = Color{ (unsigned char)i["tint"][0], (unsigned char)i["tint"][1], (unsigned char)i["tint"][2], 255 }; } else { d.tint = WHITE; } allEnemyData.push_back(d); } }
         std::ifstream uF("ui_text.json"); if (uF.is_open()) { json j; uF >> j; uiStrings.clear(); for (auto& el : j.items()) uiStrings[el.key()] = el.value().get<std::string>(); }
-        std::ifstream mF("modifiers.json"); if (mF.is_open()) { json j; mF >> j; modifiers.clear(); for (auto& i : j) { Modifier m; m.id = i.value("id", 0); m.name = i.value("name", ""); m.atk = i.value("atk", 0.0f); m.def = i.value("def", 0.0f); m.hp = i.value("hp", 0.0f); m.spd = i.value("spd", 0.0f); modifiers.push_back(m); } }
+
+        // ★ modifiers.json から耐性値 (immune) を読み込む
+        std::ifstream mF("modifiers.json");
+        if (mF.is_open()) {
+            json j; mF >> j;
+            modifiers.clear();
+            for (auto& i : j) {
+                Modifier m;
+                m.id = i.value("id", 0);
+                m.name = i.value("name", "");
+                m.atk = i.value("atk", 0.0f);
+                m.def = i.value("def", 0.0f);
+                m.hp = i.value("hp", 0.0f);
+                m.spd = i.value("spd", 0.0f);
+                m.immune = i.value("immune", 0);
+                modifiers.push_back(m);
+            }
+        }
+
         std::ifstream qF("quests.json"); if (qF.is_open()) { json j; qF >> j; quests.clear(); for (auto& q : j) { QuestData qd; qd.id = q.value("id", 0); qd.title = q.value("title", ""); qd.description = q.value("description", ""); std::string t = q.value("type", "HUNT"); qd.type = (t == "GATHER") ? QUEST_GATHER : QUEST_HUNT; qd.targetId = q.value("targetId", 0); qd.targetCount = q.value("targetCount", 0); qd.rewardGold = q.value("rewardGold", 0); qd.rewardItemId = q.value("rewardItemId", -1); qd.rewardItemCount = q.value("rewardItemCount", 0); quests.push_back(qd); } }
     }
     catch (const std::exception& e) { std::cerr << "JSON Load Error: " << e.what() << std::endl; }
 
-    // JSONで定義された敵のモデル名から、実際の3Dモデルとアニメーション(.iqm)を自動ロード
     for (const auto& enemy : allEnemyData) {
         std::string name = enemy.modelName;
         if (!name.empty() && loadedModels.count(name) == 0) {
@@ -145,7 +155,6 @@ void DataManager::LoadAllData() {
                 gm.anims = LoadModelAnimations(iqmPath.c_str(), &gm.animCount); gm.loaded = true; loadedModels[name] = gm;
             }
         }
-        // 敵が持つ武器モデルのロード(.obj も対応)
         std::string wName = enemy.weaponModelName;
         if (!wName.empty() && loadedModels.count(wName) == 0) {
             std::string wIqmPath = FindRes(wName, ".iqm", "IQM"); if (!FileExists(wIqmPath.c_str())) wIqmPath = FindRes(wName, ".obj", "OBJ"); std::string wTexPath = FindRes(wName + "_Albedo", ".png", "Texture"); if (!FileExists(wTexPath.c_str())) wTexPath = FindRes("Albedo", ".png", "Texture");
@@ -160,7 +169,6 @@ void DataManager::LoadAllData() {
         }
     }
 
-    // 環境オブジェクト(施設や階段)、プレイヤーモデルの事前ロード
     std::vector<std::string> envModels = {
         "Obj_Storage", "Obj_Reforge", "Obj_Craft", "Obj_Portal", "Obj_StairsDown", "Obj_StairsUp", "Obj_Heal", "Obj_QuestBoard", "Player",
         "Wpn_Sword", "Wpn_Spear", "Wpn_Axe", "Wpn_Wand",
@@ -181,7 +189,6 @@ void DataManager::LoadAllData() {
         }
     }
 
-    // アイテム定義で専用モデルが設定されている武器のロード
     for (auto& cfg : itemConfigs) {
         if (cfg.type == "EQUIP") {
             std::string wKey = cfg.modelName.empty() ? ("Wpn_" + std::to_string(cfg.id)) : cfg.modelName;
@@ -210,11 +217,9 @@ void DataManager::UnloadAllData() {
     if (fallbackWeaponModel.meshCount > 0) UnloadModel(fallbackWeaponModel);
 }
 
-// 階層とダンジョンIDに基づいて、出現可能な敵をランダムに抽選する
 EnemyData DataManager::GetRandomEnemyForFloor(int floor, int dungeonId) {
     std::vector<EnemyData> c;
     for (auto& e : allEnemyData) {
-        // ボスは除外
         if (e.id == 15 || e.id == 16 || e.id == 17 || e.id == 18 || e.id == 20 || e.id == 21 || e.id == 22) continue;
         bool ok = false;
         if (dungeonId == 0) { if (e.minFloor <= 10) ok = true; }
@@ -222,12 +227,10 @@ EnemyData DataManager::GetRandomEnemyForFloor(int floor, int dungeonId) {
         else { if (e.minFloor >= 10) ok = true; }
         if (ok) c.push_back(e);
     }
-    // 候補がない場合はスライムを返す
     if (c.empty()) return allEnemyData.empty() ? EnemyData{ 0, "Slime", "", "", 0, 30, 0.05f } : allEnemyData[0];
     return c[GetRandomValue(0, (int)c.size() - 1)];
 }
 
-// 階層とダンジョンIDに基づいて、出現するボスを抽選する
 EnemyData DataManager::GetBossEnemy(int floor, int dungeonId) {
     if (allEnemyData.empty()) return { 0, "Boss", "", "", 0, 1000, 0.1f };
     std::vector<EnemyData> bosses;
@@ -241,10 +244,9 @@ EnemyData DataManager::GetBossEnemy(int floor, int dungeonId) {
 
 ItemData DataManager::GetItemConfigCopy(int id) { for (auto& cfg : itemConfigs) if (cfg.id == id) return cfg; ItemData empty; empty.id = -1; return empty; }
 QuestData DataManager::GetQuestData(int id) { for (auto& q : quests) if (q.id == id) return q; QuestData empty; empty.id = -1; return empty; }
-Modifier DataManager::GetModifier(int id) { for (const auto& mod : modifiers) if (mod.id == id) return mod; for (const auto& mod : modifiers) if (mod.id == 0) return mod; return { 0, "", 0,0,0,0 }; }
+Modifier DataManager::GetModifier(int id) { for (const auto& mod : modifiers) if (mod.id == id) return mod; for (const auto& mod : modifiers) if (mod.id == 0) return mod; return { 0, "", 0,0,0,0,0 }; }
 int DataManager::GetRandomModifierId() { if (modifiers.size() <= 1) return 0; return modifiers[GetRandomValue(1, (int)modifiers.size() - 1)].id; }
 
-// 現在のプレイヤー状態やフロア状況をJSON形式でセーブする
 void DataManager::SaveGame(int slot, Player* p, int currentFloor, int currentDungeon, int unlockedDungeon, const std::vector<int>& maxFloors, const std::vector<ItemData>& sItems, const std::vector<ItemData>& sEquip, bool isPortfolio) {
     json root; root["floor"] = currentFloor; root["currentDungeonId"] = currentDungeon; root["unlockedDungeonId"] = unlockedDungeon;
     root["maxFloors"] = json::array(); for (int f : maxFloors) root["maxFloors"].push_back(f);
@@ -267,7 +269,6 @@ void DataManager::SaveGame(int slot, Player* p, int currentFloor, int currentDun
     std::ofstream o("save" + std::to_string(slot) + ".json"); o << root.dump(4);
 }
 
-// JSONファイルからセーブデータを読み込み、プレイヤーやフロアの変数にセットする
 bool DataManager::LoadGame(int slot, Player* p, int& currentFloor, int& currentDungeon, int& unlockedDungeon, std::vector<int>& maxFloors, std::vector<ItemData>& sItems, std::vector<ItemData>& sEquip, bool& isPortfolio) {
     std::ifstream i("save" + std::to_string(slot) + ".json"); if (!i.is_open()) return false;
     try {
@@ -297,7 +298,6 @@ bool DataManager::LoadGame(int slot, Player* p, int& currentFloor, int& currentD
     catch (...) { return false; }
 }
 
-// タイトル画面で表示するために、セーブデータの「ヘッダー情報」だけを高速に読み込む
 SaveHeader DataManager::GetSaveHeader(int slot) {
     SaveHeader h; h.exists = false; std::ifstream i("save" + std::to_string(slot) + ".json");
     if (i.is_open()) {

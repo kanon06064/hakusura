@@ -182,8 +182,24 @@ void Game::SpawnEnemies(int count) {
 
     if (isPortfolioMode) {
         if (floor == 1) { for (int i = 0; i < spawnCount; i++) { enemies.push_back(Enemy(dungeon.GetRandomFloorPos(), DataManager::GetRandomEnemyForFloor(30, 0), 30)); } }
-        else if (floor == 2) { if (dungeon.bossSpawnPos.x != -999) { Enemy boss(dungeon.bossSpawnPos, DataManager::GetBossEnemy(30, 0), 50); boss.maxHp *= 3.0f; boss.hp = boss.maxHp; boss.radius = 1.5f; boss.isBoss = true; enemies.push_back(boss); } bossDefeated = false; }
-        else if (floor == 3) { if (dungeon.bossSpawnPos.x != -999) { Enemy boss(dungeon.bossSpawnPos, DataManager::GetBossEnemy(100, 2), 100); boss.maxHp *= 3.0f; boss.hp = boss.maxHp; boss.radius = 1.5f; boss.isBoss = true; enemies.push_back(boss); } bossDefeated = false; }
+        else if (floor == 2) {
+            if (dungeon.bossSpawnPos.x != -999) {
+                Enemy boss(dungeon.bossSpawnPos, DataManager::GetBossEnemy(30, 0), 50);
+                boss.maxHp *= 3.0f; boss.hp = boss.maxHp; boss.delayedHp = boss.maxHp;
+                boss.radius = 1.5f; boss.isBoss = true;
+                enemies.push_back(boss);
+            }
+            bossDefeated = false;
+        }
+        else if (floor == 3) {
+            if (dungeon.bossSpawnPos.x != -999) {
+                Enemy boss(dungeon.bossSpawnPos, DataManager::GetBossEnemy(100, 2), 100);
+                boss.maxHp *= 3.0f; boss.hp = boss.maxHp; boss.delayedHp = boss.maxHp;
+                boss.radius = 1.5f; boss.isBoss = true;
+                enemies.push_back(boss);
+            }
+            bossDefeated = false;
+        }
         return;
     }
 
@@ -196,7 +212,8 @@ void Game::SpawnEnemies(int count) {
     if (floor > 0 && floor % 10 == 0) {
         if (dungeon.bossSpawnPos.x != -999) {
             Enemy boss(dungeon.bossSpawnPos, DataManager::GetBossEnemy(floor, currentDungeonId), enemyLevel);
-            boss.maxHp *= 3.0f; boss.hp = boss.maxHp; boss.radius = 1.5f; boss.isBoss = true;
+            boss.maxHp *= 3.0f; boss.hp = boss.maxHp; boss.delayedHp = boss.maxHp;
+            boss.radius = 1.5f; boss.isBoss = true;
             enemies.push_back(boss);
         }
         bossDefeated = false; return;
@@ -259,6 +276,7 @@ void Game::Update() {
     if (state == STATE_DEBUG_ROOM) { UpdateDebugRoom(); return; }
 
     float dt = GetFrameTime();
+    float gameDt = dt * fxManager.slowMotionFactor;
 
     if (state == STATE_GAMEOVER || state == STATE_GAMECLEAR) {
         if (IsMouseButtonPressed(0) || IsKeyPressed(KEY_SPACE) || IsGamepadButtonPressed(0, GAMEPAD_BUTTON_RIGHT_FACE_DOWN)) {
@@ -283,7 +301,6 @@ void Game::Update() {
         }
     }
 
-    // --- カメラ計算 ---
     Vector3 camOffset = Vector3Subtract(camera.position, camera.target);
     float dist = Vector3Length(camOffset);
     float horizontalDist = sqrtf(camOffset.x * camOffset.x + camOffset.z * camOffset.z);
@@ -320,12 +337,10 @@ void Game::Update() {
     camOffset.z = newHorizontal * cosf(yaw);
     camera.position = Vector3Add(camera.target, camOffset);
 
-    // カメラシェイクの適用
     Vector3 shake = fxManager.GetShakeOffset();
     camera.target = Vector3Add(camera.target, shake);
     camera.position = Vector3Add(camera.position, shake);
 
-    // ヒットストップ判定
     bool isHitStop = false;
     if (fxManager.hitStopTimer > 0.0f) {
         fxManager.hitStopTimer -= dt;
@@ -337,13 +352,13 @@ void Game::Update() {
     }
 
     fxManager.Update(dt, dungeon);
+    fxManager.UpdateHazards(dt, *player);
     fxManager.CheckProjectileCollisions(enemies, *player, dungeon);
     dungeon.UpdateVisibility(player->position);
 
     if (!stopPlayer) {
         if (player->hp <= 0 && state != STATE_HOME) { state = STATE_GAMEOVER; AudioManager::PlayBGM(BGM_NONE); }
 
-        // --- 敵の更新と死亡時のドロップ処理 ---
         for (int i = (int)enemies.size() - 1; i >= 0; i--) {
             if (!isHitStop) {
                 enemies[i].Update(*player, dungeon, fxManager);
@@ -354,7 +369,38 @@ void Game::Update() {
                 player->gold += enemies[i].data.gold;
                 player->UpdateHuntQuest(enemies[i].data.id);
 
-                // アイテムドロップ抽選
+                if (enemies[i].isBoss) {
+                    bossDefeated = true;
+                    fxManager.TriggerBossDefeated();
+
+                    Vector3 bPos = enemies[i].position;
+                    fxManager.SpawnEffect(bPos, { 0, 1, 0 }, FX_EXPLOSION, GOLD, 5.5f);
+                    for (int k = 0; k < 6; k++) {
+                        float angle = k * 60.0f * DEG2RAD;
+                        Vector3 subPos = Vector3Add(bPos, { cosf(angle) * 1.8f, 0.4f, sinf(angle) * 1.8f });
+                        fxManager.SpawnEffect(subPos, { 0, 1, 0 }, FX_SMASH, PURPLE, 2.5f);
+                    }
+
+                    AudioManager::PlaySE(SE_SAVE);
+
+                    // ★ 魔王判定によるログメッセージ切り替え
+                    bool isFinalBoss = isPortfolioMode ? (floor == 3) : (currentDungeonId == 2 && floor == 100);
+                    std::string logMsg = isFinalBoss ? T("BOSS_BANNER_SUB_FINAL", "DEMON LORD SLAIN!") : T("BOSS_BANNER_TITLE", "BOSS DEFEATED!");
+                    logs.insert(logs.begin(), { logMsg, 5.0f, GOLD });
+
+                    int maxF = (currentDungeonId == 0) ? 30 : (currentDungeonId == 1) ? 50 : 100;
+                    if (isPortfolioMode) {
+                        if (floor == 3) { state = STATE_GAMECLEAR; AudioManager::PlayBGM(BGM_NONE); }
+                    }
+                    else if (floor == maxF) {
+                        if (currentDungeonId == unlockedDungeonId && unlockedDungeonId < 2) {
+                            unlockedDungeonId++; UI::AddSystemLog(T("LOG_NEXT_DUNGEON", "NEXT DUNGEON UNLOCKED!"), LIME);
+                        }
+                        if (currentDungeonId == 2) { state = STATE_GAMECLEAR; AudioManager::PlayBGM(BGM_NONE); }
+                        else { UI::AddSystemLog(T("LOG_DUNGEON_CLEAR", "DUNGEON CLEARED!"), GOLD); }
+                    }
+                }
+
                 for (int id : enemies[i].data.drops) {
                     ItemData cfg = DataManager::GetItemConfigCopy(id);
                     if (cfg.id != -1) {
@@ -362,7 +408,6 @@ void Game::Update() {
                         if ((float)GetRandomValue(0, 10000) / 10000.0f <= chance) {
                             if (cfg.type == "EQUIP" || cfg.type == "ARMOR") {
                                 cfg.modifierId = DataManager::GetRandomModifierId();
-                                // 35%の確率で属性が付与
                                 if (GetRandomValue(1, 100) <= 35) {
                                     cfg.element = GetRandomValue(ELEM_HELLFIRE, ELEM_ABYSS);
                                 }
@@ -383,7 +428,6 @@ void Game::Update() {
                             di.rotation = (float)GetRandomValue(0, 360);
                             droppedItems.push_back(di);
 
-                            // エピック・伝説が落ちた瞬間の演出
                             int dropTier = Player::GetItemTier(cfg);
                             if (dropTier >= 4) {
                                 AudioManager::PlaySE(SE_REFORGE);
@@ -398,7 +442,6 @@ void Game::Update() {
             if (enemies[i].isDead) { enemies.erase(enemies.begin() + i); }
         }
 
-        // --- マグネット吸引 ＆ ドロップアイテム物理挙動 ---
         if (!isHitStop) {
             Vector3 playerChest = Vector3Add(player->position, { 0, 0.6f, 0 });
 
@@ -406,13 +449,12 @@ void Game::Update() {
                 auto& item = droppedItems[i];
                 float dist = Vector3Distance(player->position, item.pos);
 
-                // マグネット吸引（3.5m以内）
                 if (dist < 3.5f && item.pos.y <= 0.4f) {
                     Vector3 toPlayer = Vector3Subtract(playerChest, item.pos);
                     Vector3 pullDir = Vector3Normalize(toPlayer);
                     float pullSpeed = 10.0f + (3.5f - dist) * 4.0f;
-                    item.pos = Vector3Add(item.pos, Vector3Scale(pullDir, pullSpeed * dt));
-                    item.rotation += 400.0f * dt;
+                    item.pos = Vector3Add(item.pos, Vector3Scale(pullDir, pullSpeed * gameDt));
+                    item.rotation += 400.0f * gameDt;
                 }
                 else {
                     Vector3 nextX = item.pos; nextX.x += item.vel.x;
@@ -424,7 +466,7 @@ void Game::Update() {
                     else { item.vel.z *= -0.8f; }
 
                     item.pos.y += item.vel.y;
-                    item.vel.y -= 2.0f * dt;
+                    item.vel.y -= 2.0f * gameDt;
 
                     if (item.pos.y <= 0.2f) {
                         item.pos.y = 0.2f;
@@ -433,10 +475,9 @@ void Game::Update() {
                         item.vel.z *= 0.8f;
                         if (fabsf(item.vel.y) < 0.05f) item.vel.y = 0;
                     }
-                    item.rotation += 100.0f * dt * (fabsf(item.vel.x) + fabsf(item.vel.z));
+                    item.rotation += 100.0f * gameDt * (fabsf(item.vel.x) + fabsf(item.vel.z));
                 }
 
-                // アイテム回収判定
                 if (dist < 0.7f) {
                     ItemData itemToPick = item.data;
                     if (player->AddToInventory(itemToPick)) {
@@ -454,40 +495,6 @@ void Game::Update() {
                         droppedItems.erase(droppedItems.begin() + i);
                     }
                 }
-            }
-        }
-
-        // --- ボス討伐判定とダンジョンクリア判定 ---
-        if (isPortfolioMode) {
-            if ((floor == 2 || floor == 3) && enemies.empty() && !bossDefeated) {
-                bossDefeated = true;
-                AudioManager::PlaySE(SE_STAIRS);
-                fxManager.ShakeScreen(0.3f, 0.5f);
-                if (dungeon.bossSpawnPos.x != -999) {
-                    fxManager.SpawnEffect(dungeon.bossSpawnPos, { 0, 1, 0 }, FX_SMASH, GOLD, 4.0f);
-                }
-                logs.insert(logs.begin(), { T("LOG_BOSS_DEFEAT", "BOSS DEFEATED!"), 5.0f, GOLD });
-                if (floor == 3) { state = STATE_GAMECLEAR; AudioManager::PlayBGM(BGM_NONE); }
-            }
-        }
-        else {
-            if (floor > 0 && floor % 10 == 0 && enemies.empty() && !bossDefeated) {
-                bossDefeated = true;
-                AudioManager::PlaySE(SE_STAIRS);
-                fxManager.ShakeScreen(0.3f, 0.5f);
-                if (dungeon.bossSpawnPos.x != -999) {
-                    fxManager.SpawnEffect(dungeon.bossSpawnPos, { 0, 1, 0 }, FX_SMASH, GOLD, 4.0f);
-                }
-
-                int maxF = (currentDungeonId == 0) ? 30 : (currentDungeonId == 1) ? 50 : 100;
-                if (floor == maxF) {
-                    if (currentDungeonId == unlockedDungeonId && unlockedDungeonId < 2) {
-                        unlockedDungeonId++; UI::AddSystemLog(T("LOG_NEXT_DUNGEON", "NEXT DUNGEON UNLOCKED!"), LIME);
-                    }
-                    if (currentDungeonId == 2) { state = STATE_GAMECLEAR; AudioManager::PlayBGM(BGM_NONE); }
-                    else { UI::AddSystemLog(T("LOG_DUNGEON_CLEAR", "DUNGEON CLEARED!"), GOLD); }
-                }
-                else { UI::AddSystemLog(T("LOG_BOSS_DEFEAT", "BOSS DEFEATED!"), GOLD); }
             }
         }
 
@@ -589,7 +596,6 @@ void Game::NextFloor() {
     int enemyLevel = floor; if (currentDungeonId == 1) enemyLevel += 30; if (currentDungeonId == 2) enemyLevel += 60;
     SpawnEnemies(10 + floor); AudioManager::PlayBGM(BGM_DUNGEON);
 
-    // 宝箱スポーン部
     if (floor % 10 != 0 && floor % 10 != 5) {
         std::vector<int> candidateItemIds;
         EnemyData currentEnemy = DataManager::GetRandomEnemyForFloor(enemyLevel, currentDungeonId); for (int id : currentEnemy.drops) candidateItemIds.push_back(id);

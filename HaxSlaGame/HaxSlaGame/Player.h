@@ -1,5 +1,6 @@
 #pragma once
 #include "Definitions.h" 
+#include "StatusEffect.h"
 #include <vector>
 #include <string>
 
@@ -10,20 +11,23 @@ class EffectManager;
 class Player {
 public:
     // --- ステータス・座標関連 ---
-    Vector3 position, lastAimDir; // 座標と最後にエイム(向いた)した方向
+    Vector3 position, lastAimDir;
     float speed, baseSpeed, radius, attackTimer, hp, maxHp, attackPower, defense;
     int level, exp, expToNext, skillPoints, activeSlot;
     int gold;
     bool isAttacking;
 
+    // ★ プレイヤーの状態異常マネージャー（炎上・溶解・凍傷・衰弱）
+    StatusManager status;
+
     // --- アニメーション管理変数 ---
-    float animTime;           // アニメーションの再生時間(フレーム)
-    int currentAnimIndex;     // 現在再生中のアニメーション番号(0:剣, 1:斧, 2:杖, 4:待機, 5:走り)
+    float animTime;
+    int currentAnimIndex;
     int prevAnimIndex;
     float blendWeight;
     bool isTransitioning;
-    float modelRotation;      // プレイヤーモデルの向いている角度
-    bool isDead;              // 死亡フラグ
+    float modelRotation;
+    bool isDead;
 
     // --- スキルとクールダウンの管理 ---
     float dashTimer, dashCooldownTimer;
@@ -38,35 +42,34 @@ public:
     float kongoTimer, kongoCooldownTimer;
     float zoukyouTimer, zoukyouCooldownTimer;
     float healCooldownTimer;
-    float cooldownReduction; // スキルによるクールダウン短縮率
-    float healBonus;         // スキルによる回復量ボーナス
-    bool isStealth;          // 隠密状態フラグ
+    float cooldownReduction;
+    float healBonus;
+    bool isStealth;
 
-    // --- 武器アタッチメント微調整用変数 (F1デバッグメニューで変更可能) ---
     static Vector3 customWeaponOffsetPos;
     static Vector3 customWeaponOffsetRot;
     static float customWeaponScale;
 
     // --- 装備・インベントリ・スキルツリー・クエスト ---
-    WeaponType equippedWeapons[2], currentWeapon; // 武器スロット2つ
+    WeaponType equippedWeapons[2], currentWeapon;
     ItemData equippedData[2];
-    ItemData equippedArmor[5];                    // 防具5部位
+    ItemData equippedArmor[5];
 
-    std::vector<ItemData> inventoryItems;         // 消耗品や素材
-    std::vector<ItemData> inventoryEquip;         // 未装備の武器・防具
-    std::vector<SkillNode> skillTree;             // スキルツリーのノード一覧
+    std::vector<ItemData> inventoryItems;
+    std::vector<ItemData> inventoryEquip;
+    std::vector<SkillNode> skillTree;
 
-    std::vector<PlayerQuest> activeQuests;        // 受注中のクエスト
-    std::vector<int> clearedQuests;               // 完了済みのクエストID
+    std::vector<PlayerQuest> activeQuests;
+    std::vector<int> clearedQuests;
 
-    Player(Vector3 sp); // コンストラクタ
+    Player(Vector3 sp);
 
     void Update(Camera3D& cam, Dungeon& d, std::vector<Enemy>& enemies, EffectManager& fx, bool stop);
-    void Draw(bool debug); // プレイヤー本体と、手に持った武器の描画を行う
+    void Draw(bool debug);
 
-    void AddExp(int a, EffectManager& fx); // 経験値獲得・レベルアップ処理
-    bool AddToInventory(ItemData item);    // アイテムを拾う
-    void UseItem(int idx);                 // アイテムを使う
+    void AddExp(int a, EffectManager& fx);
+    bool AddToInventory(ItemData item);
+    void UseItem(int idx);
 
     void EquipWeapon(int invIdx, int slot);
     void UnequipWeapon(int slot);
@@ -79,11 +82,11 @@ public:
     float GetSkillCooldown(SkillType type);
     float GetSkillMaxCooldown(SkillType type);
 
-    void RecalculateStats(); // 装備やスキルによるステータス再計算
+    void RecalculateStats();
 
-    void UpdateHuntQuest(int enemyId); // 敵を倒したときに討伐クエストを進める
-    bool CheckGatherQuest(int itemId, int requiredCount); // 収集クエストの条件を満たしているか
-    void CompleteQuest(int questId); // クエスト報告・報酬受け取り
+    void UpdateHuntQuest(int enemyId);
+    bool CheckGatherQuest(int itemId, int requiredCount);
+    void CompleteQuest(int questId);
 
     static std::string GetFullItemName(const ItemData& item);
     static float GetItemTotalAtkBonus(const ItemData& item);
@@ -92,8 +95,11 @@ public:
 
     static std::string GetElementName(int elem);
     static Color GetElementColor(int elem);
-    static float GetElementMultiplier(int atkElem, int defElem); // 属性相性倍率
-    float GetPlayerElementResistance(int elem); // 防具の合計属性耐性(%)
+    static float GetElementMultiplier(int atkElem, int defElem);
+    float GetPlayerElementResistance(int elem);
+
+    // ★ モディファイアによる状態異常完全無効化チェック（1:炎上, 2:溶解, 3:凍傷, 4:衰弱, 99:全無効）
+    bool HasStatusImmunity(int element) const;
 
     static int CompareWithEquipped(const ItemData& item, const Player& p);
 

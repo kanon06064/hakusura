@@ -4,7 +4,7 @@
 #include <vector>
 #include <string>
 
-// 画面左下に表示されるシステムログ（「〇〇を入手した」など）の構造体
+// 画面左下に表示されるシステムログの構造体
 struct SystemLogMessage {
     std::string text;
     Color color;
@@ -23,6 +23,10 @@ public:
     static void DrawHUD(class Player& p, std::vector<class Enemy>& enemies, class Dungeon& d, Camera3D& cam, int floor, int dungeonId, bool debug, Font font);
     static int DrawMenu(class Player& p, class Dungeon& d, MenuTab& tab, Font font);
 
+    // ★ ボス戦専用HUD：画面上部大型HPバー ＆ 勝利バナー（魔王フラグ対応）
+    static void DrawBossHUD(const class Enemy& boss, Font font);
+    static void DrawBossDefeatedBanner(float bannerTimer, Font font, bool isFinalBoss = false);
+
     static void DrawStorage(class Player& p, Font font, bool& isOpen, std::vector<ItemData>& sItems, std::vector<ItemData>& sEquip);
     static void DrawReforgeMenu(class Player& p, Font font, bool& isOpen);
     static void DrawCraftingMenu(class Player& p, Font font, bool& isOpen);
@@ -36,7 +40,6 @@ public:
     static void DrawLogs(std::vector<GameLog>& logs, class Player& p, Camera3D& cam, Font font);
     static void DrawNearbyItems(class Player& p, std::vector<DroppedItem>& di, class Dungeon& d, Camera3D& cam, Font font);
 
-    // ★修正: 第5引数に bool forceInteractable = false を追加
     static bool DrawButton(Rectangle rect, const char* label, Font font, Color baseCol, bool forceInteractable = false);
 
     // --- システムログ関連 ---
@@ -46,17 +49,16 @@ public:
 
     static std::string GetPadBtnStr(int btn);
 
-    // --- ゲームパッドのUIナビゲーション（スナップ移動）機構 ---
+    // --- ゲームパッドのUIナビゲーション機構 ---
     static void ClearInteractables();
     static void RegisterInteractable(Rectangle r);
     static void UpdatePadNavigation();
 
-    // --- UIのページ遷移・スクロール状態を保持する変数 ---
+    // --- UI状態管理変数 ---
     static int itemPage, equipPage, storageInvPage, storageBoxPage, itemSubTab;
     static int selectedDungeonTab;
     static int questScroll;
 
-    // --- アイテム詳細画面(サブウィンドウ)の管理 ---
     static bool showDetail;
     static ItemData focusingItem;
     static float detailOpenTimer;

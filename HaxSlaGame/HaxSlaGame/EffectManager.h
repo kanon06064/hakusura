@@ -8,15 +8,15 @@ class Player;
 
 class EffectManager {
 public:
-    std::vector<Projectile> projectiles;   // 飛んでいく魔法や矢
-    std::vector<VisualEffect> effects;     // 斬撃などの一瞬だけ残るエフェクト
-    std::vector<DamageText> damageTexts;   // 「15」などのダメージ表記テキスト
+    std::vector<Projectile> projectiles;
+    std::vector<VisualEffect> effects;
+    std::vector<DamageText> damageTexts;
+    std::vector<HazardArea> hazardAreas;
 
-	float shakeTimer = 0.0f; // 画面揺れの残り時間
-	float shakeIntensity = 0.0f; // 画面揺れの強さ
-    // 画面揺れを発生させる
-	void ShakeScreen(float duration, float intensity)
-    {
+    float shakeTimer = 0.0f;
+    float shakeIntensity = 0.0f;
+
+    void ShakeScreen(float duration, float intensity) {
         if (intensity >= shakeIntensity || shakeTimer <= 0.0f) {
             shakeTimer = duration;
             shakeIntensity = intensity;
@@ -24,10 +24,9 @@ public:
     }
 
     Vector3 GetShakeOffset() const;
-    
+
     float hitStopTimer = 0.0f;
     void TriggerHitStop(float duration) {
-        // より長いヒットストップが発生した時のみ上書き
         if (duration > hitStopTimer) {
             hitStopTimer = duration;
         }
@@ -37,16 +36,24 @@ public:
     void TriggerDamageFlash(float duration = 0.25f) {
         damageFlashTimer = duration;
     }
-   
-    void Update(float dt, Dungeon& d);
-    void Draw(); // 3D空間にエフェクトを描画
-    void Draw2D(Font font, Camera3D cam); // スクリーン空間(2D)にテキストを描画
 
-    // エフェクトを発生させる関数群
-    void SpawnProjectile(Vector3 pos, Vector3 dir, float speed, int type, bool isPlayer);
+    float slowMotionTimer = 0.0f;
+    float slowMotionFactor = 1.0f;
+    float victoryBannerTimer = 0.0f;
+
+    void TriggerBossDefeated();
+
+    void SpawnHazardArea(Vector3 pos, float radius, float duration, float dps, Color col, int element = ELEM_ROT);
+
+    void Update(float dt, Dungeon& d);
+    void UpdateHazards(float dt, Player& p);
+    void Draw();
+    void Draw2D(Font font, Camera3D cam);
+
+    // ★ 弾丸に威力和属性の引数を追加（デフォルト引数付き）
+    void SpawnProjectile(Vector3 pos, Vector3 dir, float speed, int type, bool isPlayer, float damage = 15.0f, int element = ELEM_NONE);
     void SpawnEffect(Vector3 pos, Vector3 dir, EffectType type, Color col, float scale = 1.0f);
     void SpawnDamageText(Vector3 pos, int dmg, bool isCrit = false);
 
-    // プロジェクタイルの当たり判定を処理する
     void CheckProjectileCollisions(std::vector<Enemy>& enemies, Player& p, Dungeon& d);
 };

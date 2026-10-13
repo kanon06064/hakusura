@@ -8,15 +8,18 @@
 #include "DataManager.h"
 #include "UI.h"
 
-void EffectManager::SpawnProjectile(Vector3 pos, Vector3 dir, float speed, int type, bool isPlayer) {
+// ★ 攻撃力 (damage) と属性 (element) を弾丸に受け渡す
+void EffectManager::SpawnProjectile(Vector3 pos, Vector3 dir, float speed, int type, bool isPlayer, float damage, int element) {
     Projectile p;
     p.pos = pos;
-    if (p.pos.y < 0.5f) p.pos.y = 1.2f;
+    if (p.pos.y < 0.4f || p.pos.y > 1.0f) p.pos.y = 0.75f;
     p.vel = Vector3Scale(Vector3Normalize(dir), speed);
-    p.radius = (type == 1) ? 0.6f : 0.2f;
+    p.radius = (type == 1) ? 0.55f : 0.28f;
     p.active = true;
     p.type = type;
     p.isPlayer = isPlayer;
+    p.damage = damage;
+    p.element = element;
     projectiles.push_back(p);
 }
 
@@ -26,8 +29,8 @@ void EffectManager::SpawnEffect(Vector3 pos, Vector3 dir, EffectType type, Color
     eff.dir = dir;
     eff.type = type;
     eff.color = col;
-    eff.life = 0.3f;
-    eff.maxLife = 0.3f;
+    eff.life = (type == FX_EXPLOSION) ? 0.6f : 0.3f;
+    eff.maxLife = eff.life;
     eff.scale = scale;
     effects.push_back(eff);
 }
@@ -36,8 +39,47 @@ void EffectManager::SpawnDamageText(Vector3 pos, int dmg, bool isCrit) {
     damageTexts.push_back({ Vector3Add(pos, {0, 1.5f, 0}), dmg, isCrit ? 1.2f : 1.0f, isCrit });
 }
 
+void EffectManager::SpawnHazardArea(Vector3 pos, float radius, float duration, float dps, Color col, int element) {
+    HazardArea hz;
+    hz.pos = pos;
+    hz.pos.y = 0.05f;
+    hz.radius = radius;
+    hz.duration = duration;
+    hz.maxDuration = duration;
+    hz.tickTimer = 0.5f;
+    hz.dps = dps;
+    hz.color = col;
+    hz.element = element;
+    hz.active = true;
+    hazardAreas.push_back(hz);
+}
+
+void EffectManager::TriggerBossDefeated() {
+    slowMotionTimer = 1.2f;
+    slowMotionFactor = 0.25f;
+    victoryBannerTimer = 4.5f;
+    ShakeScreen(0.8f, 0.9f);
+    TriggerHitStop(0.18f);
+    TriggerDamageFlash(0.35f);
+}
+
 void EffectManager::Update(float dt, Dungeon& d) {
-    // 画面揺れタイマー更新（shakeIntensity を使用）
+    if (slowMotionTimer > 0.0f) {
+        slowMotionTimer -= dt;
+        if (slowMotionTimer <= 0.0f) {
+            slowMotionTimer = 0.0f;
+            slowMotionFactor = 1.0f;
+        }
+    }
+    else {
+        slowMotionFactor = 1.0f;
+    }
+
+    if (victoryBannerTimer > 0.0f) {
+        victoryBannerTimer -= dt;
+        if (victoryBannerTimer < 0.0f) victoryBannerTimer = 0.0f;
+    }
+
     if (shakeTimer > 0.0f) {
         shakeTimer -= dt;
         if (shakeTimer <= 0.0f) {
@@ -46,13 +88,11 @@ void EffectManager::Update(float dt, Dungeon& d) {
         }
     }
 
-    // 画面赤フラッシュタイマー更新
     if (damageFlashTimer > 0.0f) {
         damageFlashTimer -= dt;
         if (damageFlashTimer < 0.0f) damageFlashTimer = 0.0f;
     }
 
-    // 弾の移動処理と壁との衝突判定
     for (auto& p : projectiles) {
         if (!p.active) continue;
         p.pos = Vector3Add(p.pos, Vector3Scale(p.vel, dt));
@@ -63,7 +103,12 @@ void EffectManager::Update(float dt, Dungeon& d) {
         }
     }
 
-    // エフェクトの寿命更新
+    for (auto& hz : hazardAreas) {
+        if (!hz.active) continue;
+        hz.duration -= dt;
+        if (hz.duration <= 0.0f) hz.active = false;
+    }
+
     for (auto& e : effects) e.life -= dt;
     for (auto& t : damageTexts) {
         t.life -= dt;
@@ -71,8 +116,49 @@ void EffectManager::Update(float dt, Dungeon& d) {
     }
 
     projectiles.erase(std::remove_if(projectiles.begin(), projectiles.end(), [](const Projectile& p) { return !p.active; }), projectiles.end());
+    hazardAreas.erase(std::remove_if(hazardAreas.begin(), hazardAreas.end(), [](const HazardArea& h) { return !h.active; }), hazardAreas.end());
     effects.erase(std::remove_if(effects.begin(), effects.end(), [](const VisualEffect& e) { return e.life <= 0; }), effects.end());
     damageTexts.erase(std::remove_if(damageTexts.begin(), damageTexts.end(), [](const DamageText& t) { return t.life <= 0; }), damageTexts.end());
+}
+
+// ★ 毒沼エリア：プレイヤーへの溶解（腐蝕）状態異常付与 ＆ 耐性モディファイア判定
+void EffectManager::UpdateHazards(float dt, Player& p) {
+    for (auto& hz : hazardAreas) {
+        if (!hz.active) continue;
+        float dist = Vector3Distance(p.position, hz.pos);
+        if (dist <= hz.radius + p.radius) {
+            hz.tickTimer -= dt;
+            if (hz.tickTimer <= 0.0f) {
+                hz.tickTimer = 0.5f;
+
+                float resist = p.GetPlayerElementResistance(hz.element);
+                float finalDmg = fmaxf(2.0f, (hz.dps * 0.5f) * (1.0f - resist));
+
+                p.hp -= finalDmg;
+                SpawnDamageText(p.position, (int)finalDmg);
+                SpawnEffect(Vector3Add(p.position, { 0, 0.3f, 0 }), { 0, 1, 0 }, FX_HIT, hz.color);
+                TriggerDamageFlash(0.15f);
+
+                std::string swampFmt = DataManager::uiStrings.count("LOG_POISON_SWAMP") ? DataManager::uiStrings["LOG_POISON_SWAMP"] : "POISON AREA HIT! -%d DMG";
+                UI::AddSystemLog(TextFormat(swampFmt.c_str(), (int)finalDmg), hz.color);
+
+                // 毒沼による状態異常（溶解・腐蝕）付与判定
+                if (hz.element != ELEM_NONE && GetRandomValue(1, 100) <= 40) {
+                    if (p.HasStatusImmunity(hz.element)) {
+                        std::string immFmt = DataManager::uiStrings.count("LOG_STATUS_IMMUNE") ? DataManager::uiStrings["LOG_STATUS_IMMUNE"] : "★ STATUS IMMUNED! ★";
+                        UI::AddSystemLog(immFmt, GREEN);
+                    }
+                    else {
+                        p.status.ApplyStatus(hz.element, 3.5f, finalDmg);
+                        std::string rotKey = "LOG_PLAYER_ROT";
+                        if (DataManager::uiStrings.count(rotKey)) {
+                            UI::AddSystemLog(DataManager::uiStrings[rotKey], Player::GetElementColor(hz.element));
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 Vector3 EffectManager::GetShakeOffset() const {
@@ -86,41 +172,42 @@ Vector3 EffectManager::GetShakeOffset() const {
     return { rx, ry, rz };
 }
 
-// =============================================================================
-// プロジェクタイル(弾丸・魔法)の当たり判定とダメージ処理
-// =============================================================================
 void EffectManager::CheckProjectileCollisions(std::vector<Enemy>& enemies, Player& p, Dungeon& d) {
     for (auto& proj : projectiles) {
         if (!proj.active) continue;
 
         if (proj.isPlayer) {
             for (auto& e : enemies) {
-                if (Vector3Distance(proj.pos, e.position) < (proj.radius + e.radius + 0.3f)) {
+                float distXZ = Vector2Distance({ proj.pos.x, proj.pos.z }, { e.position.x, e.position.z });
+                float distY = fabsf(proj.pos.y - (e.position.y + 0.4f));
+
+                if (distXZ < (proj.radius + e.radius + 0.3f) && distY < 1.0f) {
                     bool isCrit = (GetRandomValue(1, 100) <= 15);
 
                     float totalBonus = Player::GetItemTotalAtkBonus(p.equippedData[p.activeSlot]);
                     int weaponElem = p.equippedData[p.activeSlot].element;
                     float elemMulti = Player::GetElementMultiplier(weaponElem, e.data.element);
 
-                    int dmg = (int)((p.attackPower + totalBonus) * elemMulti) + GetRandomValue(0, 5);
+                    // 杖からの攻撃力引き継ぎ対応
+                    float baseAtk = (proj.damage > 0.0f) ? proj.damage : (p.attackPower + totalBonus);
+                    int dmg = (int)(baseAtk * elemMulti) + GetRandomValue(0, 5);
                     if (isCrit) dmg = (int)((float)dmg * 1.75f);
 
                     e.hp -= (float)dmg;
                     e.hudTimer = 5.0f;
+                    if (e.isBoss) e.delayedHpTimer = 0.5f;
                     e.ApplyKnockback(Vector3Normalize(proj.vel), isCrit ? 1.0f : 0.5f, d);
 
                     SpawnDamageText(e.position, dmg, isCrit);
                     SpawnEffect(proj.pos, { 0,0,0 }, FX_HIT, isCrit ? GOLD : PURPLE);
 
-                    // ★ 文字化け防止：安全なダメージログ出力
                     if (elemMulti > 1.1f) {
                         std::string weakFmt = DataManager::uiStrings.count("LOG_WEAKNESS_HIT") ? DataManager::uiStrings["LOG_WEAKNESS_HIT"] : "★ %s WEAKNESS! %d DMG! ★";
                         Color elemCol = Player::GetElementColor(weaponElem);
                         UI::AddSystemLog(TextFormat(weakFmt.c_str(), e.data.name.c_str(), dmg), elemCol);
                     }
                     else if (elemMulti < 0.9f) {
-                        // ★ ここを追加：魔法弾の耐性レジストログ
-                        std::string resFmt = DataManager::uiStrings.count("LOG_RESISTED_ATTACK") ? DataManager::uiStrings["LOG_RESISTED_ATTACK"] : "【耐性】%s に攻撃を軽減された！ (%d ダメージ)";
+                        std::string resFmt = DataManager::uiStrings.count("LOG_RESISTED_ATTACK") ? DataManager::uiStrings["LOG_RESISTED_ATTACK"] : "[RESIST] %s: %d DMG";
                         UI::AddSystemLog(TextFormat(resFmt.c_str(), e.data.name.c_str(), dmg), LIGHTGRAY);
                     }
                     else if (isCrit) {
@@ -138,22 +225,29 @@ void EffectManager::CheckProjectileCollisions(std::vector<Enemy>& enemies, Playe
             }
         }
         else {
-            if (Vector3Distance(proj.pos, p.position) < (proj.radius + p.radius + 0.2f)) {
-                float rawDmg = 12.0f;
-                float defDmg = fmaxf(1.0f, rawDmg - p.defense);
+            float distXZ = Vector2Distance({ proj.pos.x, proj.pos.z }, { p.position.x, p.position.z });
+            float distY = fabsf(proj.pos.y - (p.position.y + 0.6f));
 
-                int projElem = (proj.type == 1) ? ELEM_ABYSS : ELEM_NONE;
+            if (distXZ < (proj.radius + p.radius + 0.25f) && distY < 0.95f) {
+                // ★ 敵の弾丸威力の適用（レベルスケール値）
+                float rawDmg = (proj.damage > 0.0f) ? proj.damage : ((proj.type == 2) ? 18.0f : 15.0f);
+                float defDmg = fmaxf(2.0f, rawDmg - p.defense);
+
+                int projElem = proj.element;
+                if (projElem == ELEM_NONE) {
+                    projElem = (proj.type == 1) ? ELEM_ABYSS : ((proj.type == 2) ? ELEM_ROT : ELEM_NONE);
+                }
+
                 float resist = p.GetPlayerElementResistance(projElem);
-                float finalDmg = fmaxf(1.0f, defDmg * (1.0f - resist));
+                float finalDmg = fmaxf(2.0f, defDmg * (1.0f - resist));
 
                 p.hp -= finalDmg;
 
                 SpawnDamageText(p.position, (int)finalDmg);
-                SpawnEffect(proj.pos, { 0,0,0 }, FX_HIT, RED);
+                SpawnEffect(proj.pos, { 0,0,0 }, FX_HIT, (projElem == ELEM_ROT) ? GREEN : RED);
                 ShakeScreen(0.15f, 0.3f);
                 TriggerDamageFlash(0.25f);
 
-                // ★ 文字化け防止：赤い被弾ログを ui_text.json 経由で出力
                 if (resist > 0.05f) {
                     std::string resFmt = DataManager::uiStrings.count("LOG_RESISTED_PROJ") ? DataManager::uiStrings["LOG_RESISTED_PROJ"] : "★ RESISTED! (-%d%%) ★";
                     UI::AddSystemLog(TextFormat(resFmt.c_str(), (int)(resist * 100)), SKYBLUE);
@@ -163,6 +257,26 @@ void EffectManager::CheckProjectileCollisions(std::vector<Enemy>& enemies, Playe
                     UI::AddSystemLog(TextFormat(hitFmt.c_str(), (int)finalDmg), RED);
                 }
 
+                // ★ 敵の属性弾によるプレイヤーへの状態異常付与 ＆ 耐性モディファイア判定
+                if (projElem != ELEM_NONE && GetRandomValue(1, 100) <= 35) {
+                    if (p.HasStatusImmunity(projElem)) {
+                        std::string immFmt = DataManager::uiStrings.count("LOG_STATUS_IMMUNE") ? DataManager::uiStrings["LOG_STATUS_IMMUNE"] : "★ STATUS IMMUNED! ★";
+                        UI::AddSystemLog(immFmt, GREEN);
+                    }
+                    else {
+                        p.status.ApplyStatus(projElem, 3.5f, finalDmg);
+                        std::string logKey = "";
+                        if (projElem == ELEM_HELLFIRE) logKey = "LOG_PLAYER_BURN";
+                        else if (projElem == ELEM_ROT) logKey = "LOG_PLAYER_ROT";
+                        else if (projElem == ELEM_SOUL) logKey = "LOG_PLAYER_CHILL";
+                        else if (projElem == ELEM_ABYSS) logKey = "LOG_PLAYER_CURSE";
+
+                        if (!logKey.empty() && DataManager::uiStrings.count(logKey)) {
+                            UI::AddSystemLog(DataManager::uiStrings[logKey], Player::GetElementColor(projElem));
+                        }
+                    }
+                }
+
                 proj.active = false;
             }
         }
@@ -170,9 +284,20 @@ void EffectManager::CheckProjectileCollisions(std::vector<Enemy>& enemies, Playe
 }
 
 void EffectManager::Draw() {
+    float time = (float)GetTime();
+    for (const auto& hz : hazardAreas) {
+        if (!hz.active) continue;
+        float pulse = sinf(time * 4.0f) * 0.15f;
+        float drawRadius = hz.radius + pulse;
+
+        DrawCylinder(hz.pos, drawRadius, drawRadius, 0.03f, 24, Fade(hz.color, 0.32f));
+        DrawCylinderWires(hz.pos, drawRadius, drawRadius, 0.04f, 24, Fade(hz.color, 0.75f));
+        DrawCylinderWires(hz.pos, drawRadius * 0.6f, drawRadius * 0.6f, 0.04f, 16, Fade(WHITE, 0.45f));
+    }
+
     for (const auto& p : projectiles) {
-        Color c = (p.type == 0) ? YELLOW : PURPLE;
-        if (!p.isPlayer) c = RED;
+        Color c = (p.type == 0) ? YELLOW : ((p.type == 2) ? LIME : PURPLE);
+        if (!p.isPlayer && p.type != 2) c = RED;
 
         DrawSphere(p.pos, p.radius * 0.7f, WHITE);
         DrawSphere(p.pos, p.radius, c);
@@ -259,6 +384,20 @@ void EffectManager::Draw() {
         else if (e.type == FX_HIT) {
             DrawSphere(e.pos, 0.2f * ratio, WHITE);
             DrawSphere(e.pos, 0.4f * ratio, Fade(e.color, ratio * 0.5f));
+        }
+        else if (e.type == FX_EXPLOSION) {
+            float expand = (1.0f - ratio);
+            float rExplode = e.scale * (0.3f + expand * 1.5f);
+            Vector3 pos = e.pos;
+
+            DrawSphere(pos, rExplode * 0.5f, Fade(WHITE, ratio * 0.9f));
+            DrawSphere(pos, rExplode * 0.8f, Fade(e.color, ratio * 0.6f));
+            DrawSphere(pos, rExplode, Fade(GOLD, ratio * 0.3f));
+
+            Vector3 ringPos = { pos.x, 0.15f, pos.z };
+            float ringR = e.scale * (0.5f + expand * 2.2f);
+            DrawCylinderWires(ringPos, ringR, ringR, 0.05f, 32, Fade(WHITE, ratio * 0.9f));
+            DrawCylinderWires(ringPos, ringR * 0.8f, ringR * 0.8f, 0.04f, 32, Fade(e.color, ratio * 0.7f));
         }
     }
 }
