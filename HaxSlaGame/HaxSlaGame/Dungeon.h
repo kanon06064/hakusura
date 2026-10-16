@@ -3,63 +3,59 @@
 #include "raymath.h"
 #include <vector>
 
-// ダンジョン内の「部屋」を表す構造体
 struct Room {
     int x, y, width, height;
-    RoomType type; // 部屋の種類（通常、宝物庫、ボス部屋など）
-    bool Contains(int gx, int gy); // 指定座標が部屋の中か判定
-    Vector3 GetCenter() const;     // 部屋の中心の3Dワールド座標を取得
+    RoomType type;
+    bool Contains(int gx, int gy);
+    Vector3 GetCenter() const;
 };
 
 class Dungeon {
 public:
-    // --- 重要な施設やオブジェクトの座標 ---
     Vector3 stairsDownPos, stairsUpPos, storageBoxPos;
-    Vector3 portalPos;          // 拠点への帰還ポータル
-    Vector3 healStationPos;     // 回復の泉
-    Vector3 reforgeStationPos;  // リフォージ施設
-    Vector3 craftStationPos;    // クラフト施設
-    Vector3 bossSpawnPos;       // ボス出現位置
-    Vector3 questBoardPos;      // クエストボード
+    Vector3 portalPos;
+    Vector3 healStationPos;
+    Vector3 reforgeStationPos;
+    Vector3 craftStationPos;
+    Vector3 bossSpawnPos;
+    Vector3 questBoardPos;
 
-    Vector3 dungeonEntrances[3]; // ホームにある3つのダンジョンへの入り口
-    int currentDungeonId;        // 現在潜っているダンジョンのID
+    Vector3 dungeonEntrances[3];
+    int currentDungeonId;
 
-    std::vector<Vector3> treasureSpots; // アイテムが落ちている宝の座標リスト
+    std::vector<Vector3> treasureSpots;
 
-    bool isHome; // 現在のマップが拠点(ホーム)かどうか
+    //  各フロアに配置される素材採取スポット一覧
+    std::vector<GatherSpot> gatherSpots;
+
+    bool isHome;
     int currentWidth;
     int currentHeight;
 
     Dungeon();
 
-    // マップを生成するメイン関数
     void Generate(bool homeMode, int floor, int dungeonId = 0, int unlockedDungeonId = 0);
-    // ★ 修正: ボス撃破前かどうかに応じて出口の表示/非表示を切り替える引数を追加
     void Draw(bool showExit = true);
 
-    // 当たり判定・視界判定用の関数群
     bool IsWall(float x, float z);
-    bool CheckCollisionRadius(Vector3 pos, float radius); // 円形コライダーで壁との衝突を判定
-    bool HasLineOfSight(Vector3 start, Vector3 end);      // 敵からプレイヤーが見えるか(射線判定)
-    bool IsDiscovered(float x, float z);                  // プレイヤーが探索済みのマスか
-    void UpdateVisibility(Vector3 playerPos);             // 視界(探索範囲)を広げる
+    bool CheckCollisionRadius(Vector3 pos, float radius);
+    bool HasLineOfSight(Vector3 start, Vector3 end);
+    bool IsDiscovered(float x, float z);
+    void UpdateVisibility(Vector3 playerPos);
+    void CastVisibilityRay(int x0, int y0, int x1, int y1);
 
-	void CastVisibilityRay(int x0, int y0, int x1, int y1); // 視界判定のためのレイキャスト
-
-
-    Vector3 GetStartPosition();  // 階層開始時のプレイヤー位置を取得
-    Vector3 GetRandomFloorPos(); // 敵やアイテムをスポーンさせるためのランダムな床座標を取得
+    Vector3 GetStartPosition();
+    Vector3 GetRandomFloorPos();
 
 private:
-    std::vector<std::vector<int>> map;        // マップのグリッドデータ (0:床, 1:壁, 2:何もない空間)
-    std::vector<std::vector<bool>> discovered; // 探索済みフラグ(ミニマップ用)
+    std::vector<std::vector<int>> map;
+    std::vector<std::vector<bool>> discovered;
     std::vector<Room> rooms;
 
-    void GenerateRestFloor();       // 5階ごとの休憩(安全)フロアを生成
-    void GenerateBossFloor();       // 10階ごとのボスフロアを生成
-    void GenerateNormalFloor(int floor); // 通常のランダムダンジョン生成
-    void OptimizeMap();             // 繋がっていない不要な壁を削除する最適化
-    void DigCorridor(int x1, int y1, int x2, int y2); // 部屋と部屋を通路で繋ぐ
-    void SnapToTile(Vector3& pos);  // 座標をグリッドの中央に補正する
+    void GenerateRestFloor();
+    void GenerateBossFloor();
+    void GenerateNormalFloor(int floor);
+    void OptimizeMap();
+    void DigCorridor(int x1, int y1, int x2, int y2);
+    void SnapToTile(Vector3& pos);
 };

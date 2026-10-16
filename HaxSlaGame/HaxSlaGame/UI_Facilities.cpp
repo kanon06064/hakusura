@@ -1,4 +1,4 @@
-#include "UI.h"
+ï»¿#include "UI.h"
 #include "Player.h"
 #include "Game.h"
 #include "DataManager.h"
@@ -12,7 +12,7 @@ static std::string T(const std::string& key, const std::string& def) {
 }
 
 // ==========================================
-// ƒNƒ‰ƒtƒg (‘fŞ‚ğÁ”ï‚µ‚Ä‘•”õ‚ğ¶¬‚·‚é)
+// ã‚¯ãƒ©ãƒ•ãƒˆ (ç´ æã‚’æ¶ˆè²»ã—ã¦è£…å‚™ã‚’ç”Ÿæˆã™ã‚‹)
 // ==========================================
 void UI::DrawCraftingMenu(Player& p, Font font, bool& isOpen) {
     static bool wasOpen = false; static float openTimer = 0.0f;
@@ -99,7 +99,7 @@ void UI::DrawCraftingMenu(Player& p, Font font, bool& isOpen) {
 }
 
 // =============================================================================
-// ‘qŒÉ (è‚¿‚ÌƒAƒCƒeƒ€‚ğo‚µ“ü‚ê‚·‚é • ‘fŞˆêŠ‡—a‚¯“ü‚ê“‹Ú)
+// å€‰åº« (æ‰‹æŒã¡ã®ã‚¢ã‚¤ãƒ†ãƒ ã‚’å‡ºã—å…¥ã‚Œã™ã‚‹ ï¼† ç´ æä¸€æ‹¬é ã‘å…¥ã‚Œæ­è¼‰)
 // =============================================================================
 void UI::DrawStorage(Player& p, Font font, bool& isOpen, std::vector<ItemData>& sItems, std::vector<ItemData>& sEquip) {
     static bool wasOpen = false;
@@ -123,21 +123,17 @@ void UI::DrawStorage(Player& p, Font font, bool& isOpen, std::vector<ItemData>& 
     float leftX = 80.0f;
     float rightX = sw - 430.0f;
 
-    // --- ¶‘¤FƒvƒŒƒCƒ„[‚ÌŠƒAƒCƒeƒ€ ---
     DrawTextEx(font, T("PLAYER_INV", "Player Inv").c_str(), { leftX, 120 }, 20, 1, SKYBLUE);
 
-    // š ‚±‚±‚ğ’Ç‰ÁFè‚¿‚É‘fŞ‚ª‚ ‚é‚©ƒ`ƒFƒbƒN
     int matCountInBag = 0;
     for (const auto& item : p.inventoryItems) {
         if (item.type == "MATERIAL") matCountInBag += item.count;
     }
 
-    // š ‚±‚±‚ğ’Ç‰ÁFu‘fŞ‚ğˆêŠ‡—a“üvƒ{ƒ^ƒ“
     Rectangle depositAllBtn = { leftX + 160.0f, 112.0f, 190.0f, 36.0f };
     Color depBtnCol = (matCountInBag > 0) ? ORANGE : DARKGRAY;
 
     if (UI::DrawButton(depositAllBtn, T("DEPOSIT_ALL_MATS", "Deposit All Mats").c_str(), font, modalLocked ? Fade(depBtnCol, 0.4f) : depBtnCol) && !modalLocked && matCountInBag > 0) {
-        // è‚¿‚Ì‘S‘fŞ‚ğ‘qŒÉ‚Ö©“®“]‘—
         for (auto it = p.inventoryItems.begin(); it != p.inventoryItems.end(); ) {
             if (it->type == "MATERIAL") {
                 bool found = false;
@@ -151,13 +147,13 @@ void UI::DrawStorage(Player& p, Font font, bool& isOpen, std::vector<ItemData>& 
                 if (!found) {
                     sItems.push_back(*it);
                 }
-                it = p.inventoryItems.erase(it); // ƒCƒ“ƒxƒ“ƒgƒŠ‚©‚çíœ
+                it = p.inventoryItems.erase(it);
             }
             else {
                 ++it;
             }
         }
-        AudioManager::PlaySE(SE_SAVE); // •ÛŠÇŠ®—¹‚ÌdŒú‚È‰¹
+        AudioManager::PlaySE(SE_SAVE);
         UI::AddSystemLog(T("LOG_DEPOSITED_ALL_MATS", "Deposited all materials!"), GREEN);
     }
 
@@ -188,7 +184,6 @@ void UI::DrawStorage(Player& p, Font font, bool& isOpen, std::vector<ItemData>& 
     if (UI::DrawButton({ leftX, bottomY, 100, 30 }, "<<", font, modalLocked ? GRAY : GRAY) && !modalLocked && storageInvPage > 0) storageInvPage--;
     if (UI::DrawButton({ leftX + 110, bottomY, 100, 30 }, ">>", font, modalLocked ? GRAY : GRAY) && !modalLocked && storageInvPage < mPInv - 1) storageInvPage++;
 
-    // --- ‰E‘¤F‘qŒÉ‚Ì•ÛŠÇƒAƒCƒeƒ€ ---
     DrawTextEx(font, T("STORAGE_INV", "Storage Inv").c_str(), { rightX, 120 }, 20, 1, GREEN);
     for (int i = 0; i < perP; i++) {
         int idx = storageBoxPage * perP + i;
@@ -212,7 +207,6 @@ void UI::DrawStorage(Player& p, Font font, bool& isOpen, std::vector<ItemData>& 
 
     if (UI::DrawButton({ (float)sw - 160, 70, 100, 45 }, T("CLOSE", "Close").c_str(), font, modalLocked ? Fade(RED, 0.5f) : RED) && !modalLocked) isOpen = false;
 
-    // --- ŒÂ”w’èƒ‚[ƒ_ƒ‹ƒEƒBƒ“ƒhƒE ---
     if (transferIdx != -1 && !showDetail) {
         DrawRectangle(0, 0, sw, sh, Fade(BLACK, 0.7f));
         int mw = 420, mh = 260;
@@ -281,7 +275,7 @@ void UI::DrawStorage(Player& p, Font font, bool& isOpen, std::vector<ItemData>& 
 }
 
 // =============================================================================
-// ƒŠƒtƒH[ƒW • ‘®«ƒGƒ“ƒ`ƒƒƒ“ƒg (ƒ‚ƒfƒBƒtƒ@ƒCƒAÄ’Š‘I • ‘®«•t—^)
+// ãƒªãƒ•ã‚©ãƒ¼ã‚¸ ï¼† å±æ€§ã‚¨ãƒ³ãƒãƒ£ãƒ³ãƒˆ ï¼† è£…å‚™åˆ†è§£ï¼ˆDismantleï¼‰
 // =============================================================================
 void UI::DrawReforgeMenu(Player& p, Font font, bool& isOpen) {
     static bool wasOpen = false; static float openTimer = 0.0f;
@@ -302,7 +296,7 @@ void UI::DrawReforgeMenu(Player& p, Font font, bool& isOpen) {
     const int perPage = 10;
     float midX = (float)sw / 2.0f;
 
-    // --- ¶‘¤FŠ‘•”õ•iˆê—— ---
+    // --- å·¦å´ï¼šæ‰€æŒè£…å‚™å“ä¸€è¦§ ---
     for (int i = 0; i < (int)p.inventoryEquip.size(); i++) {
         if (i >= perPage) break;
         Rectangle r = { 80, 160.0f + i * 44, midX - 160.0f, 40 };
@@ -314,60 +308,59 @@ void UI::DrawReforgeMenu(Player& p, Font font, bool& isOpen) {
         DrawTextEx(font, Player::GetFullItemName(p.inventoryEquip[i]).c_str(), { r.x + 15, r.y + r.height / 2 - tSize.y / 2 }, 18, 1, Player::GetItemRarityColor(p.inventoryEquip[i]));
     }
 
-    // --- ‰E‘¤F‘I‘ğ’†‚Ì‘•”õ‚ÆAƒŠƒtƒH[ƒW/ƒGƒ“ƒ`ƒƒƒ“ƒgƒpƒlƒ‹ ---
+    // --- å³å´ï¼šé¸æŠä¸­ã®è£…å‚™ã¨æ“ä½œãƒ‘ãƒãƒ«ï¼ˆãƒªãƒ•ã‚©ãƒ¼ã‚¸ãƒ»ã‚¨ãƒ³ãƒãƒ£ãƒ³ãƒˆãƒ»åˆ†è§£ï¼‰ ---
     if (reforgeItemIdx != -1 && reforgeItemIdx < (int)p.inventoryEquip.size()) {
         ItemData& item = p.inventoryEquip[reforgeItemIdx];
-        DrawRectangle(midX, 160, midX - 80, sh - 250, Fade(DARKGRAY, 0.4f));
-        DrawRectangleLines(midX, 160, midX - 80, sh - 250, GRAY);
+        DrawRectangle(midX, 150, midX - 80, sh - 220, Fade(DARKGRAY, 0.4f));
+        DrawRectangleLines(midX, 150, midX - 80, sh - 220, GRAY);
 
-        // ‘•”õ–¼‚ÆŒ»İ‚Ì‘®«•\¦
-        DrawTextEx(font, Player::GetFullItemName(item).c_str(), { midX + 20, 180 }, 22, 1, Player::GetItemRarityColor(item));
+        DrawTextEx(font, Player::GetFullItemName(item).c_str(), { midX + 20, 165 }, 22, 1, Player::GetItemRarityColor(item));
 
         std::string elemName = Player::GetElementName(item.element);
         if (elemName.empty()) elemName = T("NONE_ELEM", "None");
         Color elemCol = (item.element != ELEM_NONE) ? Player::GetElementColor(item.element) : LIGHTGRAY;
-        DrawTextEx(font, TextFormat(T("CURRENT_ELEM", "Element: %s").c_str(), elemName.c_str()), { midX + 20, 215 }, 18, 1, elemCol);
+        DrawTextEx(font, TextFormat(T("CURRENT_ELEM", "Element: %s").c_str(), elemName.c_str()), { midX + 20, 195 }, 18, 1, elemCol);
 
         float baseAtk = item.atkBonus;
         Modifier mod = DataManager::GetModifier(item.modifierId);
         float modAtk = mod.atk;
         float totalAtk = baseAtk + modAtk;
 
-        DrawTextEx(font, TextFormat(T("BASE_ATK", "Base ATK: %.1f").c_str(), baseAtk), { midX + 20, 250 }, 16, 1, SKYBLUE);
-        DrawTextEx(font, TextFormat(T("MOD_ATK", "Mod ATK: %.1f (%s)").c_str(), modAtk, mod.name.c_str()), { midX + 20, 275 }, 16, 1, (modAtk >= 0 ? GREEN : RED));
-        DrawTextEx(font, TextFormat(T("TOTAL_ATK", "Total ATK: %.1f").c_str(), totalAtk), { midX + 20, 305 }, 18, 1, YELLOW);
+        DrawTextEx(font, TextFormat(T("BASE_ATK", "Base ATK: %.1f").c_str(), baseAtk), { midX + 20, 225 }, 15, 1, SKYBLUE);
+        DrawTextEx(font, TextFormat(T("MOD_ATK", "Mod ATK: %.1f (%s)").c_str(), modAtk, mod.name.c_str()), { midX + 180, 225 }, 15, 1, (modAtk >= 0 ? GREEN : RED));
+        DrawTextEx(font, TextFormat(T("TOTAL_ATK", "Total ATK: %.1f").c_str(), totalAtk), { midX + 380, 225 }, 16, 1, YELLOW);
 
         // ---------------------------------------------------------------------
-        // ‘€ì1: ’ÊíƒŠƒtƒH[ƒWiƒ‚ƒfƒBƒtƒ@ƒCƒAÄ’Š‘Ij
+        // æ“ä½œ1: é€šå¸¸ãƒªãƒ•ã‚©ãƒ¼ã‚¸ï¼ˆãƒ¢ãƒ‡ã‚£ãƒ•ã‚¡ã‚¤ã‚¢å†æŠ½é¸ï¼‰
         // ---------------------------------------------------------------------
-        float panel1Y = 350.0f;
-        DrawLine(midX + 20, panel1Y - 10, sw - 100, panel1Y - 10, GRAY);
-        DrawTextEx(font, T("TITLE_REFORGE_MOD", "[Modifier Reforge]").c_str(), { midX + 20, panel1Y }, 18, 1, WHITE);
+        float panel1Y = 255.0f;
+        DrawLine(midX + 20, panel1Y - 8, sw - 100, panel1Y - 8, GRAY);
+        DrawTextEx(font, T("TITLE_REFORGE_MOD", "[Modifier Reforge]").c_str(), { midX + 20, panel1Y }, 17, 1, WHITE);
 
         int reforgeCost = 50 + p.level * 10 + (int)item.atkBonus * 2;
-        DrawTextEx(font, TextFormat(T("COST", "Cost: %d G").c_str(), reforgeCost), { midX + 20, panel1Y + 30 }, 16, 1, GOLD);
+        DrawTextEx(font, TextFormat(T("COST", "Cost: %d G").c_str(), reforgeCost), { midX + 20, panel1Y + 24 }, 15, 1, GOLD);
 
         if (p.gold >= reforgeCost) {
-            if (DrawButton({ midX + 20, panel1Y + 60, 160, 42 }, T("REFORGE", "Reforge").c_str(), font, locked ? Fade(GREEN, 0.5f) : GREEN) && !locked) {
+            if (DrawButton({ midX + 20, panel1Y + 46, 150, 36 }, T("REFORGE", "Reforge").c_str(), font, locked ? Fade(GREEN, 0.5f) : GREEN) && !locked) {
                 p.gold -= reforgeCost;
                 item.modifierId = DataManager::GetRandomModifierId();
                 AudioManager::PlaySE(SE_REFORGE);
             }
         }
         else {
-            DrawRectangle(midX + 20, panel1Y + 60, 160, 42, DARKGRAY);
-            DrawTextEx(font, T("NOT_ENOUGH_GOLD", "Not Enough Gold").c_str(), { midX + 30, panel1Y + 72 }, 16, 1, RED);
+            DrawRectangle(midX + 20, panel1Y + 46, 150, 36, DARKGRAY);
+            DrawTextEx(font, T("NOT_ENOUGH_GOLD", "Not Enough Gold").c_str(), { midX + 30, panel1Y + 56 }, 14, 1, RED);
         }
 
         // ---------------------------------------------------------------------
-        // ‘€ì2: ‘®«ƒGƒ“ƒ`ƒƒƒ“ƒgi‘fŞu–‚…»v{ƒS[ƒ‹ƒhÁ”ïj
+        // æ“ä½œ2: å±æ€§ã‚¨ãƒ³ãƒãƒ£ãƒ³ãƒˆï¼ˆæ·±æ·µã‚’é™¤å¤–ï¼šæ¥­ç«ãƒ»è…è•ãƒ»éœŠæ€¨ã®ã¿æŠ½é¸ï¼‰
         // ---------------------------------------------------------------------
-        float panel2Y = 470.0f;
-        DrawLine(midX + 20, panel2Y - 10, sw - 100, panel2Y - 10, GRAY);
-        DrawTextEx(font, T("TITLE_ENCHANT_ELEM", "[Element Enchant]").c_str(), { midX + 20, panel2Y }, 18, 1, elemCol);
+        float panel2Y = 350.0f;
+        DrawLine(midX + 20, panel2Y - 8, sw - 100, panel2Y - 8, GRAY);
+        DrawTextEx(font, T("TITLE_ENCHANT_ELEM", "[Element Enchant]").c_str(), { midX + 20, panel2Y }, 17, 1, elemCol);
 
         int enchantCost = 150;
-        int reqItemId = 17;    // –‚…» (ID: 17)
+        int reqItemId = 17; // é­”æ°´æ™¶
         int reqItemCount = 1;
 
         ItemData reqItemCfg = DataManager::GetItemConfigCopy(reqItemId);
@@ -380,11 +373,11 @@ void UI::DrawReforgeMenu(Player& p, Font font, bool& isOpen) {
         bool hasGold = (p.gold >= enchantCost);
 
         Color matTxtCol = hasMat ? GREEN : RED;
-        DrawTextEx(font, TextFormat(T("REQ_MAT", "Material: %s x%d (Have: %d)").c_str(), reqItemCfg.name.c_str(), reqItemCount, playerHasItem), { midX + 20, panel2Y + 30 }, 16, 1, matTxtCol);
-        DrawTextEx(font, TextFormat(T("COST", "Cost: %d G").c_str(), enchantCost), { midX + 20, panel2Y + 55 }, 16, 1, (hasGold ? GOLD : RED));
+        DrawTextEx(font, TextFormat(T("REQ_MAT", "Material: %s x%d (Have: %d)").c_str(), reqItemCfg.name.c_str(), reqItemCount, playerHasItem), { midX + 20, panel2Y + 24 }, 15, 1, matTxtCol);
+        DrawTextEx(font, TextFormat(T("COST", "Cost: %d G").c_str(), enchantCost), { midX + 340, panel2Y + 24 }, 15, 1, (hasGold ? GOLD : RED));
 
         if (hasMat && hasGold) {
-            if (DrawButton({ midX + 20, panel2Y + 85, 160, 42 }, T("ENCHANT_BTN", "Enchant").c_str(), font, locked ? Fade(PURPLE, 0.5f) : PURPLE) && !locked) {
+            if (DrawButton({ midX + 20, panel2Y + 46, 150, 36 }, T("ENCHANT_BTN", "Enchant").c_str(), font, locked ? Fade(PURPLE, 0.5f) : PURPLE) && !locked) {
                 p.gold -= enchantCost;
                 for (auto it = p.inventoryItems.begin(); it != p.inventoryItems.end(); ++it) {
                     if (it->id == reqItemId) {
@@ -394,25 +387,65 @@ void UI::DrawReforgeMenu(Player& p, Font font, bool& isOpen) {
                     }
                 }
 
-                item.element = GetRandomValue(ELEM_HELLFIRE, ELEM_ABYSS);
+                // â˜… æ·±æ·µ(ELEM_ABYSS=4)ã‚’é™¤å¤–ï¼æ¥­ç«(1)ã€œéœŠæ€¨(3)ã®3ã™ãã¿ã®ã¿ã‚’æŠ½é¸ä»˜ä¸
+                item.element = GetRandomValue(ELEM_HELLFIRE, ELEM_SOUL);
                 AudioManager::PlaySE(SE_REFORGE);
                 UI::AddSystemLog("Enchanted: " + Player::GetFullItemName(item), Player::GetElementColor(item.element));
             }
         }
         else {
-            DrawRectangle(midX + 20, panel2Y + 85, 160, 42, DARKGRAY);
-            // š •¶š‰»‚¯–h~Fstd::string ‚ÅˆêƒIƒuƒWƒFƒNƒg‚ğ•Û
+            DrawRectangle(midX + 20, panel2Y + 46, 150, 36, DARKGRAY);
             std::string reason = !hasMat ? T("NOT_ENOUGH_MAT", "Need Material") : T("NOT_ENOUGH_GOLD", "Need Gold");
-            DrawTextEx(font, reason.c_str(), { midX + 30, panel2Y + 97 }, 16, 1, RED);
+            DrawTextEx(font, reason.c_str(), { midX + 30, panel2Y + 56 }, 14, 1, RED);
+        }
+
+        // ---------------------------------------------------------------------
+        //  æ“ä½œ3: è£…å‚™ã®åˆ†è§£ï¼ˆDismantle: é­”æ°´æ™¶ ï¼† ç´ æã‚¢ã‚¤ãƒ†ãƒ ã‚’æŠ½å‡ºï¼‰
+        // ---------------------------------------------------------------------
+        float panel3Y = 445.0f;
+        DrawLine(midX + 20, panel3Y - 8, sw - 100, panel3Y - 8, GRAY);
+        DrawTextEx(font, T("DISMANTLE", "Equipment Dismantle").c_str(), { midX + 20, panel3Y }, 17, 1, ORANGE);
+        DrawTextEx(font, T("DISMANTLE_DESC", "Extract Magic Crystal and Materials").c_str(), { midX + 20, panel3Y + 24 }, 14, 1, LIGHTGRAY);
+
+        int tier = Player::GetItemTier(item);
+        int crystalGain = (tier >= 4) ? 2 : 1; // ã‚¨ãƒ”ãƒƒã‚¯ãƒ»ä¼èª¬ã¯é­”æ°´æ™¶2å€‹
+        int subMatGain = tier + 1;
+        int subMatId = 10 + (item.id % 6); // é‰„é‰±çŸ³ã‚„æœ¨æã€è–¬è‰ãªã©ã®åŸºç¤ç´ æ
+
+        ItemData crystalCfg = DataManager::GetItemConfigCopy(17);
+        ItemData subMatCfg = DataManager::GetItemConfigCopy(subMatId);
+
+        std::string gainInfo = TextFormat("%s x%d , %s x%d", crystalCfg.name.c_str(), crystalGain, subMatCfg.name.c_str(), subMatGain);
+        DrawTextEx(font, gainInfo.c_str(), { midX + 20, panel3Y + 44 }, 15, 1, LIME);
+
+        if (DrawButton({ midX + 20, panel3Y + 68, 160, 38 }, T("DISMANTLE", "Dismantle").c_str(), font, locked ? Fade(MAROON, 0.5f) : MAROON) && !locked) {
+            std::string itemName = Player::GetFullItemName(item);
+
+            // é­”æ°´æ™¶ã®ç²å¾—
+            ItemData cItem = crystalCfg;
+            cItem.count = crystalGain;
+            p.AddToInventory(cItem);
+
+            // åŸºç¤ç´ æã®ç²å¾—
+            ItemData sItem = subMatCfg;
+            sItem.count = subMatGain;
+            p.AddToInventory(sItem);
+
+            // è£…å‚™å“ã®æ¶ˆæ»…
+            p.inventoryEquip.erase(p.inventoryEquip.begin() + reforgeItemIdx);
+            reforgeItemIdx = -1;
+
+            AudioManager::PlaySE(SE_SAVE); // é‡åšãªåˆ†è§£æˆåŠŸSE
+            std::string logFmt = T("LOG_DISMANTLE", "%s dismantled into materials!");
+            UI::AddSystemLog(TextFormat(logFmt.c_str(), itemName.c_str(), crystalGain, subMatCfg.name.c_str(), subMatGain), GOLD);
         }
     }
 
-   
     DrawDetailWindow(font, p);
 }
 
 // ==========================================
-// ƒ[ƒvƒ|[ƒ^ƒ‹ (‰ğ•úÏ‚İ‚Ìƒ_ƒ“ƒWƒ‡ƒ“‚Æ“’BŠK‘w‚ğ‘I‚ñ‚Å“]‘—‚·‚é)
+// ãƒ¯ãƒ¼ãƒ—ãƒãƒ¼ã‚¿ãƒ« (è§£æ”¾æ¸ˆã¿ã®ãƒ€ãƒ³ã‚¸ãƒ§ãƒ³ã¨åˆ°é”éšå±¤ã‚’é¸ã‚“ã§è»¢é€ã™ã‚‹)
 // ==========================================
 void UI::DrawWarpMenu(void* gamePtr, int unlockedDungeon, const std::vector<int>& maxFloors, Font font, bool& isOpen) {
     Game* game = (Game*)gamePtr;
@@ -444,7 +477,6 @@ void UI::DrawWarpMenu(void* gamePtr, int unlockedDungeon, const std::vector<int>
         if (i > unlockedDungeon) { DrawTextEx(font, T("LOCKED", "LOCKED").c_str(), { tabR.x + 60, tabR.y + 10 }, 18, 1, GRAY); }
     }
 
-    // šC³: •Ï”–¼‚ğ maxF ‚©‚ç maxWarpFloor ‚É•ÏX‚µAƒGƒ‰[‚ğŠmÀ‚É‰ñ”ğ‚µ‚Ü‚·
     int maxWarpFloor = maxFloors[selectedDungeonTab];
     std::vector<int> warpFloors;
 
@@ -481,7 +513,7 @@ void UI::DrawWarpMenu(void* gamePtr, int unlockedDungeon, const std::vector<int>
 }
 
 // ==========================================
-// ƒNƒGƒXƒgƒ{[ƒh (ƒNƒGƒXƒg‚Ìó’‚Æ•ñ)
+// ã‚¯ã‚¨ã‚¹ãƒˆãƒœãƒ¼ãƒ‰ (ã‚¯ã‚¨ã‚¹ãƒˆã®å—æ³¨ã¨å ±å‘Š)
 // ==========================================
 void UI::DrawQuestMenu(Player& p, Font font, bool& isOpen) {
     static bool wasOpen = false; static float openTimer = 0.0f;

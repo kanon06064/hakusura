@@ -15,6 +15,7 @@ std::map<std::string, std::string> DataManager::uiStrings;
 std::vector<Modifier> DataManager::modifiers;
 std::vector<CraftRecipe> DataManager::recipes;
 std::vector<QuestData> DataManager::quests;
+std::vector<SkillNode> DataManager::masterSkills; // ★ 実体の定義
 std::map<std::string, GameModel> DataManager::loadedModels;
 
 Model DataManager::batModel = { 0 }; Texture2D DataManager::batTexture = { 0 }; ModelAnimation* DataManager::batAnims = nullptr; int DataManager::batAnimCount = 0; bool DataManager::isBatModelLoaded = false;
@@ -123,7 +124,6 @@ void DataManager::LoadAllData() {
         std::ifstream eF("enemies.json"); if (eF.is_open()) { json j; eF >> j; allEnemyData.clear(); for (auto& i : j) { EnemyData d; d.id = i.value("id", 0); d.name = i.value("name", ""); d.modelName = i.value("model", ""); d.weaponModelName = i.value("weaponModel", ""); d.type = i.value("type", 0); d.hp = i.value("hp", 0.0f); d.speed = i.value("speed", 0.0f); d.minFloor = i.value("minFloor", 1); d.atkRange = i.value("atkRange", 2.0f); d.exp = i.value("exp", 0); d.gold = i.value("gold", 0); if (i.contains("drops")) d.drops = i["drops"].get<std::vector<int>>(); d.element = i.value("element", 0); if (i.contains("tint") && i["tint"].is_array() && i["tint"].size() >= 3) { d.tint = Color{ (unsigned char)i["tint"][0], (unsigned char)i["tint"][1], (unsigned char)i["tint"][2], 255 }; } else { d.tint = WHITE; } allEnemyData.push_back(d); } }
         std::ifstream uF("ui_text.json"); if (uF.is_open()) { json j; uF >> j; uiStrings.clear(); for (auto& el : j.items()) uiStrings[el.key()] = el.value().get<std::string>(); }
 
-        // ★ modifiers.json から耐性値 (immune) を読み込む
         std::ifstream mF("modifiers.json");
         if (mF.is_open()) {
             json j; mF >> j;
@@ -142,6 +142,44 @@ void DataManager::LoadAllData() {
         }
 
         std::ifstream qF("quests.json"); if (qF.is_open()) { json j; qF >> j; quests.clear(); for (auto& q : j) { QuestData qd; qd.id = q.value("id", 0); qd.title = q.value("title", ""); qd.description = q.value("description", ""); std::string t = q.value("type", "HUNT"); qd.type = (t == "GATHER") ? QUEST_GATHER : QUEST_HUNT; qd.targetId = q.value("targetId", 0); qd.targetCount = q.value("targetCount", 0); qd.rewardGold = q.value("rewardGold", 0); qd.rewardItemId = q.value("rewardItemId", -1); qd.rewardItemCount = q.value("rewardItemCount", 0); quests.push_back(qd); } }
+
+        // =====================================================================
+        // ★ skills.json から全43ノードのスキルツリーマスターデータを読み込む
+        // =====================================================================
+        std::ifstream sF("skills.json");
+        if (sF.is_open()) {
+            json j; sF >> j;
+            masterSkills.clear();
+            for (auto& sn : j) {
+                SkillNode node;
+                node.id = sn.value("id", 0);
+                node.name = sn.value("name", "");
+                node.uiPos = { sn.value("x", 0.0f), sn.value("y", 0.0f) };
+                if (sn.contains("reqIds")) {
+                    node.reqIds = sn["reqIds"].get<std::vector<int>>();
+                }
+                node.unlocked = (node.id == 0); // 起点(ID:0)のみ最初から解放
+                node.cost = sn.value("cost", 1);
+                node.atkAdd = sn.value("atk", 0.0f);
+                node.defAdd = sn.value("def", 0.0f);
+                node.hpAdd = sn.value("hp", 0.0f);
+                node.spdAdd = sn.value("spd", 0.0f);
+                node.cdRedAdd = sn.value("cdRed", 0.0f);
+                node.healAdd = sn.value("heal", 0.0f);
+                node.critRateAdd = sn.value("critRate", 0.0f);
+                node.critDmgAdd = sn.value("critDmg", 0.0f);
+                node.armorPenAdd = sn.value("armorPen", 0.0f);
+                node.statusDmgAdd = sn.value("statusDmg", 0.0f);
+                node.elemDmgAdd = sn.value("elemDmg", 0.0f);
+                node.lifestealAdd = sn.value("lifesteal", 0.0f);
+                node.reflectAdd = sn.value("reflect", 0.0f);
+                node.keystoneType = sn.value("keystone", 0);
+                node.desc = sn.value("desc", "");
+                node.type = (SkillType)sn.value("type", 0);
+                node.maxCooldown = sn.value("cooldown", 0.0f);
+                masterSkills.push_back(node);
+            }
+        }
     }
     catch (const std::exception& e) { std::cerr << "JSON Load Error: " << e.what() << std::endl; }
 
@@ -215,6 +253,7 @@ void DataManager::UnloadAllData() {
     for (auto& pair : loadedModels) { if (pair.second.loaded) { UnloadTexture(pair.second.texture); if (pair.second.anims != nullptr) UnloadModelAnimations(pair.second.anims, pair.second.animCount); UnloadModel(pair.second.model); } }
     loadedModels.clear(); isBatModelLoaded = false; if (titleBg.id != 0) { UnloadTexture(titleBg); }
     if (fallbackWeaponModel.meshCount > 0) UnloadModel(fallbackWeaponModel);
+    masterSkills.clear();
 }
 
 EnemyData DataManager::GetRandomEnemyForFloor(int floor, int dungeonId) {

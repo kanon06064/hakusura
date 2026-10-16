@@ -1,4 +1,4 @@
-#include "Player.h"
+﻿#include "Player.h"
 #include "Dungeon.h"
 #include "Enemy.h"
 #include "DataManager.h"
@@ -46,6 +46,27 @@ expToNext(100), skillPoints(0), gold(0)
 	equippedData[0].id = -1; equippedData[1].id = -1;
 	equippedWeapons[0] = NONE; equippedWeapons[1] = NONE;
 	for (int i = 0; i < 5; i++) equippedArmor[i].id = -1;
+
+	critRate = 0.15f;
+	critMultiplier = 1.75f;
+	armorPenetration = 0.0f;
+	statusDamageBonus = 0.25f;
+
+	lifestealRate = 0.0f;
+	reflectRate = 0.0f;
+	spearSweetBonus = 0.0f;
+	axeSweetBonus = 0.0f;
+	wandSweetBonus = 0.0f;
+	elemPotencyBonus = 0.0f;
+
+	hasGlassCannon = false;
+	hasUnstoppableColossus = false;
+	hasMasteryMaster = false;
+	hasBloodPact = false;
+	hasElementalOverload = false;
+	hasUndyingWill = false;
+	undyingTimer = 0.0f;
+	undyingUsed = false;
 
 	dashTimer = 0; dashCooldownTimer = 0;
 	smashCooldownTimer = 0;
@@ -137,29 +158,136 @@ float Player::GetPlayerElementResistance(int elem) {
 			totalRes += 0.15f;
 		}
 	}
-	if (totalRes > 0.60f) totalRes = 0.60f;
+	// パッシブ「属性コート」等による耐性加算
+	for (const auto& node : skillTree) {
+		if (node.unlocked && node.id == 26) totalRes += 0.15f;
+	}
+	if (totalRes > 0.75f) totalRes = 0.75f; // 最大上限75%
 	return totalRes;
 }
 
-// �� �������̕���E�h�������Ԉُ�̊��S�ϐ��iimmune�j���`�F�b�N
 bool Player::HasStatusImmunity(int element) const {
 	auto checkMod = [element](int modId) -> bool {
 		if (modId == 0) return false;
 		Modifier m = DataManager::GetModifier(modId);
-		if (m.immune == 99) return true; // �S����
-		if (m.immune == element) return true; // �Y����������
+		if (m.immune == 99) return true;
+		if (m.immune == element) return true;
 		return false;
 		};
 
-	// ����2�X���b�g
 	for (int i = 0; i < 2; i++) {
 		if (equippedData[i].id != -1 && checkMod(equippedData[i].modifierId)) return true;
 	}
-	// �h��5����
 	for (int i = 0; i < 5; i++) {
 		if (equippedArmor[i].id != -1 && checkMod(equippedArmor[i].modifierId)) return true;
 	}
 	return false;
+}
+
+// =============================================================================
+// ★ 6段階新パイプライン（キーストーン＆特化パッシブ完全統合）
+// =============================================================================
+DamageResult Player::CalculateDamageToEnemy(const Enemy& target, float distance, WeaponType wType, bool isSkill) {
+	DamageResult res;
+
+	// [ステップ1: 基礎ダメージ算出 ＆ 乱数振れ幅]
+	float totalBonus = GetItemTotalAtkBonus(equippedData[activeSlot]);
+	float baseAtk = attackPower + totalBonus;
+	if (isSkill) baseAtk *= 2.5f;
+
+	// キーストーン5（属性暴走）: 物理基礎-25%
+	if (hasElementalOverload) baseAtk *= 0.75f;
+
+	float variance = 0.0f;
+	if (wType == SWORD)      variance = (float)GetRandomValue(-5, 5) / 100.0f;
+	else if (wType == SPEAR) variance = (float)GetRandomValue(-10, 10) / 100.0f;
+	else if (wType == AXE)   variance = (float)GetRandomValue(-25, 35) / 100.0f;
+	else if (wType == WAND)  variance = (float)GetRandomValue(-12, 12) / 100.0f;
+	else                     variance = (float)GetRandomValue(-5, 5) / 100.0f;
+
+	float baseDmg = baseAtk * (1.0f + variance);
+
+	// [ステップ2: 武器種・間合い補正 (Sweet Spot)]
+	float distFactor = 1.0f;
+	float masteryBonus = hasMasteryMaster ? 0.25f : 0.0f; // キーストーン3「武芸百般」
+
+	if (wType == SPEAR) {
+		if (distance >= 3.8f && distance <= 5.2f) {
+			distFactor = 1.40f + spearSweetBonus + masteryBonus;
+			res.isSweetSpot = true;
+		}
+	}
+	else if (wType == AXE) {
+		if (distance <= 1.8f) {
+			distFactor = 1.25f + axeSweetBonus + masteryBonus;
+			res.isSweetSpot = true;
+		}
+	}
+	else if (wType == WAND) {
+		if (distance >= 5.0f) {
+			distFactor = 1.20f + wandSweetBonus + masteryBonus;
+			res.isSweetSpot = true;
+		}
+	}
+	else if (wType == SWORD) {
+		if (distance >= 1.2f && distance <= 2.2f) {
+			distFactor = 1.15f + masteryBonus;
+		}
+	}
+
+	float preMitigationDamage = baseDmg * distFactor;
+
+	// [ステップ3: 防御減衰 & 貫通]
+	float targetDef = target.defense;
+	targetDef *= (1.0f - target.status.GetDefenseReductionRate());
+
+	float effectivePen = armorPenetration;
+	if (hasElementalOverload) effectivePen += 0.15f; // 属性暴走
+	float effectiveDef = targetDef * (1.0f - effectivePen);
+	if (effectiveDef < 0.0f) effectiveDef = 0.0f;
+
+	float defMitigation = effectiveDef / (effectiveDef + 100.0f + (float)target.level * 5.0f);
+	float postArmorDamage = preMitigationDamage * (1.0f - defMitigation);
+
+	// [ステップ4: 属性相性 & 耐性計算]
+	int weaponElem = equippedData[activeSlot].element;
+	float elemMulti = GetElementMultiplier(weaponElem, target.data.element);
+
+	// 属性特効ボーナスの加算
+	if (elemMulti > 1.1f) {
+		if (hasElementalOverload) elemMulti = 2.0f; // 属性暴走時は確定2.0倍
+		else elemMulti += elemPotencyBonus;
+	}
+	res.elemMultiplier = elemMulti;
+	float postElementDamage = postArmorDamage * elemMulti;
+
+	// [ステップ5: クリティカル判定]
+	float effectiveCritRate = critRate;
+	float effectiveCritDmg = critMultiplier;
+
+	if (hasGlassCannon) {
+		effectiveCritDmg += 0.50f; // 硝子の大砲: 会心威力+0.5x
+		postElementDamage *= 1.40f; // 硝子の大砲: 与ダメ+40%
+	}
+
+	if (target.status.chill.timer > 0.0f) effectiveCritRate += 0.25f; // 凍傷時会心率+25%
+	if (res.isSweetSpot && wType == SPEAR) effectiveCritRate += 0.30f;
+	if (isSkill) effectiveCritRate += 0.10f;
+
+	float roll = (float)GetRandomValue(1, 1000) / 1000.0f;
+	if (roll <= effectiveCritRate) {
+		res.isCrit = true;
+		postElementDamage *= effectiveCritDmg;
+	}
+
+	// [ステップ6: 状態異常特効]
+	if (target.status.HasAnyStatus()) {
+		postElementDamage *= (1.0f + statusDamageBonus);
+		res.isStatusPunish = true;
+	}
+
+	res.damage = (int)fmaxf(1.0f, roundf(postElementDamage));
+	return res;
 }
 
 int Player::CompareWithEquipped(const ItemData& item, const Player& p) {
@@ -235,6 +363,7 @@ int Player::GetItemTier(const ItemData& item) {
 	return tier;
 }
 
+// ★ 全43ノード対応の再計算処理（キーストーン補正の積算）
 void Player::RecalculateStats() {
 	float bHp = 100.0f + (level - 1) * 20.0f;
 	float bAtk = 12.0f + (level - 1) * 2.0f;
@@ -243,15 +372,60 @@ void Player::RecalculateStats() {
 	cooldownReduction = 0.0f;
 	healBonus = 0.0f;
 
-	for (const auto& node : skillTree) if (node.unlocked) {
-		bAtk += node.atkAdd; bDef += node.defAdd; bHp += node.hpAdd;
-		cooldownReduction += node.cdRedAdd; healBonus += node.healAdd;
+	critRate = 0.15f;
+	critMultiplier = 1.75f;
+	armorPenetration = 0.0f;
+	statusDamageBonus = 0.25f;
+
+	lifestealRate = 0.0f;
+	reflectRate = 0.0f;
+	spearSweetBonus = 0.0f;
+	axeSweetBonus = 0.0f;
+	wandSweetBonus = 0.0f;
+	elemPotencyBonus = 0.0f;
+
+	hasGlassCannon = false;
+	hasUnstoppableColossus = false;
+	hasMasteryMaster = false;
+	hasBloodPact = false;
+	hasElementalOverload = false;
+	hasUndyingWill = false;
+
+	// スキルツリーのアンロックノード全積算
+	for (const auto& node : skillTree) {
+		if (node.unlocked) {
+			bAtk += node.atkAdd;
+			bDef += node.defAdd;
+			bHp += node.hpAdd;
+			bSpd += node.spdAdd;
+			cooldownReduction += node.cdRedAdd;
+			healBonus += node.healAdd;
+
+			critRate += node.critRateAdd;
+			critMultiplier += node.critDmgAdd;
+			armorPenetration += node.armorPenAdd;
+			statusDamageBonus += node.statusDmgAdd;
+			elemPotencyBonus += node.elemDmgAdd;
+			lifestealRate += node.lifestealAdd;
+			reflectRate += node.reflectAdd;
+
+			if (node.id == 28) spearSweetBonus += 0.35f;
+			if (node.id == 29) axeSweetBonus += 0.25f;
+			if (node.id == 38) wandSweetBonus += 0.30f;
+
+			// キーストーンの有効化
+			if (node.keystoneType == 1) hasGlassCannon = true;
+			if (node.keystoneType == 2) hasUnstoppableColossus = true;
+			if (node.keystoneType == 3) hasMasteryMaster = true;
+			if (node.keystoneType == 4) hasBloodPact = true;
+			if (node.keystoneType == 5) hasElementalOverload = true;
+			if (node.keystoneType == 6) hasUndyingWill = true;
+		}
 	}
 
 	if (zoukyouTimer > 0) bAtk *= 1.5f;
 	if (kongoTimer > 0) bDef += 20.0f;
 
-	// �� �f�o�t�ɂ��X�e�[�^�X�ቺ���f�i����ōU����-25%�A�n���Ŗh���-30%�j
 	bAtk *= (1.0f - status.GetAttackReductionRate());
 	bDef *= (1.0f - status.GetDefenseReductionRate());
 
@@ -259,44 +433,63 @@ void Player::RecalculateStats() {
 		Modifier m = DataManager::GetModifier(equippedArmor[i].modifierId);
 		bHp += equippedArmor[i].hpBonus + m.hp; bDef += equippedArmor[i].defBonus + m.def;
 		bAtk += equippedArmor[i].atkBonus + m.atk; bSpd += equippedArmor[i].speedBonus + m.spd;
+
+		if (m.id == 4) critRate += 0.05f;
+		if (m.id == 6) { critRate += 0.08f; armorPenetration += 0.10f; }
+		if (m.id == 7) { critRate += 0.12f; critMultiplier += 0.35f; armorPenetration += 0.15f; }
 	}
+
+	// キーストーンの最終割合補正
+	if (hasGlassCannon) bHp *= 0.65f;        // 硝子の大砲: 最大HP-35%
+	if (hasBloodPact) bHp *= 0.80f;          // 血の契約: 最大HP-20%
+	if (hasUnstoppableColossus) {
+		bDef *= 1.50f;                       // 不動の巨兵: 常時防御+50%
+		bSpd *= 0.80f;                       // 不動の巨兵: 移動速度-20%
+	}
+
 	maxHp = bHp; attackPower = bAtk; defense = bDef; baseSpeed = bSpd;
 	if (hp > maxHp) hp = maxHp;
 }
 
+// =============================================================================
+// ★ skills.json からのスキルツリー動的初期化
+// =============================================================================
 void Player::InitSkillTree() {
 	skillTree.clear();
-	skillTree.push_back({ 0, T("SKILL_NAME_START", "START"), {600, 400}, {}, true, 0, 0, 0, 0, 0, 0, T("SKILL_DESC_START", "Skill Tree Start"), SKILL_PASSIVE });
-	skillTree.push_back({ 1, T("SKILL_NAME_ATK1", "ATK I"),   {600, 290}, {0}, false, 1, 3.0f, 0, 0, 0, 0, T("SKILL_DESC_ATK1", "ATK +3"), SKILL_PASSIVE });
-	skillTree.push_back({ 2, T("SKILL_NAME_ATK2", "ATK II"),  {600, 190}, {1}, false, 2, 5.0f, 0, 0, 0, 0, T("SKILL_DESC_ATK2", "ATK +5"), SKILL_PASSIVE });
-	skillTree.push_back({ 3, T("SMASH", "SMASH"),             {600, 90},  {2}, false, 3, 0,    0, 0, 0, 0, T("SKILL_DESC_SMASH", "Active: Deal heavy damage & knockback"), SKILL_ACTIVE_SMASH, 8.0f });
-
-	skillTree.push_back({ 4, T("SKILL_NAME_DEF1", "DEF I"),   {695, 345}, {0}, false, 1, 0, 2.0f, 0, 0, 0, T("SKILL_DESC_DEF1", "DEF +2"), SKILL_PASSIVE });
-	skillTree.push_back({ 5, T("SKILL_NAME_DEF2", "DEF II"),  {782, 295}, {4}, false, 2, 0, 3.0f, 0, 0, 0, T("SKILL_DESC_DEF2", "DEF +3"), SKILL_PASSIVE });
-	skillTree.push_back({ 6, T("KONGO", "KONGO"),             {868, 245}, {5}, false, 3, 0, 0,    0, 0, 0, T("SKILL_DESC_KONGO", "Active: Boost DEF temporarily"), SKILL_ACTIVE_KONGO, 15.0f });
-
-	skillTree.push_back({ 7, T("SKILL_NAME_HP1", "HP I"),     {695, 455}, {0}, false, 1, 0, 0, 20.0f, 0, 0, T("SKILL_DESC_HP1", "HP +20"), SKILL_PASSIVE });
-	skillTree.push_back({ 8, T("SKILL_NAME_HP2", "HP II"),    {782, 505}, {7}, false, 2, 0, 0, 30.0f, 0, 0, T("SKILL_DESC_HP2", "HP +30"), SKILL_PASSIVE });
-	skillTree.push_back({ 9, T("ZOUKYOU", "ZOUKYOU"),         {868, 555}, {8}, false, 3, 0, 0, 0,     0, 0, T("SKILL_DESC_ZOUKYOU", "Active: Boost ATK temporarily"), SKILL_ACTIVE_ZOUKYOU, 20.0f });
-
-	skillTree.push_back({ 16, T("DASH", "DASH"),              {600, 520}, {0}, false, 1, 0, 0, 0,     0, 0, T("SKILL_DESC_DASH", "Active: Quick dodge"), SKILL_ACTIVE_DASH, 3.0f });
-
-	skillTree.push_back({ 10, T("SKILL_NAME_CD1", "CD I"),    {505, 455}, {0},  false, 1, 0, 0, 0, 0.05f, 0, T("SKILL_DESC_CD1", "Cooldown -5%"), SKILL_PASSIVE });
-	skillTree.push_back({ 11, T("SKILL_NAME_CD2", "CD II"),   {418, 505}, {10}, false, 2, 0, 0, 0, 0.10f, 0, T("SKILL_DESC_CD2", "Cooldown -10%"), SKILL_PASSIVE });
-	skillTree.push_back({ 12, T("STEALTH", "STEALTH"),        {332, 555}, {11}, false, 3, 0, 0, 0, 0,     0, T("SKILL_DESC_STEALTH", "Active: Become undetectable"), SKILL_ACTIVE_STEALTH, 15.0f });
-
-	skillTree.push_back({ 13, T("SKILL_NAME_HEAL1", "HEAL I"),{505, 345}, {0},  false, 1, 0, 0, 0, 0, 10.0f, T("SKILL_DESC_HEAL1", "Healing +10"), SKILL_PASSIVE });
-	skillTree.push_back({ 14, T("SKILL_NAME_HEAL2", "HEAL II"),{418, 295},{13}, false, 2, 0, 0, 0, 0, 20.0f, T("SKILL_DESC_HEAL2", "Healing +20"), SKILL_PASSIVE });
-	skillTree.push_back({ 15, T("HEAL", "HEAL"),              {332, 245},{14}, false, 3, 0, 0, 0, 0, 0,     T("SKILL_DESC_HEAL", "Active: Restore HP instantly"), SKILL_ACTIVE_HEAL, 25.0f });
+	if (!DataManager::masterSkills.empty()) {
+		skillTree = DataManager::masterSkills;
+	}
+	else {
+		// 万が一JSONロード前・未存在時の安全な起点フォールバック
+		skillTree.push_back({ 0, T("SKILL_NAME_START", "START"), {600, 400}, {}, true, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, T("SKILL_DESC_START", "Skill Tree Start"), SKILL_PASSIVE, 0.0f });
+	}
 }
 
 bool Player::IsSkillAvailable(int id) {
-	for (auto& n : skillTree) if (n.id == id) { if (n.unlocked) return false; if (n.reqIds.empty()) return true; for (int r : n.reqIds) for (auto& rn : skillTree) if (rn.id == r && rn.unlocked) return true; }
+	for (auto& n : skillTree) if (n.id == id) {
+		if (n.unlocked) return false;
+		if (n.reqIds.empty()) return true;
+		for (int r : n.reqIds) {
+			for (auto& rn : skillTree) {
+				if (rn.id == r && rn.unlocked) return true;
+			}
+		}
+	}
 	return false;
 }
 
 void Player::UnlockSkill(int id) {
-	if (IsSkillAvailable(id)) { for (auto& n : skillTree) if (n.id == id && skillPoints >= n.cost) { skillPoints -= n.cost; n.unlocked = true; AudioManager::PlaySE(SE_SKILL); RecalculateStats(); return; } }
+	if (IsSkillAvailable(id)) {
+		for (auto& n : skillTree) {
+			if (n.id == id && skillPoints >= n.cost) {
+				skillPoints -= n.cost;
+				n.unlocked = true;
+				AudioManager::PlaySE(SE_SKILL);
+				RecalculateStats();
+				return;
+			}
+		}
+	}
 }
 
 bool Player::IsSkillUnlocked(SkillType t) { for (auto& n : skillTree) if (n.type == t && n.unlocked) return true; return false; }
@@ -342,12 +535,14 @@ void Player::UpdateHuntQuest(int eId) { for (auto& q : activeQuests) if (!q.isCo
 bool Player::CheckGatherQuest(int itemId, int count) { int sum = 0; for (auto& i : inventoryItems) if (i.id == itemId) sum += i.count; return sum >= count; }
 void Player::CompleteQuest(int qId) { for (auto it = activeQuests.begin(); it != activeQuests.end(); ++it) if (it->questId == qId) { QuestData d = DataManager::GetQuestData(qId); gold += d.rewardGold; if (d.rewardItemId != -1) { ItemData r = DataManager::GetItemConfigCopy(d.rewardItemId); r.count = d.rewardItemCount; AddToInventory(r); } clearedQuests.push_back(qId); activeQuests.erase(it); AudioManager::PlaySE(SE_REFORGE); return; } }
 
+// =============================================================================
+// 通常攻撃の実行処理（吸血・反射・間合いバフ適用）
+// =============================================================================
 void Player::PerformAttack(Vector3 ad, std::vector<Enemy>& enemies, Dungeon& d, EffectManager& fx) {
 	AudioManager::PlaySE(SE_ATTACK);
 	Vector3 origin = Vector3Add(position, { 0, 0.75f, 0 });
 	int weaponElem = equippedData[activeSlot].element;
 
-	// �� ��iWAND�j�̈З͋����F��b�U���͂�1.35�{�X�P�[�� �� �e�ۂւ̍U���́E�����̊��S�󂯓n��
 	if (currentWeapon == WAND) {
 		float totalBonus = GetItemTotalAtkBonus(equippedData[activeSlot]);
 		float wandDmg = (attackPower + totalBonus) * 1.35f;
@@ -377,6 +572,7 @@ void Player::PerformAttack(Vector3 ad, std::vector<Enemy>& enemies, Dungeon& d, 
 
 		bool hitAny = false;
 		bool anyCrit = false;
+		int totalDmgDealt = 0;
 
 		for (auto& e : enemies) {
 			float dist = Vector3Distance(e.position, position);
@@ -388,28 +584,23 @@ void Player::PerformAttack(Vector3 ad, std::vector<Enemy>& enemies, Dungeon& d, 
 				float requiredDot = (currentWeapon == SPEAR) ? 0.6f : 0.0f;
 
 				if (dot >= requiredDot) {
-					bool isCrit = (GetRandomValue(1, 100) <= 15);
-					if (isCrit) anyCrit = true;
+					DamageResult dmgRes = CalculateDamageToEnemy(e, dist, currentWeapon, false);
+					if (dmgRes.isCrit) anyCrit = true;
 
-					float baseAtk = attackPower + GetItemTotalAtkBonus(equippedData[activeSlot]);
-					float elemMulti = GetElementMultiplier(weaponElem, e.data.element);
-					float defReduction = e.status.GetDefenseReductionRate();
-					float effectiveMulti = elemMulti * (1.0f + defReduction);
+					e.hp -= dmgRes.damage;
+					totalDmgDealt += dmgRes.damage;
 
-					int dmg = (int)(baseAtk * effectiveMulti) + GetRandomValue(0, 3);
-					if (isCrit) dmg = (int)((float)dmg * 1.75f);
+					// 不動の巨兵（キーストーン2）以外はノックバック適用
+					e.ApplyKnockback(ad, dmgRes.isCrit ? 1.8f : 1.0f, d);
 
-					e.hp -= dmg;
-					e.ApplyKnockback(ad, isCrit ? 1.8f : 1.0f, d);
-
-					Color hitCol = (weaponElem != ELEM_NONE) ? GetElementColor(weaponElem) : (isCrit ? GOLD : RED);
-					fx.SpawnDamageText(e.position, dmg, isCrit);
+					Color hitCol = (weaponElem != ELEM_NONE) ? GetElementColor(weaponElem) : (dmgRes.isCrit ? GOLD : RED);
+					fx.SpawnDamageText(e.position, dmgRes.damage, dmgRes.isCrit);
 					fx.SpawnEffect(e.position, { 0,0,0 }, FX_HIT, hitCol);
 
 					if (weaponElem != ELEM_NONE) {
-						int statusChance = (elemMulti > 1.1f) ? 60 : 35;
+						int statusChance = (dmgRes.elemMultiplier > 1.1f) ? 60 : 35;
 						if (GetRandomValue(1, 100) <= statusChance) {
-							e.status.ApplyStatus(weaponElem, 3.5f, (float)dmg);
+							e.status.ApplyStatus(weaponElem, 3.5f, (float)dmgRes.damage);
 
 							std::string logKey = "";
 							if (weaponElem == ELEM_HELLFIRE) logKey = "LOG_STATUS_BURN";
@@ -423,25 +614,38 @@ void Player::PerformAttack(Vector3 ad, std::vector<Enemy>& enemies, Dungeon& d, 
 						}
 					}
 
-					if (elemMulti > 1.1f) {
-						std::string weakFmt = DataManager::uiStrings.count("LOG_WEAKNESS_HIT") ? DataManager::uiStrings["LOG_WEAKNESS_HIT"] : "�� %s WEAKNESS! %d DMG! ��";
-						UI::AddSystemLog(TextFormat(weakFmt.c_str(), e.data.name.c_str(), dmg), hitCol);
+					if (dmgRes.isSweetSpot) {
+						UI::AddSystemLog(T("LOG_SWEET_SPOT", "★ SWEET SPOT! ★"), GOLD);
 					}
-					else if (elemMulti < 0.9f) {
+
+					if (dmgRes.elemMultiplier > 1.1f) {
+						std::string weakFmt = DataManager::uiStrings.count("LOG_WEAKNESS_HIT") ? DataManager::uiStrings["LOG_WEAKNESS_HIT"] : "★ %s WEAKNESS! %d DMG! ★";
+						UI::AddSystemLog(TextFormat(weakFmt.c_str(), e.data.name.c_str(), dmgRes.damage), hitCol);
+					}
+					else if (dmgRes.elemMultiplier < 0.9f) {
 						std::string resFmt = DataManager::uiStrings.count("LOG_RESISTED_ATTACK") ? DataManager::uiStrings["LOG_RESISTED_ATTACK"] : "[RESIST] %s: %d DMG";
-						UI::AddSystemLog(TextFormat(resFmt.c_str(), e.data.name.c_str(), dmg), LIGHTGRAY);
+						UI::AddSystemLog(TextFormat(resFmt.c_str(), e.data.name.c_str(), dmgRes.damage), LIGHTGRAY);
 					}
-					else if (isCrit) {
-						UI::AddSystemLog(TextFormat(DataManager::uiStrings["LOG_CRIT_DEALT"].c_str(), e.data.name.c_str(), dmg), GOLD);
+					else if (dmgRes.isCrit) {
+						UI::AddSystemLog(TextFormat(DataManager::uiStrings["LOG_CRIT_DEALT"].c_str(), e.data.name.c_str(), dmgRes.damage), GOLD);
 					}
 					else {
-						UI::AddSystemLog(TextFormat(DataManager::uiStrings["LOG_DMG_DEALT"].c_str(), e.data.name.c_str(), dmg), ORANGE);
+						UI::AddSystemLog(TextFormat(DataManager::uiStrings["LOG_DMG_DEALT"].c_str(), e.data.name.c_str(), dmgRes.damage), ORANGE);
 					}
 
 					e.hudTimer = 5.0f;
 					isStealth = false;
 					hitAny = true;
 				}
+			}
+		}
+
+		// ★ 吸血（ライフスティール）処理
+		if (hitAny && totalDmgDealt > 0 && lifestealRate > 0.001f) {
+			float lHeal = (float)totalDmgDealt * lifestealRate;
+			if (lHeal >= 1.0f) {
+				hp = fminf(maxHp, hp + lHeal);
+				fx.SpawnEffect(position, { 0, 1, 0 }, FX_HIT, GREEN);
 			}
 		}
 
@@ -464,40 +668,52 @@ void Player::PerformAttack(Vector3 ad, std::vector<Enemy>& enemies, Dungeon& d, 
 	}
 }
 
+// =============================================================================
+// 強撃(SMASH)の実行処理（吸血処理統合）
+// =============================================================================
 void Player::PerformSmash(Vector3 ad, std::vector<Enemy>& enemies, Dungeon& d, EffectManager& fx) {
 	AudioManager::PlaySE(SE_SKILL);
 	fx.SpawnEffect(Vector3Add(position, { 0, 0.8f, 0 }), ad, FX_SMASH, RED, 4.2f);
 
 	bool hitAny = false;
 	bool anyCrit = false;
+	int totalDmgDealt = 0;
 
 	for (auto& e : enemies) {
-		if (Vector3Distance(e.position, position) < 4.5f) {
+		float dist = Vector3Distance(e.position, position);
+		if (dist < 4.5f) {
 			if (!d.HasLineOfSight(position, e.position)) continue;
 
-			bool isCrit = (GetRandomValue(1, 100) <= 25);
-			if (isCrit) anyCrit = true;
+			DamageResult dmgRes = CalculateDamageToEnemy(e, dist, currentWeapon, true);
+			if (dmgRes.isCrit) anyCrit = true;
 
-			int dmg = (int)(attackPower * 2.5f);
-			if (isCrit) dmg = (int)((float)dmg * 1.6f);
-
-			e.hp -= dmg;
+			e.hp -= dmgRes.damage;
+			totalDmgDealt += dmgRes.damage;
 			e.ApplyKnockback(ad, 3.5f, d);
-			fx.SpawnDamageText(e.position, dmg, isCrit);
-			fx.SpawnEffect(e.position, { 0,0,0 }, FX_HIT, isCrit ? GOLD : RED);
+			fx.SpawnDamageText(e.position, dmgRes.damage, dmgRes.isCrit);
+			fx.SpawnEffect(e.position, { 0,0,0 }, FX_HIT, dmgRes.isCrit ? GOLD : RED);
 
-			if (isCrit) {
-				std::string critFmt = DataManager::uiStrings.count("LOG_SMASH_CRIT") ? DataManager::uiStrings["LOG_SMASH_CRIT"] : "�� SMASH CRIT! %s: %d DMG! ��";
-				UI::AddSystemLog(TextFormat(critFmt.c_str(), e.data.name.c_str(), dmg), GOLD);
+			if (dmgRes.isCrit) {
+				std::string critFmt = DataManager::uiStrings.count("LOG_SMASH_CRIT") ? DataManager::uiStrings["LOG_SMASH_CRIT"] : "★ SMASH CRIT! %s: %d DMG! ★";
+				UI::AddSystemLog(TextFormat(critFmt.c_str(), e.data.name.c_str(), dmgRes.damage), GOLD);
 			}
 			else {
 				std::string smashFmt = DataManager::uiStrings.count("LOG_SMASH_HIT") ? DataManager::uiStrings["LOG_SMASH_HIT"] : "SMASH: %s: %d DMG!";
-				UI::AddSystemLog(TextFormat(smashFmt.c_str(), e.data.name.c_str(), dmg), ORANGE);
+				UI::AddSystemLog(TextFormat(smashFmt.c_str(), e.data.name.c_str(), dmgRes.damage), ORANGE);
 			}
 
 			e.hudTimer = 5.0f;
 			isStealth = false;
 			hitAny = true;
+		}
+	}
+
+	// 強撃時の吸血処理
+	if (hitAny && totalDmgDealt > 0 && lifestealRate > 0.001f) {
+		float lHeal = (float)totalDmgDealt * lifestealRate;
+		if (lHeal >= 1.0f) {
+			hp = fminf(maxHp, hp + lHeal);
+			fx.SpawnEffect(position, { 0, 1, 0 }, FX_HIT, GREEN);
 		}
 	}
 
@@ -529,11 +745,26 @@ void Player::Update(Camera3D& cam, Dungeon& d, std::vector<Enemy>& enemies, Effe
 	if (kongoTimer > 0) { kongoTimer -= dt; if (kongoTimer <= 0) RecalculateStats(); }
 	if (zoukyouTimer > 0) { zoukyouTimer -= dt; if (zoukyouTimer <= 0) RecalculateStats(); }
 
-	// �� �v���C���[�̏�Ԉُ�X�V�iDot��_�������Ȃǁj
+	// ★ 不撓不屈（キーストーン6: 食いしばり無敵タイマー）
+	if (undyingTimer > 0.0f) {
+		undyingTimer -= dt;
+		if (undyingTimer < 0.0f) undyingTimer = 0.0f;
+	}
+
+	// 致命傷時の不撓不屈判定
+	if (hp <= 0.0f && hasUndyingWill && !undyingUsed) {
+		hp = 1.0f;
+		undyingTimer = 3.0f; // 3秒間完全無敵
+		undyingUsed = true;
+		AudioManager::PlaySE(SE_SAVE);
+		fx.SpawnEffect(position, { 0, 1, 0 }, FX_EXPLOSION, GOLD, 3.5f);
+		UI::AddSystemLog("★ 不撓不屈発動！ 3秒間無敵！ ★", GOLD);
+	}
+
 	bool prevHadStatus = status.HasAnyStatus();
 	status.Update(dt, hp, fx, position);
 	if (prevHadStatus != status.HasAnyStatus()) {
-		RecalculateStats(); // ��Ԉُ�̕t�^�E�������ɃX�e�[�^�X�𑦍��ɍČv�Z
+		RecalculateStats();
 	}
 
 	if (isChargingSmash) {
@@ -575,7 +806,6 @@ void Player::Update(Camera3D& cam, Dungeon& d, std::vector<Enemy>& enemies, Effe
 		isMoving = (Vector3Length(md) > 0.1f);
 		curSpd = (dashTimer > 0) ? baseSpeed * 2.8f : baseSpeed;
 
-		// �� �����f�o�t�̓K�p�i�ړ����x50%�ቺ�j
 		curSpd *= status.GetSpeedMultiplier();
 
 		if (isMoving) {
@@ -717,9 +947,14 @@ void Player::Draw(bool debug) {
 	Vector3 drawPos = { position.x, position.y + yOffset, position.z };
 
 	gm.model.transform = MatrixMultiply(MatrixRotateX(-90 * DEG2RAD), MatrixRotateY(modelRotation * DEG2RAD));
-	DrawModel(gm.model, drawPos, scale, (isStealth ? Fade(BLUE, 0.4f) : WHITE));
 
-	// �� �v���C���[�̏�Ԉُ�I�[���`��i���������O�j
+	// 不撓不屈（無敵中）は黄金に光り輝く
+	Color pCol = WHITE;
+	if (undyingTimer > 0.0f) pCol = (GetRandomValue(0, 10) < 5) ? GOLD : WHITE;
+	else if (isStealth) pCol = Fade(BLUE, 0.4f);
+
+	DrawModel(gm.model, drawPos, scale, pCol);
+
 	if (!isDead && status.HasAnyStatus()) {
 		status.DrawAura(position, radius);
 	}

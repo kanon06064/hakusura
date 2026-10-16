@@ -132,6 +132,7 @@
     <None Include="packages.config" />
     <None Include="quests.json" />
     <None Include="recipes.json" />
+    <None Include="skills.json" />
     <None Include="ui_text.json" />
   </ItemGroup>
   <ItemGroup>

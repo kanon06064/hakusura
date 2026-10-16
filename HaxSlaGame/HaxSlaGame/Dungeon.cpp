@@ -11,7 +11,7 @@ Vector3 Room::GetCenter() const { return { (float)x * TILE_SIZE + (float)width *
 Dungeon::Dungeon() {
     map.resize(MAX_MAP_WIDTH, std::vector<int>(MAX_MAP_HEIGHT, 2));
     discovered.resize(MAX_MAP_WIDTH, std::vector<bool>(MAX_MAP_HEIGHT, false));
-    Generate(true, 0, 0, 0); // 初期化時はホームを生成
+    Generate(true, 0, 0, 0);
 }
 
 void Dungeon::SnapToTile(Vector3& pos) {
@@ -21,12 +21,13 @@ void Dungeon::SnapToTile(Vector3& pos) {
     }
 }
 
-// ダンジョンまたはホームを生成するメイン関数
 void Dungeon::Generate(bool homeMode, int floor, int dungeonId, int unlockedDungeonId) {
     currentDungeonId = dungeonId;
-    isHome = homeMode; rooms.clear(); treasureSpots.clear();
+    isHome = homeMode;
+    rooms.clear();
+    treasureSpots.clear();
+    gatherSpots.clear(); // ★ 採取スポットのリセット
 
-    // 全ての施設・階段の座標を初期化(非表示を示す -999 に設定)
     stairsDownPos = { -999,-999,-999 }; stairsUpPos = { -999,-999,-999 };
     storageBoxPos = { -999,-999,-999 }; portalPos = { -999,-999,-999 };
     healStationPos = { -999,-999,-999 }; reforgeStationPos = { -999,-999,-999 };
@@ -122,6 +123,15 @@ void Dungeon::GenerateRestFloor() {
     DigCorridor(r2.GetCenter().x / TILE_SIZE, r2.GetCenter().z / TILE_SIZE, r3.GetCenter().x / TILE_SIZE, r3.GetCenter().z / TILE_SIZE);
     stairsUpPos = r1.GetCenter(); stairsUpPos.y = 0.0f; portalPos = Vector3Add(stairsUpPos, { 3,0,0 });
     healStationPos = r2.GetCenter(); stairsDownPos = r3.GetCenter(); stairsDownPos.y = 0.0f;
+
+    // ★ 休憩階に安全な採取スポット（魔水晶・大）を1箇所配置
+    GatherSpot gs;
+    gs.pos = Vector3Add(healStationPos, { 3.0f, 0.0f, 0.0f });
+    gs.materialItemId = 17; // 魔水晶
+    gs.count = GetRandomValue(2, 3);
+    gs.color = PURPLE;
+    gs.gathered = false;
+    gatherSpots.push_back(gs);
 }
 
 void Dungeon::GenerateBossFloor() {
@@ -161,6 +171,38 @@ void Dungeon::GenerateNormalFloor(int floor) {
         stairsUpPos = rooms[v[0]].GetCenter(); stairsUpPos.y = 0.0f;
         stairsDownPos = rooms[v.size() > 1 ? v.back() : v[0]].GetCenter(); stairsDownPos.y = 0.0f;
     }
+
+    // ★ 通常フロア内に2〜4箇所の素材採取スポット（魔水晶・鉱石・薬草結晶）を自動生成
+    int gatherCount = GetRandomValue(2, 4);
+    for (int i = 0; i < gatherCount && i < (int)rooms.size(); i++) {
+        Room& r = rooms[i];
+        if (r.type == RT_TREASURE) continue;
+
+        int gx = GetRandomValue(r.x + 1, r.x + r.width - 2);
+        int gy = GetRandomValue(r.y + 1, r.y + r.height - 2);
+        Vector3 gPos = { (float)gx * TILE_SIZE, 0.0f, (float)gy * TILE_SIZE };
+
+        // 階段や宝箱から一定距離離れているかチェック
+        if (Vector3Distance(gPos, stairsUpPos) < 4.0f) continue;
+        if (stairsDownPos.x != -999 && Vector3Distance(gPos, stairsDownPos) < 4.0f) continue;
+
+        GatherSpot spot;
+        spot.pos = gPos;
+        spot.gathered = false;
+
+        // 採取アイテムの抽選（50%魔水晶, 50%クラフト素材）
+        if (GetRandomValue(1, 100) <= 50) {
+            spot.materialItemId = 17; // 魔水晶
+            spot.count = GetRandomValue(1, 2);
+            spot.color = PURPLE;
+        }
+        else {
+            spot.materialItemId = GetRandomValue(10, 16); // 鉄鉱石、木材、薬草など
+            spot.count = GetRandomValue(2, 4);
+            spot.color = (spot.materialItemId % 2 == 0) ? SKYBLUE : LIME;
+        }
+        gatherSpots.push_back(spot);
+    }
 }
 
 void Dungeon::DigCorridor(int x1, int y1, int x2, int y2) {
@@ -181,14 +223,10 @@ void Dungeon::CastVisibilityRay(int x0, int y0, int x1, int y1) {
     int y = y0;
 
     while (true) {
-        // マップ範囲内なら探索済みにする
         if (x >= 0 && x < currentWidth && y >= 0 && y < currentHeight) {
             discovered[x][y] = true;
-
-            // ★ 壁（または外郭空間）にぶつかったら、壁自体を解放した上で視線を遮断！
-            // （プレイヤー自身がいる足元マス以外の壁でストップ）
             if (map[x][y] != 0 && !(x == x0 && y == y0)) {
-                break; // 壁の向こう側には光が届かない
+                break;
             }
         }
         else {
@@ -209,29 +247,24 @@ void Dungeon::CastVisibilityRay(int x0, int y0, int x1, int y1) {
     }
 }
 
-// ★ プレイヤーの現在位置をもとに、壁を貫通しないリアルな視界(Fog of War)を更新
 void Dungeon::UpdateVisibility(Vector3 p) {
     if (isHome) return;
 
     int gx = (int)floorf((p.x + TILE_SIZE / 2.0f) / TILE_SIZE);
     int gz = (int)floorf((p.z + TILE_SIZE / 2.0f) / TILE_SIZE);
 
-    const int R = 6; // 視界の広さ（半径6マス）
+    const int R = 6;
 
-    // 視界範囲の外周4辺に向けて放射状にレイ（視線）を飛ばす
-    // 上下の外周辺
     for (int x = gx - R; x <= gx + R; x++) {
-        CastVisibilityRay(gx, gz, x, gz - R); // 上辺へ
-        CastVisibilityRay(gx, gz, x, gz + R); // 下辺へ
+        CastVisibilityRay(gx, gz, x, gz - R);
+        CastVisibilityRay(gx, gz, x, gz + R);
     }
-    // 左右の外周辺
     for (int y = gz - R; y <= gz + R; y++) {
-        CastVisibilityRay(gx, gz, gx - R, y); // 左辺へ
-        CastVisibilityRay(gx, gz, gx + R, y); // 右辺へ
+        CastVisibilityRay(gx, gz, gx - R, y);
+        CastVisibilityRay(gx, gz, gx + R, y);
     }
 }
 
-// ★ 修正: showExit に応じてクリアゲートや下り階段の描画を制御
 void Dungeon::Draw(bool showExit) {
     for (int y = 0; y < currentHeight; y++) for (int x = 0; x < currentWidth; x++) {
         if (!discovered[x][y]) continue;
@@ -243,7 +276,6 @@ void Dungeon::Draw(bool showExit) {
         }
         else {
             bool drawFloor = true;
-            // 階段やポータルが描画されるマスのみ床の色塗りをスキップ（チラつき防止）
             if (showExit && stairsDownPos.x != -999 && fabs(pos.x - stairsDownPos.x) < 0.1f && fabs(pos.z - stairsDownPos.z) < 0.1f) drawFloor = false;
             if (stairsUpPos.x != -999 && fabs(pos.x - stairsUpPos.x) < 0.1f && fabs(pos.z - stairsUpPos.z) < 0.1f) drawFloor = false;
             for (int i = 0; i < 3; i++) {
@@ -268,7 +300,6 @@ void Dungeon::Draw(bool showExit) {
         return false;
         };
 
-    // ★ 下り階段：showExit が true の時だけ描画
     if (showExit && stairsDownPos.x != -999 && IsDiscovered(stairsDownPos.x, stairsDownPos.z)) {
         if (!drawEnvTint("Obj_StairsDown", stairsDownPos, WHITE)) DrawCube(stairsDownPos, 1.2f, 0.1f, 1.2f, GOLD);
     }
@@ -293,8 +324,6 @@ void Dungeon::Draw(bool showExit) {
         if (!drawEnvTint("Obj_Craft", craftStationPos, WHITE)) { DrawCube(craftStationPos, 1.2f, 1.2f, 1.2f, ORANGE); }
     }
 
-    // ★ 帰還ポータルの描画制御：
-    // ボス部屋中央（bossSpawnPosに近い位置）のクリアポータルは、showExit が true の時のみ描画する！
     bool isBossCenterPortal = (!isHome && bossSpawnPos.x != -999 && Vector3Distance(portalPos, bossSpawnPos) < 5.0f);
     bool canDrawPortal = !isBossCenterPortal || showExit;
 
@@ -323,6 +352,36 @@ void Dungeon::Draw(bool showExit) {
 
     if (isHome && questBoardPos.x != -999) {
         if (!drawEnvTint("Obj_QuestBoard", questBoardPos, WHITE)) { DrawCube(questBoardPos, 2.0f, 2.0f, 0.2f, BEIGE); }
+    }
+
+    // =========================================================================
+    // ★ 素材採取スポット（鉱石・魔水晶結晶）の3D描画
+    // =========================================================================
+    float curTime = (float)GetTime();
+    for (const auto& spot : gatherSpots) {
+        if (!IsDiscovered(spot.pos.x, spot.pos.z)) continue;
+
+        Vector3 cPos = spot.pos;
+        if (!spot.gathered) {
+            float pulse = sinf(curTime * 3.5f) * 0.1f;
+            cPos.y = 0.35f + pulse;
+
+            // 1. 光り輝く多面体クリスタル結晶（中央）
+            DrawCylinder(cPos, 0.05f, 0.35f, 0.7f, 6, Fade(spot.color, 0.85f));
+            DrawCylinderWires(cPos, 0.05f, 0.35f, 0.7f, 6, Fade(WHITE, 0.95f));
+
+            // 2. 地面に広がる魔法の光輪オーラ
+            Vector3 auraBase = { spot.pos.x, 0.06f, spot.pos.z };
+            float ringR = 0.75f + pulse * 0.5f;
+            DrawCylinderWires(auraBase, ringR, ringR, 0.02f, 16, Fade(spot.color, 0.8f));
+            DrawCylinder(auraBase, ringR * 0.7f, ringR * 0.7f, 0.01f, 16, Fade(spot.color, 0.25f));
+        }
+        else {
+            // 採取後の残骸（小さく崩れた岩）
+            cPos.y = 0.1f;
+            DrawCube(cPos, 0.4f, 0.15f, 0.4f, DARKGRAY);
+            DrawCubeWires(cPos, 0.4f, 0.15f, 0.4f, BLACK);
+        }
     }
 }
 

@@ -20,7 +20,7 @@ enum EnemyState { STATE_PATROL, STATE_CHASE, STATE_ATTACK }; // 敵のAIステート（
 enum MenuTab { EQUIP, SKILL, MAP_TAB, INVENTORY, SYSTEM_TAB, OPTION_TAB, CONTROL_TAB }; // メニュー画面のタブ
 enum EffectType { FX_SLASH, FX_THRUST, FX_SMASH, FX_HIT, FX_EXPLOSION }; // エフェクトの種類
 enum RoomType { RT_NORMAL, RT_SMALL, RT_LARGE, RT_TREASURE, RT_HEAL, RT_BOSS }; // ダンジョンの部屋の種類
-enum SkillType { SKILL_PASSIVE, SKILL_ACTIVE_DASH, SKILL_ACTIVE_SMASH, SKILL_ACTIVE_STEALTH, SKILL_ACTIVE_KONGO, SKILL_ACTIVE_ZOUKYOU, SKILL_ACTIVE_HEAL }; // スキル種別
+enum SkillType { SKILL_PASSIVE = 0, SKILL_ACTIVE_DASH = 1, SKILL_ACTIVE_SMASH = 2, SKILL_ACTIVE_STEALTH = 3, SKILL_ACTIVE_KONGO = 4, SKILL_ACTIVE_ZOUKYOU = 5, SKILL_ACTIVE_HEAL = 6 }; // スキル種別
 enum QuestType { QUEST_HUNT, QUEST_GATHER }; // クエスト種別（討伐・収集）
 enum SoundType { SE_ATTACK, SE_ENEMY_ATTACK, SE_CLICK, SE_SKILL, SE_STAIRS, SE_SAVE, SE_REFORGE, SE_LEVELUP, SE_HEAL }; // SEの種別
 enum MusicType { BGM_TITLE, BGM_HOME, BGM_DUNGEON, BGM_NONE }; // BGMの種別
@@ -55,7 +55,6 @@ struct KeyConfig {
 };
 
 // --- インゲームの各種データを保持する構造体 ---
-// ★ Projectile に攻撃力 (damage) と属性 (element) を保持
 struct Projectile {
     Vector3 pos = { 0.0f, 0.0f, 0.0f };
     Vector3 vel = { 0.0f, 0.0f, 0.0f };
@@ -90,7 +89,6 @@ struct GameLog {
     Color color = WHITE;
 };
 
-// ★ Modifier に状態異常耐性 (immune: 1:炎上, 2:溶解, 3:凍傷, 4:衰弱, 99:全無効) を追加
 struct Modifier {
     int id = 0;
     std::string name = "";
@@ -132,6 +130,7 @@ struct EnemyData {
     std::string weaponModelName = "";
     int type = 0;
     float hp = 0.0f;
+    float def = 0.0f;
     float speed = 0.0f;
     float detect = 12.0f;
     float atkRange = 2.0f;
@@ -143,6 +142,7 @@ struct EnemyData {
     Color tint = WHITE;
 };
 
+// ★ 新・巨大スキルツリー用ノード構造体（全パラメータ・キーストーン完全対応）
 struct SkillNode {
     int id = 0;
     std::string name = "";
@@ -150,11 +150,27 @@ struct SkillNode {
     std::vector<int> reqIds;
     bool unlocked = false;
     int cost = 1;
+
+    // 基本補正値
     float atkAdd = 0.0f;
     float defAdd = 0.0f;
     float hpAdd = 0.0f;
+    float spdAdd = 0.0f;
     float cdRedAdd = 0.0f;
     float healAdd = 0.0f;
+
+    // 特化補正値（会心・貫通・異常・属性・吸血・反射・間合い）
+    float critRateAdd = 0.0f;
+    float critDmgAdd = 0.0f;
+    float armorPenAdd = 0.0f;
+    float statusDmgAdd = 0.0f;
+    float elemDmgAdd = 0.0f;
+    float lifestealAdd = 0.0f;
+    float reflectAdd = 0.0f;
+
+    // キーストーン種別 (0:通常, 1:硝子の大砲, 2:不動の巨兵, 3:武芸百般, 4:血の契約, 5:属性暴走, 6:不撓不屈)
+    int keystoneType = 0;
+
     std::string desc = "";
     SkillType type = SKILL_PASSIVE;
     float maxCooldown = 0.0f;
@@ -208,4 +224,21 @@ struct HazardArea {
     Color color = GREEN;
     int element = ELEM_ROT;
     bool active = true;
+};
+
+struct GatherSpot {
+    Vector3 pos = { 0, 0, 0 };
+    int materialItemId = 17;
+    int count = 1;
+    Color color = SKYBLUE;
+    bool gathered = false;
+    float pulseTime = 0.0f;
+};
+
+struct DamageResult {
+    int damage = 0;
+    bool isCrit = false;
+    bool isSweetSpot = false;
+    bool isStatusPunish = false;
+    float elemMultiplier = 1.0f;
 };

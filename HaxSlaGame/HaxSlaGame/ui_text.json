@@ -277,5 +277,14 @@
   "LOG_PLAYER_ROT": "【溶解】防具が腐蝕し防御力が低下した！",
   "LOG_PLAYER_CHILL": "【凍傷】足元が凍りつき移動速度が低下した！",
   "LOG_PLAYER_CURSE": "【衰弱】深淵の呪いで攻撃力が低下した！",
-  "LOG_STATUS_IMMUNE": "★ 耐性モディファイアで状態異常を無効化した！ ★"
+  "LOG_STATUS_IMMUNE": "★ 耐性モディファイアで状態異常を無効化した！ ★",
+
+  "DISMANTLE": "装備分解",
+  "DISMANTLE_DESC": "魔水晶と素材を抽出",
+  "LOG_DISMANTLE": "%s を分解し、魔水晶x%d と %s x%d を入手！",
+  "GATHER_PROMPT": "素材を採取する",
+  "LOG_GATHER": "採取成功！ %s x%d を入手！",
+
+  "LOG_SWEET_SPOT": "★ 芯を捉えた！ (クリティカル間合い) ★",
+  "LOG_STATUS_PUNISH": "★ 状態異常の隙を突いた！ (+25%%) ★"
 }

@@ -53,6 +53,14 @@ Enemy::Enemy(Vector3 sp, EnemyData d, int fl) {
     detectRange = d.detect;
     attackRange = d.atkRange;
 
+    // ★ 敵の防御力（defense）の初期化（レベルスケール ＆ 重装・ボス補正）
+    defense = d.def;
+    if (defense <= 0.0f) {
+        defense = (float)level * 1.3f;
+        if (eType == E_AXE) defense *= 1.4f; // 斧持ち・重装タイプ
+        if (d.id >= 15) defense *= 1.6f;     // 強敵・ボスタイプ
+    }
+
     if (IsPlant()) {
         speed = 0.0f;
         detectRange = fmaxf(detectRange, 14.0f);
@@ -90,6 +98,25 @@ Enemy::Enemy(Vector3 sp, EnemyData d, int fl) {
 
     delayedHp = maxHp;
     delayedHpTimer = 0.0f;
+}
+
+// ★ プレイヤーへの被ダメージ計算（漸近防御減衰式 ＆ 属性耐性）
+float Enemy::CalculateDamageToPlayer(const Player& p, float rawDmg, int attackElem) {
+    float pDef = p.defense;
+    if (pDef < 0.0f) pDef = 0.0f;
+
+    // プレイヤー防御軽減率 = 防御 / (防御 + 100 + Lv * 5)
+    float defMitigation = pDef / (pDef + 100.0f + (float)p.level * 5.0f);
+    float postArmorDamage = rawDmg * (1.0f - defMitigation);
+
+    // プレイヤーの防具属性耐性 (1部位につき15%、最大60%)
+    float resist = 0.0f;
+    if (attackElem != ELEM_NONE) {
+        resist = const_cast<Player&>(p).GetPlayerElementResistance(attackElem);
+    }
+
+    float finalDmg = fmaxf(2.0f, postArmorDamage * (1.0f - resist));
+    return finalDmg;
 }
 
 void Enemy::StartDeath() {
@@ -201,7 +228,6 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
                 if (IsPlant()) {
                     bossActionTimer -= dt;
 
-                    // 1. 5方向拡散毒弾幕（威力スケール化: 24.0f + level * 2.5f）
                     if (bossAttackType == 1) {
                         if (bossActionTimer <= 0.0f) {
                             animFrameCounter = 0; AudioManager::PlaySE(SE_ENEMY_ATTACK);
@@ -216,7 +242,6 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
                             bossAttackType = 0; attackTimer = 1.6f;
                         }
                     }
-                    // 2. 全方位360度スパイラル毒胞子弾幕（威力スケール化: 18.0f + level * 2.0f）
                     else if (bossAttackType == 2) {
                         if (bossActionTimer <= 0.0f) {
                             animFrameCounter = 0; AudioManager::PlaySE(SE_ENEMY_ATTACK);
@@ -232,7 +257,6 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
                             bossAttackType = 0; attackTimer = 2.0f;
                         }
                     }
-                    // 3. 毒沼・胞子エリア展開
                     else if (bossAttackType == 3) {
                         if (bossActionTimer <= 0.0f) {
                             animFrameCounter = 0; AudioManager::PlaySE(SE_SKILL);
@@ -253,7 +277,6 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
                             bossAttackType = 0; attackTimer = 2.2f;
                         }
                     }
-                    // 4. 超広域ポイズンブラスト
                     else if (bossAttackType == 4) {
                         if (bossActionTimer <= 0.0f) {
                             animFrameCounter = 0; AudioManager::PlaySE(SE_ENEMY_ATTACK);
@@ -265,10 +288,9 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
 
                             float aoeRadius = 7.5f;
                             if (Vector3Distance(position, p.position) < aoeRadius) {
-                                float rawDmg = 26.0f + level * 2.8f;
-                                float defDmg = fmaxf(2.0f, rawDmg - p.defense);
-                                float resist = p.GetPlayerElementResistance(ELEM_ROT);
-                                float finalDmg = fmaxf(2.0f, defDmg * (1.0f - resist));
+                                float rawDmg = 30.0f + level * 3.0f;
+                                // ★ 新・防御減衰式で被ダメ算出
+                                float finalDmg = CalculateDamageToPlayer(p, rawDmg, ELEM_ROT);
                                 p.hp -= finalDmg;
 
                                 fx.SpawnDamageText(p.position, (int)finalDmg);
@@ -278,7 +300,6 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
                                 std::string aoeFmt = DataManager::uiStrings.count("LOG_BOSS_AOE") ? DataManager::uiStrings["LOG_BOSS_AOE"] : "BOSS EXPLOSION HIT: %d DMG!";
                                 UI::AddSystemLog(TextFormat(aoeFmt.c_str(), (int)finalDmg), RED);
 
-                                // プレイヤーへの溶解デバフ付与
                                 if (GetRandomValue(1, 100) <= 40) {
                                     if (p.HasStatusImmunity(ELEM_ROT)) {
                                         std::string immFmt = DataManager::uiStrings.count("LOG_STATUS_IMMUNE") ? DataManager::uiStrings["LOG_STATUS_IMMUNE"] : "★ STATUS IMMUNED! ★";
@@ -311,15 +332,15 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
                             float distToPlayer = Vector2Distance({ hitCenter.x, hitCenter.z }, { p.position.x, p.position.z });
 
                             if (distToPlayer < 2.6f) {
-                                float rawDmg = 14.0f + level * 2.4f; if (bossComboStep == 3) rawDmg *= 1.5f;
-                                float defDmg = fmaxf(2.0f, rawDmg - p.defense);
-                                float resist = p.GetPlayerElementResistance(data.element);
-                                float finalDmg = fmaxf(2.0f, defDmg * (1.0f - resist));
+                                float rawDmg = 16.0f + level * 2.5f; if (bossComboStep == 3) rawDmg *= 1.5f;
+                                // ★ 新・防御減衰式で被ダメ算出
+                                float finalDmg = CalculateDamageToPlayer(p, rawDmg, data.element);
                                 p.hp -= finalDmg;
 
                                 fx.SpawnDamageText(p.position, (int)finalDmg);
                                 fx.SpawnEffect(p.position, { 0,0,0 }, FX_HIT, RED);
 
+                                float resist = (data.element != ELEM_NONE) ? const_cast<Player&>(p).GetPlayerElementResistance(data.element) : 0.0f;
                                 if (resist > 0.05f) {
                                     std::string resFmt = DataManager::uiStrings.count("LOG_RESISTED_HIT") ? DataManager::uiStrings["LOG_RESISTED_HIT"] : "★ RESISTED! (-%d%%) ★";
                                     UI::AddSystemLog(TextFormat(resFmt.c_str(), (int)(resist * 100)), SKYBLUE);
@@ -329,7 +350,6 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
                                     UI::AddSystemLog(TextFormat(comboFmt.c_str(), (int)finalDmg), RED);
                                 }
 
-                                // 属性ボスの近接攻撃による状態異常付与
                                 if (data.element != ELEM_NONE && GetRandomValue(1, 100) <= 30) {
                                     if (p.HasStatusImmunity(data.element)) {
                                         std::string immFmt = DataManager::uiStrings.count("LOG_STATUS_IMMUNE") ? DataManager::uiStrings["LOG_STATUS_IMMUNE"] : "★ STATUS IMMUNED! ★";
@@ -362,7 +382,6 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
                             }
                         }
                     }
-                    // 通常ボス 3方向弾幕（威力スケール化: 22.0f + level * 2.5f）
                     else if (bossAttackType == 2) {
                         bossActionTimer -= dt;
                         if (bossActionTimer <= 0.0f) {
@@ -391,15 +410,15 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
 
                             float distToPlayer = Vector2Distance({ position.x, position.z }, { p.position.x, p.position.z });
                             if (distToPlayer < radius + p.radius + 0.8f) {
-                                float rawDmg = 20.0f + level * 2.8f;
-                                float defDmg = fmaxf(2.0f, rawDmg - p.defense);
-                                float resist = p.GetPlayerElementResistance(data.element);
-                                float finalDmg = fmaxf(2.0f, defDmg * (1.0f - resist));
+                                float rawDmg = 22.0f + level * 2.8f;
+                                // ★ 新・防御減衰式で被ダメ算出
+                                float finalDmg = CalculateDamageToPlayer(p, rawDmg, data.element);
                                 p.hp -= finalDmg;
 
                                 fx.SpawnDamageText(p.position, (int)finalDmg);
                                 fx.SpawnEffect(p.position, { 0,0,0 }, FX_HIT, RED);
 
+                                float resist = (data.element != ELEM_NONE) ? const_cast<Player&>(p).GetPlayerElementResistance(data.element) : 0.0f;
                                 if (resist > 0.05f) {
                                     std::string resFmt = DataManager::uiStrings.count("LOG_RESISTED_HIT") ? DataManager::uiStrings["LOG_RESISTED_HIT"] : "★ RESISTED! (-%d%%) ★";
                                     UI::AddSystemLog(TextFormat(resFmt.c_str(), (int)(resist * 100)), SKYBLUE);
@@ -428,15 +447,15 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
 
                             float aoeRadius = 7.0f;
                             if (Vector3Distance(position, p.position) < aoeRadius) {
-                                float rawDmg = 25.0f + level * 2.8f;
-                                float defDmg = fmaxf(2.0f, rawDmg - p.defense);
-                                float resist = p.GetPlayerElementResistance(data.element);
-                                float finalDmg = fmaxf(2.0f, defDmg * (1.0f - resist));
+                                float rawDmg = 28.0f + level * 3.0f;
+                                // ★ 新・防御減衰式で被ダメ算出
+                                float finalDmg = CalculateDamageToPlayer(p, rawDmg, data.element);
                                 p.hp -= finalDmg;
 
                                 fx.SpawnDamageText(p.position, (int)finalDmg);
                                 fx.SpawnEffect(p.position, { 0,0,0 }, FX_HIT, RED);
 
+                                float resist = (data.element != ELEM_NONE) ? const_cast<Player&>(p).GetPlayerElementResistance(data.element) : 0.0f;
                                 if (resist > 0.05f) {
                                     std::string resFmt = DataManager::uiStrings.count("LOG_RESISTED_HIT") ? DataManager::uiStrings["LOG_RESISTED_HIT"] : "★ RESISTED! (-%d%%) ★";
                                     UI::AddSystemLog(TextFormat(resFmt.c_str(), (int)(resist * 100)), SKYBLUE);
@@ -507,7 +526,6 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
                     Vector3 spawnPos = Vector3Add(position, { 0, 0.75f, 0 });
                     AudioManager::PlaySE(SE_ENEMY_ATTACK);
 
-                    // ★ 通常植物敵の弾丸威力スケール化
                     if (IsPlant()) {
                         if (normalAttackPattern == 1) {
                             float pDmg = 18.0f + level * 2.2f;
@@ -529,13 +547,11 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
                             attackTimer = 2.4f;
                         }
                     }
-                    // ★ 通常アーチャーの弾丸威力スケール化
                     else if (eType == E_ARCHER) {
                         float pDmg = 16.0f + level * 2.2f;
                         fx.SpawnProjectile(spawnPos, lastAttackDir, 18.0f, 0, false, pDmg, data.element);
                         attackTimer = 1.8f;
                     }
-                    // ★ 通常メイジの弾丸威力スケール化
                     else if (eType == E_MAGE) {
                         float pDmg = 19.0f + level * 2.5f;
                         int elem = (data.element != ELEM_NONE) ? data.element : ELEM_ABYSS;
@@ -559,17 +575,17 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
                         Vector3 hitCenter = Vector3Add(position, Vector3Scale(lastAttackDir, attackRange * 0.5f));
 
                         if (Vector3Distance(hitCenter, p.position) < aoeRadius) {
-                            float rawDmg = 12.0f + level * 2.2f;
+                            float rawDmg = 14.0f + level * 2.4f;
                             rawDmg *= (1.0f - status.GetAttackReductionRate());
-                            float defDmg = fmaxf(2.0f, rawDmg - p.defense);
 
-                            float resist = p.GetPlayerElementResistance(data.element);
-                            float finalDmg = fmaxf(2.0f, defDmg * (1.0f - resist));
+                            // ★ 新・防御減衰式で被ダメ算出
+                            float finalDmg = CalculateDamageToPlayer(p, rawDmg, data.element);
                             p.hp -= finalDmg;
 
                             fx.SpawnDamageText(p.position, (int)finalDmg);
                             fx.SpawnEffect(p.position, { 0,0,0 }, FX_HIT, RED);
 
+                            float resist = (data.element != ELEM_NONE) ? const_cast<Player&>(p).GetPlayerElementResistance(data.element) : 0.0f;
                             if (resist > 0.05f) {
                                 std::string resFmt = DataManager::uiStrings.count("LOG_RESISTED_HIT") ? DataManager::uiStrings["LOG_RESISTED_HIT"] : "★ RESISTED! (-%d%%) ★";
                                 UI::AddSystemLog(TextFormat(resFmt.c_str(), (int)(resist * 100)), SKYBLUE);
@@ -579,7 +595,6 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
                                 UI::AddSystemLog(TextFormat(takenFmt.c_str(), data.name.c_str(), (int)finalDmg), RED);
                             }
 
-                            // 通常近接敵の属性攻撃による状態異常付与
                             if (data.element != ELEM_NONE && GetRandomValue(1, 100) <= 30) {
                                 if (p.HasStatusImmunity(data.element)) {
                                     std::string immFmt = DataManager::uiStrings.count("LOG_STATUS_IMMUNE") ? DataManager::uiStrings["LOG_STATUS_IMMUNE"] : "★ STATUS IMMUNED! ★";

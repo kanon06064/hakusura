@@ -13,7 +13,9 @@ public:
     EnemyState state;
     EnemyType eType;
     EnemyData data;
-    float hp, maxHp, speed, radius, detectRange, attackRange, attackTimer, hudTimer;
+
+    // ★ defense (防御力) を追加
+    float hp, maxHp, defense, speed, radius, detectRange, attackRange, attackTimer, hudTimer;
     int level, expValue;
     StatusManager status;
 
@@ -28,10 +30,10 @@ public:
     bool isChargingAttack;
     float attackChargeTimer;
     float attackChargeMax;
-    int normalAttackPattern; // ★ 通常敵の遠距離攻撃バリエーション番号
+    int normalAttackPattern;
 
     bool isBoss;
-    int bossAttackType;      // 1:扇状弾幕, 2:全方位スパイラル, 3:毒沼設置, 4:巨大範囲毒爆発
+    int bossAttackType;
     int bossComboStep;
     float bossActionTimer;
     Vector3 bossTargetDir;
@@ -41,8 +43,10 @@ public:
 
     Enemy(Vector3 sp, EnemyData d, int fl);
 
-    // ★ 植物系モンスター（ポイズンプラント、魔界樹など）の自動判定
     bool IsPlant() const;
+
+    // ★ プレイヤーへの被ダメージ計算（漸近防御減衰式）
+    float CalculateDamageToPlayer(const Player& p, float rawDmg, int attackElem);
 
     void Update(Player& p, Dungeon& d, EffectManager& fx);
     void Draw(bool debug, Camera3D cam, Font font, Vector3 playerPos);

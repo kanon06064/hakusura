@@ -55,6 +55,15 @@ Game::Game()
     for (const auto& mod : DataManager::modifiers) addString(mod.name);
     for (const auto& q : DataManager::quests) { addString(q.title); addString(q.description); }
 
+    // =========================================================================
+    // ★ skills.json に含まれる全スキルの名称・説明文をフォント文字抽出に自動追加！
+    // （文字化け完全防止）
+    // =========================================================================
+    for (const auto& sn : DataManager::masterSkills) {
+        addString(sn.name);
+        addString(sn.desc);
+    }
+
     std::vector<int> cps;
     for (int cp : uniqueCodepoints) cps.push_back(cp);
 
@@ -175,16 +184,26 @@ void Game::SaveCurrentSlot() {
 }
 
 void Game::SpawnEnemies(int count) {
-    if (state == STATE_HOME) return; enemies.clear();
+    if (state == STATE_HOME) return;
+    enemies.clear();
 
     int spawnCount = count;
     if (spawnCount > 25) spawnCount = 25;
+    int pLevel = player ? player->level : 1;
 
     if (isPortfolioMode) {
-        if (floor == 1) { for (int i = 0; i < spawnCount; i++) { enemies.push_back(Enemy(dungeon.GetRandomFloorPos(), DataManager::GetRandomEnemyForFloor(30, 0), 30)); } }
+        if (floor == 1) {
+            int eLv = fmaxf(30, (30 + pLevel) / 2);
+            for (int i = 0; i < spawnCount; i++) {
+                enemies.push_back(Enemy(dungeon.GetRandomFloorPos(), DataManager::GetRandomEnemyForFloor(30, 0), eLv));
+            }
+        }
         else if (floor == 2) {
             if (dungeon.bossSpawnPos.x != -999) {
-                Enemy boss(dungeon.bossSpawnPos, DataManager::GetBossEnemy(30, 0), 50);
+                int bossLv = 50;
+                if (pLevel > 50) bossLv = 50 + (int)((pLevel - 50) * 0.6f);
+
+                Enemy boss(dungeon.bossSpawnPos, DataManager::GetBossEnemy(30, 0), bossLv);
                 boss.maxHp *= 3.0f; boss.hp = boss.maxHp; boss.delayedHp = boss.maxHp;
                 boss.radius = 1.5f; boss.isBoss = true;
                 enemies.push_back(boss);
@@ -193,7 +212,10 @@ void Game::SpawnEnemies(int count) {
         }
         else if (floor == 3) {
             if (dungeon.bossSpawnPos.x != -999) {
-                Enemy boss(dungeon.bossSpawnPos, DataManager::GetBossEnemy(100, 2), 100);
+                int bossLv = 100;
+                if (pLevel > 100) bossLv = 100 + (int)((pLevel - 100) * 0.7f);
+
+                Enemy boss(dungeon.bossSpawnPos, DataManager::GetBossEnemy(100, 2), bossLv);
                 boss.maxHp *= 3.0f; boss.hp = boss.maxHp; boss.delayedHp = boss.maxHp;
                 boss.radius = 1.5f; boss.isBoss = true;
                 enemies.push_back(boss);
@@ -205,22 +227,45 @@ void Game::SpawnEnemies(int count) {
 
     if (floor > 0 && floor % 10 == 5) return;
 
-    int enemyLevel = floor;
-    if (currentDungeonId == 1) enemyLevel += 30;
-    if (currentDungeonId == 2) enemyLevel += 60;
+    int baseFloorLevel = floor;
+    if (currentDungeonId == 1) baseFloorLevel += 30;
+    if (currentDungeonId == 2) baseFloorLevel += 60;
 
     if (floor > 0 && floor % 10 == 0) {
         if (dungeon.bossSpawnPos.x != -999) {
-            Enemy boss(dungeon.bossSpawnPos, DataManager::GetBossEnemy(floor, currentDungeonId), enemyLevel);
+            int baseBossLevel = baseFloorLevel + 5;
+            int bossLevel = baseBossLevel;
+            if (pLevel > baseBossLevel) {
+                bossLevel = baseBossLevel + (int)((pLevel - baseBossLevel) * 0.6f);
+            }
+
+            Enemy boss(dungeon.bossSpawnPos, DataManager::GetBossEnemy(floor, currentDungeonId), bossLevel);
             boss.maxHp *= 3.0f; boss.hp = boss.maxHp; boss.delayedHp = boss.maxHp;
             boss.radius = 1.5f; boss.isBoss = true;
             enemies.push_back(boss);
         }
-        bossDefeated = false; return;
+        bossDefeated = false;
+        return;
     }
 
     for (int i = 0; i < spawnCount; i++) {
-        enemies.push_back(Enemy(dungeon.GetRandomFloorPos(), DataManager::GetRandomEnemyForFloor(floor, currentDungeonId), enemyLevel));
+        EnemyData eData = DataManager::GetRandomEnemyForFloor(floor, currentDungeonId);
+
+        int enemyLevel = baseFloorLevel;
+        if (eData.minFloor >= 10 || currentDungeonId >= 1) {
+            if (pLevel > baseFloorLevel) {
+                enemyLevel = baseFloorLevel + (int)((pLevel - baseFloorLevel) * 0.5f);
+            }
+        }
+        else {
+            if (pLevel > baseFloorLevel + 3) {
+                enemyLevel = baseFloorLevel + (int)((pLevel - baseFloorLevel) * 0.4f);
+            }
+        }
+        enemyLevel += GetRandomValue(-1, 1);
+        if (enemyLevel < 1) enemyLevel = 1;
+
+        enemies.push_back(Enemy(dungeon.GetRandomFloorPos(), eData, enemyLevel));
     }
 }
 
@@ -383,7 +428,6 @@ void Game::Update() {
 
                     AudioManager::PlaySE(SE_SAVE);
 
-                    // ★ 魔王判定によるログメッセージ切り替え
                     bool isFinalBoss = isPortfolioMode ? (floor == 3) : (currentDungeonId == 2 && floor == 100);
                     std::string logMsg = isFinalBoss ? T("BOSS_BANNER_SUB_FINAL", "DEMON LORD SLAIN!") : T("BOSS_BANNER_TITLE", "BOSS DEFEATED!");
                     logs.insert(logs.begin(), { logMsg, 5.0f, GOLD });
@@ -501,6 +545,28 @@ void Game::Update() {
         auto dist2D = [](Vector3 a, Vector3 b) { return Vector2Distance({ a.x, a.z }, { b.x, b.z }); };
         bool clickAction = IsMouseButtonPressed(0) || IsGamepadButtonPressed(0, GAMEPAD_BUTTON_RIGHT_FACE_DOWN);
 
+        if (state == STATE_DUNGEON && clickAction && player) {
+            for (auto& spot : dungeon.gatherSpots) {
+                if (!spot.gathered) {
+                    float dist = Vector3Distance(player->position, spot.pos);
+                    if (dist < 2.0f) {
+                        spot.gathered = true;
+
+                        ItemData mat = DataManager::GetItemConfigCopy(spot.materialItemId);
+                        mat.count = spot.count;
+                        player->AddToInventory(mat);
+
+                        fxManager.SpawnEffect(spot.pos, { 0, 1, 0 }, FX_SMASH, spot.color, 1.5f);
+                        AudioManager::PlaySE(SE_SAVE);
+
+                        std::string gFmt = T("LOG_GATHER", "Gathered %s x%d!");
+                        UI::AddSystemLog(TextFormat(gFmt.c_str(), mat.name.c_str(), spot.count), spot.color);
+                        break;
+                    }
+                }
+            }
+        }
+
         if (sceneTimer > 0) sceneTimer -= dt;
         else {
             if (state == STATE_HOME) {
@@ -593,11 +659,15 @@ void Game::NextFloor() {
     Vector3 startPos = dungeon.GetStartPosition(); player->position = { startPos.x, 0.5f, startPos.z };
     droppedItems.clear(); fxManager.projectiles.clear(); fxManager.effects.clear(); fxManager.damageTexts.clear();
 
-    int enemyLevel = floor; if (currentDungeonId == 1) enemyLevel += 30; if (currentDungeonId == 2) enemyLevel += 60;
-    SpawnEnemies(10 + floor); AudioManager::PlayBGM(BGM_DUNGEON);
+    SpawnEnemies(10 + floor);
+    AudioManager::PlayBGM(BGM_DUNGEON);
 
     if (floor % 10 != 0 && floor % 10 != 5) {
         std::vector<int> candidateItemIds;
+        int enemyLevel = floor;
+        if (currentDungeonId == 1) enemyLevel += 30;
+        if (currentDungeonId == 2) enemyLevel += 60;
+
         EnemyData currentEnemy = DataManager::GetRandomEnemyForFloor(enemyLevel, currentDungeonId); for (int id : currentEnemy.drops) candidateItemIds.push_back(id);
         EnemyData nextEnemy = DataManager::GetRandomEnemyForFloor(enemyLevel + 1, currentDungeonId); for (int id : nextEnemy.drops) candidateItemIds.push_back(id);
         for (const auto& pos : dungeon.treasureSpots) {
@@ -636,8 +706,10 @@ void Game::WarpToFloor(int targetDungeon, int targetFloor) {
     Vector3 startPos = dungeon.GetStartPosition(); player->position = { startPos.x, 0.5f, startPos.z };
     droppedItems.clear(); fxManager.projectiles.clear(); fxManager.effects.clear(); fxManager.damageTexts.clear();
 
-    int enemyLevel = floor; if (currentDungeonId == 1) enemyLevel += 30; if (currentDungeonId == 2) enemyLevel += 60;
-    SpawnEnemies(10 + floor); showWarpMenu = false; AudioManager::PlayBGM(BGM_DUNGEON); AudioManager::PlaySE(SE_STAIRS);
+    SpawnEnemies(10 + floor);
+    showWarpMenu = false;
+    AudioManager::PlayBGM(BGM_DUNGEON);
+    AudioManager::PlaySE(SE_STAIRS);
 }
 
 void Game::ReturnHome() {
@@ -645,5 +717,6 @@ void Game::ReturnHome() {
     dungeon.Generate(true, 0, currentDungeonId, unlockedDungeonId);
     Vector3 startPos = dungeon.GetStartPosition(); player->position = { startPos.x, 0.5f, startPos.z };
     enemies.clear(); droppedItems.clear(); fxManager.projectiles.clear(); fxManager.effects.clear(); fxManager.damageTexts.clear();
-    AudioManager::PlayBGM(BGM_HOME); AudioManager::PlaySE(SE_STAIRS);
+    AudioManager::PlayBGM(BGM_HOME);
+    AudioManager::PlaySE(SE_STAIRS);
 }

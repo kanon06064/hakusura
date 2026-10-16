@@ -123,6 +123,26 @@ void Game::Draw() {
         player->Draw(debugMode);
         EndMode3D();
 
+        // ★ 素材採取スポットの接近ガイド表示（未採取の結晶に近づくと頭上に案内を表示）
+        if (state == STATE_DUNGEON && player) {
+            for (const auto& spot : dungeon.gatherSpots) {
+                if (spot.gathered) continue;
+                if (!dungeon.IsDiscovered(spot.pos.x, spot.pos.z)) continue;
+
+                float dist = Vector3Distance(player->position, spot.pos);
+                if (dist < 2.2f) {
+                    Vector2 sPos = GetWorldToScreen(Vector3Add(spot.pos, { 0, 1.2f, 0 }), camera);
+                    if (sPos.x > 0 && sPos.y > 0) {
+                        std::string gTxt = T("GATHER_PROMPT", "Gather Material [L-Click / A]");
+                        Vector2 gSize = MeasureTextEx(font, gTxt.c_str(), 18, 1);
+                        DrawRectangle(sPos.x - gSize.x / 2 - 8, sPos.y - 4, gSize.x + 16, 26, Fade(BLACK, 0.75f));
+                        DrawRectangleLines(sPos.x - gSize.x / 2 - 8, sPos.y - 4, gSize.x + 16, 26, spot.color);
+                        DrawTextEx(font, gTxt.c_str(), { sPos.x - gSize.x / 2, sPos.y }, 18, 1, WHITE);
+                    }
+                }
+            }
+        }
+
         if (fxManager.damageFlashTimer > 0.0f) {
             float alpha = (fxManager.damageFlashTimer / 0.35f);
             if (alpha > 1.0f) alpha = 1.0f;
@@ -144,7 +164,6 @@ void Game::Draw() {
 
         UI::DrawHUD(*player, enemies, dungeon, camera, displayFloor, currentDungeonId, debugMode, font);
 
-        // ★ 生存中のボスがいれば、画面上部に大型専用HPバーを表示
         for (const auto& e : enemies) {
             if (e.isBoss && e.hp > 0 && !e.isDead) {
                 UI::DrawBossHUD(e, font);
@@ -152,10 +171,7 @@ void Game::Draw() {
             }
         }
 
-        // ★ 魔王判定：第3ダンジョン100層、またはポートフォリオモード3層のみ魔王
         bool isFinalBoss = isPortfolioMode ? (floor == 3) : (currentDungeonId == 2 && floor == 100);
-
-        // ★ ボス撃破バナー（魔王フラグを渡してテキストを切り替え）
         if (fxManager.victoryBannerTimer > 0.0f) {
             UI::DrawBossDefeatedBanner(fxManager.victoryBannerTimer, font, isFinalBoss);
         }

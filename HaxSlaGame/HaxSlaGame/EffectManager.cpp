@@ -8,7 +8,11 @@
 #include "DataManager.h"
 #include "UI.h"
 
-// ★ 攻撃力 (damage) と属性 (element) を弾丸に受け渡す
+static std::string T(const std::string& key, const std::string& def) {
+    if (DataManager::uiStrings.count(key)) return DataManager::uiStrings[key];
+    return def;
+}
+
 void EffectManager::SpawnProjectile(Vector3 pos, Vector3 dir, float speed, int type, bool isPlayer, float damage, int element) {
     Projectile p;
     p.pos = pos;
@@ -121,7 +125,7 @@ void EffectManager::Update(float dt, Dungeon& d) {
     damageTexts.erase(std::remove_if(damageTexts.begin(), damageTexts.end(), [](const DamageText& t) { return t.life <= 0; }), damageTexts.end());
 }
 
-// ★ 毒沼エリア：プレイヤーへの溶解（腐蝕）状態異常付与 ＆ 耐性モディファイア判定
+// 設置型毒沼エリア：プレイヤー被ダメ（漸近防御減衰式 ＆ 耐性モディファイア判定）
 void EffectManager::UpdateHazards(float dt, Player& p) {
     for (auto& hz : hazardAreas) {
         if (!hz.active) continue;
@@ -131,8 +135,13 @@ void EffectManager::UpdateHazards(float dt, Player& p) {
             if (hz.tickTimer <= 0.0f) {
                 hz.tickTimer = 0.5f;
 
+                float pDef = p.defense;
+                if (pDef < 0.0f) pDef = 0.0f;
+                float defMitigation = pDef / (pDef + 100.0f + (float)p.level * 5.0f);
+                float postArmorDmg = (hz.dps * 0.5f) * (1.0f - defMitigation);
+
                 float resist = p.GetPlayerElementResistance(hz.element);
-                float finalDmg = fmaxf(2.0f, (hz.dps * 0.5f) * (1.0f - resist));
+                float finalDmg = fmaxf(2.0f, postArmorDmg * (1.0f - resist));
 
                 p.hp -= finalDmg;
                 SpawnDamageText(p.position, (int)finalDmg);
@@ -142,7 +151,6 @@ void EffectManager::UpdateHazards(float dt, Player& p) {
                 std::string swampFmt = DataManager::uiStrings.count("LOG_POISON_SWAMP") ? DataManager::uiStrings["LOG_POISON_SWAMP"] : "POISON AREA HIT! -%d DMG";
                 UI::AddSystemLog(TextFormat(swampFmt.c_str(), (int)finalDmg), hz.color);
 
-                // 毒沼による状態異常（溶解・腐蝕）付与判定
                 if (hz.element != ELEM_NONE && GetRandomValue(1, 100) <= 40) {
                     if (p.HasStatusImmunity(hz.element)) {
                         std::string immFmt = DataManager::uiStrings.count("LOG_STATUS_IMMUNE") ? DataManager::uiStrings["LOG_STATUS_IMMUNE"] : "★ STATUS IMMUNED! ★";
@@ -172,51 +180,76 @@ Vector3 EffectManager::GetShakeOffset() const {
     return { rx, ry, rz };
 }
 
+// =============================================================================
+// 弾丸の当たり判定（プレイヤーの杖攻撃 ＆ 敵の弾丸攻撃）
+// =============================================================================
 void EffectManager::CheckProjectileCollisions(std::vector<Enemy>& enemies, Player& p, Dungeon& d) {
     for (auto& proj : projectiles) {
         if (!proj.active) continue;
 
+        // ---------------------------------------------------------------------
+        // 1. プレイヤーの魔法弾（杖 WAND）が敵に命中した時
+        // ---------------------------------------------------------------------
         if (proj.isPlayer) {
             for (auto& e : enemies) {
                 float distXZ = Vector2Distance({ proj.pos.x, proj.pos.z }, { e.position.x, e.position.z });
                 float distY = fabsf(proj.pos.y - (e.position.y + 0.4f));
 
                 if (distXZ < (proj.radius + e.radius + 0.3f) && distY < 1.0f) {
-                    bool isCrit = (GetRandomValue(1, 100) <= 15);
+                    float distFromPlayer = Vector3Distance(p.position, e.position);
 
-                    float totalBonus = Player::GetItemTotalAtkBonus(p.equippedData[p.activeSlot]);
-                    int weaponElem = p.equippedData[p.activeSlot].element;
-                    float elemMulti = Player::GetElementMultiplier(weaponElem, e.data.element);
+                    // ★ 杖の弾丸にも6段階ダメージ計算パイプラインを完全適用！
+                    DamageResult dmgRes = p.CalculateDamageToEnemy(e, distFromPlayer, WAND, false);
 
-                    // 杖からの攻撃力引き継ぎ対応
-                    float baseAtk = (proj.damage > 0.0f) ? proj.damage : (p.attackPower + totalBonus);
-                    int dmg = (int)(baseAtk * elemMulti) + GetRandomValue(0, 5);
-                    if (isCrit) dmg = (int)((float)dmg * 1.75f);
-
-                    e.hp -= (float)dmg;
+                    e.hp -= (float)dmgRes.damage;
                     e.hudTimer = 5.0f;
                     if (e.isBoss) e.delayedHpTimer = 0.5f;
-                    e.ApplyKnockback(Vector3Normalize(proj.vel), isCrit ? 1.0f : 0.5f, d);
+                    e.ApplyKnockback(Vector3Normalize(proj.vel), dmgRes.isCrit ? 1.0f : 0.5f, d);
 
-                    SpawnDamageText(e.position, dmg, isCrit);
-                    SpawnEffect(proj.pos, { 0,0,0 }, FX_HIT, isCrit ? GOLD : PURPLE);
+                    SpawnDamageText(e.position, dmgRes.damage, dmgRes.isCrit);
+                    SpawnEffect(proj.pos, { 0,0,0 }, FX_HIT, dmgRes.isCrit ? GOLD : PURPLE);
 
-                    if (elemMulti > 1.1f) {
+                    // 属性状態異常の付与判定
+                    int weaponElem = p.equippedData[p.activeSlot].element;
+                    if (weaponElem != ELEM_NONE) {
+                        int statusChance = (dmgRes.elemMultiplier > 1.1f) ? 60 : 35;
+                        if (GetRandomValue(1, 100) <= statusChance) {
+                            e.status.ApplyStatus(weaponElem, 3.5f, (float)dmgRes.damage);
+
+                            std::string logKey = "";
+                            if (weaponElem == ELEM_HELLFIRE) logKey = "LOG_STATUS_BURN";
+                            else if (weaponElem == ELEM_ROT) logKey = "LOG_STATUS_ROT";
+                            else if (weaponElem == ELEM_SOUL) logKey = "LOG_STATUS_CHILL";
+                            else if (weaponElem == ELEM_ABYSS) logKey = "LOG_STATUS_CURSE";
+
+                            if (!logKey.empty() && DataManager::uiStrings.count(logKey)) {
+                                UI::AddSystemLog(TextFormat(DataManager::uiStrings[logKey].c_str(), e.data.name.c_str()), Player::GetElementColor(weaponElem));
+                            }
+                        }
+                    }
+
+                    // 遠距離スナイプ（スイートスポット）ログ
+                    if (dmgRes.isSweetSpot) {
+                        UI::AddSystemLog(T("LOG_SWEET_SPOT", "★ SWEET SPOT! (LONG RANGE) ★"), GOLD);
+                    }
+
+                    // ダメージログ
+                    if (dmgRes.elemMultiplier > 1.1f) {
                         std::string weakFmt = DataManager::uiStrings.count("LOG_WEAKNESS_HIT") ? DataManager::uiStrings["LOG_WEAKNESS_HIT"] : "★ %s WEAKNESS! %d DMG! ★";
                         Color elemCol = Player::GetElementColor(weaponElem);
-                        UI::AddSystemLog(TextFormat(weakFmt.c_str(), e.data.name.c_str(), dmg), elemCol);
+                        UI::AddSystemLog(TextFormat(weakFmt.c_str(), e.data.name.c_str(), dmgRes.damage), elemCol);
                     }
-                    else if (elemMulti < 0.9f) {
+                    else if (dmgRes.elemMultiplier < 0.9f) {
                         std::string resFmt = DataManager::uiStrings.count("LOG_RESISTED_ATTACK") ? DataManager::uiStrings["LOG_RESISTED_ATTACK"] : "[RESIST] %s: %d DMG";
-                        UI::AddSystemLog(TextFormat(resFmt.c_str(), e.data.name.c_str(), dmg), LIGHTGRAY);
+                        UI::AddSystemLog(TextFormat(resFmt.c_str(), e.data.name.c_str(), dmgRes.damage), LIGHTGRAY);
                     }
-                    else if (isCrit) {
-                        UI::AddSystemLog(TextFormat(DataManager::uiStrings["LOG_CRIT_DEALT"].c_str(), e.data.name.c_str(), dmg), GOLD);
+                    else if (dmgRes.isCrit) {
+                        UI::AddSystemLog(TextFormat(DataManager::uiStrings["LOG_CRIT_DEALT"].c_str(), e.data.name.c_str(), dmgRes.damage), GOLD);
                         TriggerHitStop(0.06f);
                         ShakeScreen(0.15f, 0.3f);
                     }
                     else {
-                        UI::AddSystemLog(TextFormat(DataManager::uiStrings["LOG_DMG_DEALT"].c_str(), e.data.name.c_str(), dmg), ORANGE);
+                        UI::AddSystemLog(TextFormat(DataManager::uiStrings["LOG_DMG_DEALT"].c_str(), e.data.name.c_str(), dmgRes.damage), ORANGE);
                     }
 
                     proj.active = false;
@@ -224,14 +257,21 @@ void EffectManager::CheckProjectileCollisions(std::vector<Enemy>& enemies, Playe
                 }
             }
         }
+        // ---------------------------------------------------------------------
+        // 2. 敵の弾丸がプレイヤーに命中した時（新・漸近防御減衰式）
+        // ---------------------------------------------------------------------
         else {
             float distXZ = Vector2Distance({ proj.pos.x, proj.pos.z }, { p.position.x, p.position.z });
             float distY = fabsf(proj.pos.y - (p.position.y + 0.6f));
 
             if (distXZ < (proj.radius + p.radius + 0.25f) && distY < 0.95f) {
-                // ★ 敵の弾丸威力の適用（レベルスケール値）
                 float rawDmg = (proj.damage > 0.0f) ? proj.damage : ((proj.type == 2) ? 18.0f : 15.0f);
-                float defDmg = fmaxf(2.0f, rawDmg - p.defense);
+
+                // ★ プレイヤーの漸近防御減衰式: 軽減率 = 防御 / (防御 + 100 + Lv*5)
+                float pDef = p.defense;
+                if (pDef < 0.0f) pDef = 0.0f;
+                float defMitigation = pDef / (pDef + 100.0f + (float)p.level * 5.0f);
+                float postArmorDamage = rawDmg * (1.0f - defMitigation);
 
                 int projElem = proj.element;
                 if (projElem == ELEM_NONE) {
@@ -239,7 +279,7 @@ void EffectManager::CheckProjectileCollisions(std::vector<Enemy>& enemies, Playe
                 }
 
                 float resist = p.GetPlayerElementResistance(projElem);
-                float finalDmg = fmaxf(2.0f, defDmg * (1.0f - resist));
+                float finalDmg = fmaxf(2.0f, postArmorDamage * (1.0f - resist));
 
                 p.hp -= finalDmg;
 
@@ -257,7 +297,7 @@ void EffectManager::CheckProjectileCollisions(std::vector<Enemy>& enemies, Playe
                     UI::AddSystemLog(TextFormat(hitFmt.c_str(), (int)finalDmg), RED);
                 }
 
-                // ★ 敵の属性弾によるプレイヤーへの状態異常付与 ＆ 耐性モディファイア判定
+                // 敵の属性弾によるプレイヤー状態異常付与 ＆ 耐性モディファイア判定
                 if (projElem != ELEM_NONE && GetRandomValue(1, 100) <= 35) {
                     if (p.HasStatusImmunity(projElem)) {
                         std::string immFmt = DataManager::uiStrings.count("LOG_STATUS_IMMUNE") ? DataManager::uiStrings["LOG_STATUS_IMMUNE"] : "★ STATUS IMMUNED! ★";
