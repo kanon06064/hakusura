@@ -8,10 +8,6 @@
 #include "imgui.h"
 #include <string>
 
-// =============================================================================
-// デバッグメニュー用：完全英数字変換ヘルパー（文字化け完全防止）
-// =============================================================================
-
 static std::string GetEngModifierName(int modId) {
     switch (modId) {
     case 1: return "Broken";
@@ -27,6 +23,11 @@ static std::string GetEngModifierName(int modId) {
     case 13: return "Heavy";
     case 14: return "Godspeed";
     case 15: return "Arcana";
+    case 16: return "Fireproof";
+    case 17: return "Pure";
+    case 18: return "Warm";
+    case 19: return "Cursebreak";
+    case 20: return "Innocent";
     default: return "";
     }
 }
@@ -69,16 +70,11 @@ static std::string GetEngFullItemName(const ItemData& item) {
 
     std::string modStr = GetEngModifierName(item.modifierId);
     if (!modStr.empty()) fullName += "[" + modStr + "] ";
-
     if (item.element != 0) fullName += "<" + GetEngElementName(item.element) + "> ";
-
     fullName += GetEngItemBaseName(item);
     return fullName;
 }
 
-// =============================================================================
-// デバッグメニュー本体
-// =============================================================================
 void DebugMenu::Draw(Game* game) {
     if (!game) return;
 
@@ -88,10 +84,6 @@ void DebugMenu::Draw(Game* game) {
         ImGui::Separator();
 
         if (ImGui::BeginTabBar("DebugTabs")) {
-
-            // =================================================================
-            // タブ1: プレイヤー・ステータス操作
-            // =================================================================
             if (ImGui::BeginTabItem("Player / Stats")) {
                 Player* p = game->player;
                 if (p) {
@@ -143,9 +135,6 @@ void DebugMenu::Draw(Game* game) {
                 ImGui::EndTabItem();
             }
 
-            // =================================================================
-            // タブ2: ダンジョン進行・フロア操作
-            // =================================================================
             if (ImGui::BeginTabItem("Dungeon / Floor")) {
                 ImGui::Text("Current Dungeon: %d  |  Current Floor: %d", game->currentDungeonId, game->floor);
                 ImGui::Text("Boss Defeated: %s", game->bossDefeated ? "YES" : "NO");
@@ -170,9 +159,6 @@ void DebugMenu::Draw(Game* game) {
                 ImGui::EndTabItem();
             }
 
-            // =================================================================
-            // タブ3: 戦闘・敵の操作（完全英名表示）
-            // =================================================================
             if (ImGui::BeginTabItem("Enemies / Combat")) {
                 ImGui::Text("Enemies Count: %d", (int)game->enemies.size());
 
@@ -208,33 +194,27 @@ void DebugMenu::Draw(Game* game) {
                 ImGui::EndTabItem();
             }
 
-            // =================================================================
-            // タブ4: アイテム生成（完全英名表示）
-            // =================================================================
             if (ImGui::BeginTabItem("Item Spawner")) {
                 static int selectElem = 0;
-                static int selectMod = 0;
                 const char* elemNames[] = { "None", "Hellfire", "Rot", "Soul", "Abyss" };
                 const char* modOptions[] = {
                     "None(0)", "Broken(1)", "Crude(2)", "Dull(3)", "Sharp(4)", "Strong(5)",
                     "Master(6)", "Legendary(7)", "Hard(10)", "Guarded(11)", "Swift(12)",
-                    "Heavy(13)", "Godspeed(14)", "Arcana(15)"
+                    "Heavy(13)", "Godspeed(14)", "Arcana(15)", "Fireproof(16)", "Pure(17)",
+                    "Warm(18)", "Cursebreak(19)", "Innocent(20)"
                 };
-                static int modValues[] = { 0, 1, 2, 3, 4, 5, 6, 7, 10, 11, 12, 13, 14, 15 };
+                static int modValues[] = { 0, 1, 2, 3, 4, 5, 6, 7, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20 };
                 static int modComboIdx = 0;
 
                 ImGui::TextColored(ImVec4(1, 1, 0, 1), "Spawn Config for Equipments:");
                 ImGui::Combo("Element", &selectElem, elemNames, 5);
-                if (ImGui::Combo("Modifier", &modComboIdx, modOptions, 14)) {
-                    selectMod = modValues[modComboIdx];
-                }
+                ImGui::Combo("Modifier", &modComboIdx, modOptions, 19);
+                int selectMod = modValues[modComboIdx];
 
                 ImGui::Separator();
                 ImGui::BeginChild("ItemSpawnList", ImVec2(0, 300), true);
                 for (auto& cfg : DataManager::itemConfigs) {
                     ImGui::PushID(cfg.id);
-
-                    // 英語のアイテムベース名を表示（文字化け完全防止）
                     std::string engItemName = GetEngItemBaseName(cfg);
                     ImGui::Text("[%s] ID:%d %s", cfg.type.c_str(), cfg.id, engItemName.c_str());
 
@@ -255,15 +235,10 @@ void DebugMenu::Draw(Game* game) {
                 ImGui::EndTabItem();
             }
 
-            // =================================================================
-            // タブ5: 鍛冶・エンチャント・リフォージ（完全英名表示）
-            // =================================================================
             if (ImGui::BeginTabItem("Reforge & Enchant")) {
                 Player* p = game->player;
                 if (p) {
                     ItemData& curWpn = p->equippedData[p->activeSlot];
-
-                    // 英語で現在の武器名・属性・モディファイアを表示
                     std::string curWpnName = GetEngFullItemName(curWpn);
                     ImGui::TextColored(ImVec4(1, 0.8f, 0, 1), "Active Weapon Slot: %d", p->activeSlot + 1);
                     ImGui::Text("Name: %s", curWpnName.c_str());
@@ -277,12 +252,10 @@ void DebugMenu::Draw(Game* game) {
                         ImGui::Spacing();
                         ImGui::Separator();
 
-                        // 1. ワンクリックモディファイアリフォージ
                         if (ImGui::Button("Random Reforge (Modifier)", ImVec2(220, 32))) {
                             curWpn.modifierId = DataManager::GetRandomModifierId();
                         }
 
-                        // 2. ワンクリック属性エンチャント
                         ImGui::Spacing();
                         ImGui::TextColored(ImVec4(0.4f, 0.8f, 1, 1), "Instant Element Enchant:");
                         if (ImGui::Button("Enchant: Hellfire")) { curWpn.element = ELEM_HELLFIRE; }
@@ -302,9 +275,6 @@ void DebugMenu::Draw(Game* game) {
                 ImGui::EndTabItem();
             }
 
-            // =================================================================
-            // タブ6: 武器オフセット微調整 (Tweaker)
-            // =================================================================
             if (ImGui::BeginTabItem("Weapon Tweaker")) {
                 ImGui::TextColored(ImVec4(1, 0.5f, 0, 1), "Adjust in-hand weapon transform:");
                 ImGui::DragFloat("Scale (Size)", &Player::customWeaponScale, 0.01f, 0.01f, 100.0f);

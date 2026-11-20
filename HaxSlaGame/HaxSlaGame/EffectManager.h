@@ -50,7 +50,6 @@ public:
     void Draw();
     void Draw2D(Font font, Camera3D cam);
 
-    // ★ 弾丸に威力和属性の引数を追加（デフォルト引数付き）
     void SpawnProjectile(Vector3 pos, Vector3 dir, float speed, int type, bool isPlayer, float damage = 15.0f, int element = ELEM_NONE);
     void SpawnEffect(Vector3 pos, Vector3 dir, EffectType type, Color col, float scale = 1.0f);
     void SpawnDamageText(Vector3 pos, int dmg, bool isCrit = false);

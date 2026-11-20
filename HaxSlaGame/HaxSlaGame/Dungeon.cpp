@@ -11,6 +11,8 @@ Vector3 Room::GetCenter() const { return { (float)x * TILE_SIZE + (float)width *
 Dungeon::Dungeon() {
     map.resize(MAX_MAP_WIDTH, std::vector<int>(MAX_MAP_HEIGHT, 2));
     discovered.resize(MAX_MAP_WIDTH, std::vector<bool>(MAX_MAP_HEIGHT, false));
+    lastVisGridX = -9999;
+    lastVisGridZ = -9999;
     Generate(true, 0, 0, 0);
 }
 
@@ -26,7 +28,9 @@ void Dungeon::Generate(bool homeMode, int floor, int dungeonId, int unlockedDung
     isHome = homeMode;
     rooms.clear();
     treasureSpots.clear();
-    gatherSpots.clear(); // ★ 採取スポットのリセット
+    gatherSpots.clear();
+    lastVisGridX = -9999;
+    lastVisGridZ = -9999;
 
     stairsDownPos = { -999,-999,-999 }; stairsUpPos = { -999,-999,-999 };
     storageBoxPos = { -999,-999,-999 }; portalPos = { -999,-999,-999 };
@@ -124,10 +128,9 @@ void Dungeon::GenerateRestFloor() {
     stairsUpPos = r1.GetCenter(); stairsUpPos.y = 0.0f; portalPos = Vector3Add(stairsUpPos, { 3,0,0 });
     healStationPos = r2.GetCenter(); stairsDownPos = r3.GetCenter(); stairsDownPos.y = 0.0f;
 
-    // ★ 休憩階に安全な採取スポット（魔水晶・大）を1箇所配置
     GatherSpot gs;
     gs.pos = Vector3Add(healStationPos, { 3.0f, 0.0f, 0.0f });
-    gs.materialItemId = 17; // 魔水晶
+    gs.materialItemId = 17;
     gs.count = GetRandomValue(2, 3);
     gs.color = PURPLE;
     gs.gathered = false;
@@ -150,29 +153,62 @@ void Dungeon::GenerateNormalFloor(int floor) {
     if (floor > 10) ex += (floor - 10) / 5;
 
     int tR = 4 + ex; if (tR > 20) tR = 20;
-    while ((int)typeQueue.size() < tR) { int r = GetRandomValue(0, 100); if (r < 30)typeQueue.push_back(RT_SMALL); else if (r < 60)typeQueue.push_back(RT_NORMAL); else if (r < 80)typeQueue.push_back(RT_LARGE); else typeQueue.push_back(RT_TREASURE); }
+    while ((int)typeQueue.size() < tR) {
+        int r = GetRandomValue(0, 100);
+        if (r < 30) typeQueue.push_back(RT_SMALL);
+        else if (r < 60) typeQueue.push_back(RT_NORMAL);
+        else if (r < 80) typeQueue.push_back(RT_LARGE);
+        else typeQueue.push_back(RT_TREASURE);
+    }
 
     for (auto t : typeQueue) {
-        int w, h; switch (t) { case RT_SMALL:w = GetRandomValue(4, 6); h = w; break; case RT_NORMAL:w = GetRandomValue(7, 9); h = w; break; case RT_LARGE:w = GetRandomValue(12, 16); h = w; break; case RT_TREASURE:w = 4; h = 4; break; default:w = 5; h = 5; break; }
-                                            for (int k = 0; k < 50; k++) {
-                                                int x = GetRandomValue(1, currentWidth - w - 1); int y = GetRandomValue(1, currentHeight - h - 1);
-                                                bool ov = false; for (auto& r : rooms) if (x<r.x + r.width + 2 && x + w + 2>r.x && y<r.y + r.height + 2 && y + h + 2>r.y) { ov = true; break; }
-                                                if (!ov) {
-                                                    rooms.push_back({ x,y,w,h,t }); for (int ry = y; ry < y + h; ry++)for (int rx = x; rx < x + w; rx++)map[rx][ry] = 0;
-                                                    if (rooms.size() > 1) { Room& p = rooms[rooms.size() - 2]; DigCorridor(p.x + p.width / 2, p.y + p.height / 2, x + w / 2, y + h / 2); }
-                                                    if (t == RT_TREASURE) treasureSpots.push_back({ (float)(x * TILE_SIZE + w * TILE_SIZE / 2),0.5f,(float)(y * TILE_SIZE + h * TILE_SIZE / 2) });
-                                                    break;
-                                                }
-                                            }
+        int w, h;
+        switch (t) {
+        case RT_SMALL: w = GetRandomValue(4, 6); h = w; break;
+        case RT_NORMAL: w = GetRandomValue(7, 9); h = w; break;
+        case RT_LARGE: w = GetRandomValue(12, 16); h = w; break;
+        case RT_TREASURE: w = 4; h = 4; break;
+        default: w = 5; h = 5; break;
+        }
+
+        for (int k = 0; k < 50; k++) {
+            int x = GetRandomValue(1, currentWidth - w - 1);
+            int y = GetRandomValue(1, currentHeight - h - 1);
+            bool ov = false;
+            for (auto& r : rooms) {
+                if (x < r.x + r.width + 2 && x + w + 2 > r.x && y < r.y + r.height + 2 && y + h + 2 > r.y) {
+                    ov = true;
+                    break;
+                }
+            }
+            if (!ov) {
+                rooms.push_back({ x,y,w,h,t });
+                for (int ry = y; ry < y + h; ry++) {
+                    for (int rx = x; rx < x + w; rx++) map[rx][ry] = 0;
+                }
+                if (rooms.size() > 1) {
+                    Room& p = rooms[rooms.size() - 2];
+                    DigCorridor(p.x + p.width / 2, p.y + p.height / 2, x + w / 2, y + h / 2);
+                }
+                if (t == RT_TREASURE) {
+                    treasureSpots.push_back({ (float)(x * TILE_SIZE + w * TILE_SIZE / 2), 0.5f, (float)(y * TILE_SIZE + h * TILE_SIZE / 2) });
+                }
+                break;
+            }
+        }
     }
-    std::vector<int> v; for (int i = 0; i < (int)rooms.size(); i++) if (rooms[i].type != RT_TREASURE) v.push_back(i);
-    if (v.size() < 2) { v.clear(); for (int i = 0; i < (int)rooms.size(); i++)v.push_back(i); }
+
+    std::vector<int> v;
+    for (int i = 0; i < (int)rooms.size(); i++) if (rooms[i].type != RT_TREASURE) v.push_back(i);
+    if (v.size() < 2) {
+        v.clear();
+        for (int i = 0; i < (int)rooms.size(); i++) v.push_back(i);
+    }
     if (v.size() >= 1) {
         stairsUpPos = rooms[v[0]].GetCenter(); stairsUpPos.y = 0.0f;
         stairsDownPos = rooms[v.size() > 1 ? v.back() : v[0]].GetCenter(); stairsDownPos.y = 0.0f;
     }
 
-    // ★ 通常フロア内に2〜4箇所の素材採取スポット（魔水晶・鉱石・薬草結晶）を自動生成
     int gatherCount = GetRandomValue(2, 4);
     for (int i = 0; i < gatherCount && i < (int)rooms.size(); i++) {
         Room& r = rooms[i];
@@ -182,7 +218,6 @@ void Dungeon::GenerateNormalFloor(int floor) {
         int gy = GetRandomValue(r.y + 1, r.y + r.height - 2);
         Vector3 gPos = { (float)gx * TILE_SIZE, 0.0f, (float)gy * TILE_SIZE };
 
-        // 階段や宝箱から一定距離離れているかチェック
         if (Vector3Distance(gPos, stairsUpPos) < 4.0f) continue;
         if (stairsDownPos.x != -999 && Vector3Distance(gPos, stairsDownPos) < 4.0f) continue;
 
@@ -190,14 +225,13 @@ void Dungeon::GenerateNormalFloor(int floor) {
         spot.pos = gPos;
         spot.gathered = false;
 
-        // 採取アイテムの抽選（50%魔水晶, 50%クラフト素材）
         if (GetRandomValue(1, 100) <= 50) {
-            spot.materialItemId = 17; // 魔水晶
+            spot.materialItemId = 17;
             spot.count = GetRandomValue(1, 2);
             spot.color = PURPLE;
         }
         else {
-            spot.materialItemId = GetRandomValue(10, 16); // 鉄鉱石、木材、薬草など
+            spot.materialItemId = GetRandomValue(10, 16);
             spot.count = GetRandomValue(2, 4);
             spot.color = (spot.materialItemId % 2 == 0) ? SKYBLUE : LIME;
         }
@@ -247,11 +281,18 @@ void Dungeon::CastVisibilityRay(int x0, int y0, int x1, int y1) {
     }
 }
 
-void Dungeon::UpdateVisibility(Vector3 p) {
+void Dungeon::UpdateVisibility(Vector3 p, bool forceUpdate) {
     if (isHome) return;
 
     int gx = (int)floorf((p.x + TILE_SIZE / 2.0f) / TILE_SIZE);
     int gz = (int)floorf((p.z + TILE_SIZE / 2.0f) / TILE_SIZE);
+
+    if (!forceUpdate && gx == lastVisGridX && gz == lastVisGridZ) {
+        return;
+    }
+
+    lastVisGridX = gx;
+    lastVisGridZ = gz;
 
     const int R = 6;
 
@@ -265,30 +306,142 @@ void Dungeon::UpdateVisibility(Vector3 p) {
     }
 }
 
+// =============================================================================
+// ダンジョン描画（下り階段深く沈下・上り階段上昇・余分な外郭床ゼロ）
+// =============================================================================
 void Dungeon::Draw(bool showExit) {
-    for (int y = 0; y < currentHeight; y++) for (int x = 0; x < currentWidth; x++) {
-        if (!discovered[x][y]) continue;
-        if (map[x][y] == 2) continue;
-        Vector3 pos = { (float)x * TILE_SIZE, 0.0f, (float)y * TILE_SIZE };
+    bool hasWallModel = (DataManager::loadedModels.count("Dungeon_Wall") > 0);
+    bool hasFloorModel = (DataManager::loadedModels.count("Dungeon_Floor") > 0);
 
-        if (map[x][y] == 1) {
-            DrawCube(pos, TILE_SIZE, 2.0f, TILE_SIZE, GRAY);
+    const float halfTile = TILE_SIZE * 0.5f; // 1.0f
+
+    for (int y = 0; y < currentHeight; y++) {
+        for (int x = 0; x < currentWidth; x++) {
+            if (!discovered[x][y]) continue;
+            if (map[x][y] == 2) continue;
+            Vector3 pos = { (float)x * TILE_SIZE, 0.0f, (float)y * TILE_SIZE };
+
+            // -----------------------------------------------------------------
+            // 1. 床板（Floor）の描画：
+            // 床マス（map == 0）にのみ敷く！
+            // ★ 下り階段（穴）のマスのみ床をくり抜き、上り階段の足元には床を敷く
+            // -----------------------------------------------------------------
+            if (map[x][y] == 0) {
+                bool drawFloor = true;
+                if (showExit && stairsDownPos.x != -999 && fabs(pos.x - stairsDownPos.x) < 0.1f && fabs(pos.z - stairsDownPos.z) < 0.1f) drawFloor = false;
+                if (isHome) {
+                    for (int i = 0; i < 3; i++) {
+                        if (dungeonEntrances[i].x != -999 && fabs(pos.x - dungeonEntrances[i].x) < 0.1f && fabs(pos.z - dungeonEntrances[i].z) < 0.1f) {
+                            drawFloor = false;
+                        }
+                    }
+                }
+
+                if (drawFloor) {
+                    if (hasFloorModel) {
+                        Color tintCol = Color{ 220, 225, 235, 255 };
+                        if (currentDungeonId == 1) tintCol = Color{ 235, 210, 205, 255 };
+                        else if (currentDungeonId == 2) tintCol = Color{ 210, 200, 235, 255 };
+                        DrawModel(DataManager::loadedModels["Dungeon_Floor"].model, pos, 1.0f, tintCol);
+                    }
+                    else {
+                        Color floorCol = isHome ? DARKBLUE : (currentDungeonId == 1 ? MAROON : (currentDungeonId == 2 ? DARKPURPLE : DARKGREEN));
+                        DrawPlane(pos, { TILE_SIZE, TILE_SIZE }, floorCol);
+                    }
+                }
+            }
+
+            // -----------------------------------------------------------------
+            // 2. 壁マス（map == 1）の描画：床との境界線に壁を配置
+            // -----------------------------------------------------------------
+            if (map[x][y] == 1) {
+                if (hasWallModel) {
+                    bool floorSouth = (y + 1 < currentHeight && map[x][y + 1] == 0); // 南（手前、Z+）
+                    bool floorNorth = (y - 1 >= 0 && map[x][y - 1] == 0);           // 北（奥、Z-）
+                    bool floorEast = (x + 1 < currentWidth && map[x + 1][y] == 0);   // 東（右、X+）
+                    bool floorWest = (x - 1 >= 0 && map[x - 1][y] == 0);           // 西（左、X-）
+
+                    if (floorSouth) {
+                        Vector3 wallPos = { pos.x, 0.0f, pos.z + halfTile };
+                        DrawModelEx(DataManager::loadedModels["Dungeon_Wall"].model, wallPos, { 0, 1, 0 }, 0.0f, { 1.0f, 1.0f, 1.0f }, WHITE);
+                    }
+                    if (floorNorth) {
+                        Vector3 wallPos = { pos.x, 0.0f, pos.z - halfTile };
+                        DrawModelEx(DataManager::loadedModels["Dungeon_Wall"].model, wallPos, { 0, 1, 0 }, 180.0f, { 1.0f, 1.0f, 1.0f }, WHITE);
+                    }
+                    if (floorEast) {
+                        Vector3 wallPos = { pos.x + halfTile, 0.0f, pos.z };
+                        DrawModelEx(DataManager::loadedModels["Dungeon_Wall"].model, wallPos, { 0, 1, 0 }, 90.0f, { 1.0f, 1.0f, 1.0f }, WHITE);
+                    }
+                    if (floorWest) {
+                        Vector3 wallPos = { pos.x - halfTile, 0.0f, pos.z };
+                        DrawModelEx(DataManager::loadedModels["Dungeon_Wall"].model, wallPos, { 0, 1, 0 }, 270.0f, { 1.0f, 1.0f, 1.0f }, WHITE);
+                    }
+                }
+                else {
+                    DrawCube(pos, TILE_SIZE, 2.0f, TILE_SIZE, GRAY);
+                }
+            }
+        }
+    }
+
+    // =========================================================================
+    // 施設・階段・宝箱の描画
+    // =========================================================================
+
+    // ★ 1. 下り階段（ダンジョン内）：最上段が床穴の縁と完全に一致するよう深く下げる（-0.55m）
+    if (showExit && stairsDownPos.x != -999 && IsDiscovered(stairsDownPos.x, stairsDownPos.z)) {
+        if (DataManager::loadedModels.count("Obj_StairsDown") > 0) {
+            Vector3 sPos = stairsDownPos;
+            sPos.y = -0.55f;
+            DrawModelEx(DataManager::loadedModels["Obj_StairsDown"].model, sPos, { 0, 1, 0 }, 180.0f, { 1.0f, 1.0f, 1.0f }, WHITE);
         }
         else {
-            bool drawFloor = true;
-            if (showExit && stairsDownPos.x != -999 && fabs(pos.x - stairsDownPos.x) < 0.1f && fabs(pos.z - stairsDownPos.z) < 0.1f) drawFloor = false;
-            if (stairsUpPos.x != -999 && fabs(pos.x - stairsUpPos.x) < 0.1f && fabs(pos.z - stairsUpPos.z) < 0.1f) drawFloor = false;
-            for (int i = 0; i < 3; i++) {
-                if (dungeonEntrances[i].x != -999 && fabs(pos.x - dungeonEntrances[i].x) < 0.1f && fabs(pos.z - dungeonEntrances[i].z) < 0.1f) drawFloor = false;
-            }
+            DrawCube(stairsDownPos, 1.2f, 0.1f, 1.2f, GOLD);
+        }
+    }
 
-            if (drawFloor) {
-                Color floorCol = DARKGREEN;
-                if (isHome) floorCol = DARKBLUE;
-                else if (currentDungeonId == 1) floorCol = MAROON;
-                else if (currentDungeonId == 2) floorCol = DARKPURPLE;
-                DrawPlane(pos, { TILE_SIZE, TILE_SIZE }, floorCol);
+    // ★ 2. 上り階段（拠点へ帰還・上層へ戻る階段）：地上から上空へ登っていくよう Y軸をグッと上げる（+0.85m）
+    if (stairsUpPos.x != -999 && IsDiscovered(stairsUpPos.x, stairsUpPos.z)) {
+        if (DataManager::loadedModels.count("Obj_StairsDown") > 0) {
+            Vector3 sPos = stairsUpPos;
+            sPos.y = 0.85f; // 床の上に階段全体がそびえ立つ高さ
+            DrawModelEx(DataManager::loadedModels["Obj_StairsDown"].model, sPos, { 0, 1, 0 }, 0.0f, { 1.0f, 1.0f, 1.0f }, Color{ 180, 220, 255, 255 });
+        }
+        else {
+            DrawCube(stairsUpPos, 1.2f, 0.1f, 1.2f, SKYBLUE);
+        }
+    }
+
+    // ★ 3. ホーム拠点の3つのダンジョン入口階段（下り階段）：穴の縁とツライチになるよう深く下げる（-0.55m）
+    if (isHome) {
+        for (int i = 0; i < 3; i++) {
+            if (dungeonEntrances[i].x != -999 && IsDiscovered(dungeonEntrances[i].x, dungeonEntrances[i].z)) {
+                Color tint = Color{ 245, 245, 250, 255 };
+                if (i == 1) tint = Color{ 255, 160, 160, 255 }; // 灼熱
+                if (i == 2) tint = Color{ 210, 160, 255, 255 }; // 深淵
+
+                if (DataManager::loadedModels.count("Obj_StairsDown") > 0) {
+                    Vector3 ePos = dungeonEntrances[i];
+                    ePos.y = -0.55f; // 最上段が穴のフチと完全にピタッと一致！
+                    DrawModelEx(DataManager::loadedModels["Obj_StairsDown"].model, ePos, { 0, 1, 0 }, 0.0f, { 1.0f, 1.0f, 1.0f }, tint);
+                }
+                else {
+                    DrawCube(dungeonEntrances[i], 1.2f, 0.1f, 1.2f, tint);
+                }
             }
+        }
+    }
+
+    // 倉庫の宝箱（地面にぴったり接地）
+    if (isHome && storageBoxPos.x != -999) {
+        if (DataManager::loadedModels.count("Obj_Storage") > 0) {
+            Vector3 cPos = storageBoxPos;
+            cPos.y = 0.0f;
+            DrawModelEx(DataManager::loadedModels["Obj_Storage"].model, cPos, { 0, 1, 0 }, 0.0f, { 1.2f, 1.2f, 1.2f }, Color{ 200, 160, 110, 255 });
+        }
+        else {
+            DrawCube(storageBoxPos, 1.2f, 1.2f, 1.2f, BROWN);
         }
     }
 
@@ -300,23 +453,6 @@ void Dungeon::Draw(bool showExit) {
         return false;
         };
 
-    if (showExit && stairsDownPos.x != -999 && IsDiscovered(stairsDownPos.x, stairsDownPos.z)) {
-        if (!drawEnvTint("Obj_StairsDown", stairsDownPos, WHITE)) DrawCube(stairsDownPos, 1.2f, 0.1f, 1.2f, GOLD);
-    }
-    if (stairsUpPos.x != -999 && IsDiscovered(stairsUpPos.x, stairsUpPos.z)) {
-        if (!drawEnvTint("Obj_StairsUp", stairsUpPos, WHITE)) DrawCube(stairsUpPos, 1.2f, 0.1f, 1.2f, SKYBLUE);
-    }
-    if (isHome) {
-        for (int i = 0; i < 3; i++) {
-            if (dungeonEntrances[i].x != -999 && IsDiscovered(dungeonEntrances[i].x, dungeonEntrances[i].z)) {
-                Color tint = WHITE; if (i == 1) tint = RED; if (i == 2) tint = PURPLE;
-                if (!drawEnvTint("Obj_StairsDown", dungeonEntrances[i], tint)) DrawCube(dungeonEntrances[i], 1.2f, 0.1f, 1.2f, tint);
-            }
-        }
-    }
-    if (isHome && storageBoxPos.x != -999) {
-        if (!drawEnvTint("Obj_Storage", storageBoxPos, WHITE)) { DrawCube(storageBoxPos, 1.2f, 1.2f, 1.2f, BROWN); }
-    }
     if (isHome && reforgeStationPos.x != -999) {
         if (!drawEnvTint("Obj_Reforge", reforgeStationPos, WHITE)) { DrawCube(reforgeStationPos, 1.2f, 1.2f, 1.2f, PURPLE); }
     }
@@ -354,9 +490,6 @@ void Dungeon::Draw(bool showExit) {
         if (!drawEnvTint("Obj_QuestBoard", questBoardPos, WHITE)) { DrawCube(questBoardPos, 2.0f, 2.0f, 0.2f, BEIGE); }
     }
 
-    // =========================================================================
-    // ★ 素材採取スポット（鉱石・魔水晶結晶）の3D描画
-    // =========================================================================
     float curTime = (float)GetTime();
     for (const auto& spot : gatherSpots) {
         if (!IsDiscovered(spot.pos.x, spot.pos.z)) continue;
@@ -366,18 +499,15 @@ void Dungeon::Draw(bool showExit) {
             float pulse = sinf(curTime * 3.5f) * 0.1f;
             cPos.y = 0.35f + pulse;
 
-            // 1. 光り輝く多面体クリスタル結晶（中央）
             DrawCylinder(cPos, 0.05f, 0.35f, 0.7f, 6, Fade(spot.color, 0.85f));
             DrawCylinderWires(cPos, 0.05f, 0.35f, 0.7f, 6, Fade(WHITE, 0.95f));
 
-            // 2. 地面に広がる魔法の光輪オーラ
             Vector3 auraBase = { spot.pos.x, 0.06f, spot.pos.z };
             float ringR = 0.75f + pulse * 0.5f;
             DrawCylinderWires(auraBase, ringR, ringR, 0.02f, 16, Fade(spot.color, 0.8f));
             DrawCylinder(auraBase, ringR * 0.7f, ringR * 0.7f, 0.01f, 16, Fade(spot.color, 0.25f));
         }
         else {
-            // 採取後の残骸（小さく崩れた岩）
             cPos.y = 0.1f;
             DrawCube(cPos, 0.4f, 0.15f, 0.4f, DARKGRAY);
             DrawCubeWires(cPos, 0.4f, 0.15f, 0.4f, BLACK);
@@ -398,6 +528,8 @@ bool Dungeon::CheckCollisionRadius(Vector3 p, float r) {
     int minZ = (int)floorf((p.z - r + TILE_SIZE / 2) / TILE_SIZE);
     int maxZ = (int)floorf((p.z + r + TILE_SIZE / 2) / TILE_SIZE);
 
+    float rSq = r * r;
+
     for (int z = minZ; z <= maxZ; z++) {
         for (int x = minX; x <= maxX; x++) {
             if (x < 0 || x >= currentWidth || z < 0 || z >= currentHeight || map[x][z] != 0) {
@@ -405,28 +537,45 @@ bool Dungeon::CheckCollisionRadius(Vector3 p, float r) {
                 float closestX = fmaxf(cx - halfT, fminf(p.x, cx + halfT));
                 float closestZ = fmaxf(cz - halfT, fminf(p.z, cz + halfT));
                 float dx = p.x - closestX; float dz = p.z - closestZ;
-                if (dx * dx + dz * dz < r * r) return true;
+                if (dx * dx + dz * dz < rSq) return true;
             }
         }
     }
     return false;
 }
 
-bool Dungeon::HasLineOfSight(Vector3 s, Vector3 e) { float d = Vector3Distance(s, e); Vector3 dir = Vector3Normalize(Vector3Subtract(e, s)); for (float t = 0.5f; t < d; t += 0.5f) { Vector3 p = Vector3Add(s, Vector3Scale(dir, t)); if (IsWall(p.x, p.z))return false; }return true; }
-bool Dungeon::IsDiscovered(float x, float z) { int gx = (int)floorf((x + TILE_SIZE / 2) / TILE_SIZE); int gz = (int)floorf((z + TILE_SIZE / 2) / TILE_SIZE); return (gx >= 0 && gx < currentWidth && gz >= 0 && gz < currentHeight) ? discovered[gx][gz] : false; }
-Vector3 Dungeon::GetStartPosition() { if (stairsUpPos.x != -999)return stairsUpPos; return rooms.empty() ? Vector3{ 0,0,0 } : rooms[0].GetCenter(); }
+bool Dungeon::HasLineOfSight(Vector3 s, Vector3 e) {
+    float d = Vector3Distance(s, e);
+    Vector3 dir = Vector3Normalize(Vector3Subtract(e, s));
+    for (float t = 0.5f; t < d; t += 0.5f) {
+        Vector3 p = Vector3Add(s, Vector3Scale(dir, t));
+        if (IsWall(p.x, p.z)) return false;
+    }
+    return true;
+}
+
+bool Dungeon::IsDiscovered(float x, float z) {
+    int gx = (int)floorf((x + TILE_SIZE / 2) / TILE_SIZE);
+    int gz = (int)floorf((z + TILE_SIZE / 2) / TILE_SIZE);
+    return (gx >= 0 && gx < currentWidth && gz >= 0 && gz < currentHeight) ? discovered[gx][gz] : false;
+}
+
+Vector3 Dungeon::GetStartPosition() {
+    if (stairsUpPos.x != -999) return stairsUpPos;
+    return rooms.empty() ? Vector3{ 0,0,0 } : rooms[0].GetCenter();
+}
 
 Vector3 Dungeon::GetRandomFloorPos() {
     for (int i = 0; i < 50; i++) {
         int r = GetRandomValue(0, (int)rooms.size() - 1);
-        if (rooms[r].type == RT_TREASURE || rooms[r].type == RT_HEAL || rooms[r].type == RT_BOSS)continue;
+        if (rooms[r].type == RT_TREASURE || rooms[r].type == RT_HEAL || rooms[r].type == RT_BOSS) continue;
 
         int tx = GetRandomValue(rooms[r].x + 1, rooms[r].x + rooms[r].width - 2);
         int ty = GetRandomValue(rooms[r].y + 1, rooms[r].y + rooms[r].height - 2);
         Vector3 c = { (float)tx * TILE_SIZE + TILE_SIZE / 2.0f, 0.5f, (float)ty * TILE_SIZE + TILE_SIZE / 2.0f };
 
-        if (stairsUpPos.x != -999 && Vector3Distance(c, stairsUpPos) < 8.0f)continue;
-        if (stairsDownPos.x != -999 && Vector3Distance(c, stairsDownPos) < 5.0f)continue;
+        if (stairsUpPos.x != -999 && Vector3Distance(c, stairsUpPos) < 8.0f) continue;
+        if (stairsDownPos.x != -999 && Vector3Distance(c, stairsDownPos) < 5.0f) continue;
 
         if (!IsWall(c.x, c.z)) return c;
     }

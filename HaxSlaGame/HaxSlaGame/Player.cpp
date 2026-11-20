@@ -6,6 +6,7 @@
 #include "AudioManager.h"
 #include "UI.h" 
 #include "raymath.h"
+#include "rlgl.h"
 #include <math.h>
 #include <algorithm>
 #include <string>
@@ -28,12 +29,10 @@ static Matrix GetPlayerBoneGlobalMatrix(Model model, ModelAnimation anim, int fr
 	if (frame >= anim.frameCount) frame = anim.frameCount - 1;
 
 	Transform b = anim.framePoses[frame][boneIndex];
-
 	Matrix mat = MatrixMultiply(
 		QuaternionToMatrix(b.rotation),
 		MatrixTranslate(b.translation.x, b.translation.y, b.translation.z)
 	);
-
 	return mat;
 }
 
@@ -67,20 +66,47 @@ expToNext(100), skillPoints(0), gold(0)
 	hasUndyingWill = false;
 	undyingTimer = 0.0f;
 	undyingUsed = false;
+	shadowstepCritBuffTimer = 0.0f;
 
-	dashTimer = 0; dashCooldownTimer = 0;
-	smashCooldownTimer = 0;
-	stealthTimer = 0; stealthCooldownTimer = 0;
-	kongoTimer = 0; kongoCooldownTimer = 0;
-	zoukyouTimer = 0; zoukyouCooldownTimer = 0;
-	healCooldownTimer = 0;
-	cooldownReduction = 0; healBonus = 0;
+	dashTimer = 0.0f;
+	dashCooldownTimer = 0.0f;
+	stealthTimer = 0.0f;
+	kongoTimer = 0.0f;
+	zoukyouTimer = 0.0f;
+	cooldownReduction = 0.0f;
+	healBonus = 0.0f;
 	isStealth = false;
+
+	smashCooldownTimer = 0.0f;
+	kongoCooldownTimer = 0.0f;
+	zoukyouCooldownTimer = 0.0f;
+	stealthCooldownTimer = 0.0f;
+	healCooldownTimer = 0.0f;
 
 	isChargingSmash = false;
 	smashChargeTimer = 0.0f;
 	smashChargeMax = 0.6f;
 	smashChargeDir = { 1, 0, 0 };
+
+	equippedActiveSkills[0] = SKILL_ACTIVE_SMASH;
+	equippedActiveSkills[1] = SKILL_ACTIVE_KONGO;
+	equippedActiveSkills[2] = SKILL_ACTIVE_ZOUKYOU;
+	equippedActiveSkills[3] = SKILL_ACTIVE_STEALTH;
+	equippedActiveSkills[4] = SKILL_ACTIVE_HEAL;
+
+	for (int i = 0; i < 10; i++) {
+		skillCooldownTimers[i] = 0.0f;
+		skillMaxCooldowns[i] = 10.0f;
+	}
+	skillMaxCooldowns[SKILL_ACTIVE_DASH] = 3.0f;
+	skillMaxCooldowns[SKILL_ACTIVE_SMASH] = 8.0f;
+	skillMaxCooldowns[SKILL_ACTIVE_STEALTH] = 15.0f;
+	skillMaxCooldowns[SKILL_ACTIVE_KONGO] = 15.0f;
+	skillMaxCooldowns[SKILL_ACTIVE_ZOUKYOU] = 20.0f;
+	skillMaxCooldowns[SKILL_ACTIVE_HEAL] = 25.0f;
+	skillMaxCooldowns[SKILL_ACTIVE_WHIRLWIND] = 6.0f;
+	skillMaxCooldowns[SKILL_ACTIVE_SHADOWSTEP] = 8.0f;
+	skillMaxCooldowns[SKILL_ACTIVE_CATACLYSM] = 12.0f;
 
 	animTime = 0.0f;
 	currentAnimIndex = 4;
@@ -94,6 +120,281 @@ expToNext(100), skillPoints(0), gold(0)
 
 	InitSkillTree();
 	RecalculateStats();
+}
+
+float Player::TakeDamage(float rawDmg, int attackElem, Enemy* attacker, EffectManager& fx) {
+	if (undyingTimer > 0.0f || dashTimer > 0.0f) {
+		fx.SpawnDamageText(position, 0, false);
+		return 0.0f;
+	}
+
+	float pDef = defense;
+	if (pDef < 0.0f) pDef = 0.0f;
+	float defMitigation = pDef / (pDef + 100.0f + (float)level * 5.0f);
+	float postArmorDmg = rawDmg * (1.0f - defMitigation);
+
+	float resist = GetPlayerElementResistance(attackElem);
+	float finalDmg = fmaxf(2.0f, postArmorDmg * (1.0f - resist));
+
+	if (hp - finalDmg <= 0.0f && hasUndyingWill && !undyingUsed) {
+		hp = 1.0f;
+		undyingTimer = 3.0f;
+		undyingUsed = true;
+		AudioManager::PlaySE(SE_SAVE);
+		fx.SpawnEffect(position, { 0, 1, 0 }, FX_EXPLOSION, GOLD, 3.5f);
+		fx.ShakeScreen(0.4f, 0.8f);
+		UI::AddSystemLog("★ 不撓不屈発動！ HP1で耐え3秒間無敵！ ★", GOLD);
+	}
+	else {
+		hp -= finalDmg;
+	}
+
+	fx.SpawnDamageText(position, (int)finalDmg, false);
+	Color hitCol = (attackElem != ELEM_NONE) ? GetElementColor(attackElem) : RED;
+	fx.SpawnEffect(position, { 0, 0, 0 }, FX_HIT, hitCol);
+	fx.TriggerDamageFlash(0.22f);
+
+	if (attacker != nullptr && attacker->hp > 0 && reflectRate > 0.001f) {
+		float reflectedDmg = finalDmg * reflectRate;
+		if (reflectedDmg >= 1.0f) {
+			attacker->hp -= reflectedDmg;
+			fx.SpawnDamageText(attacker->position, (int)reflectedDmg, true);
+			fx.SpawnEffect(attacker->position, { 0, 1, 0 }, FX_HIT, GOLD);
+			UI::AddSystemLog(TextFormat("★ 反撃！ %s に %d の反射ダメージ！ ★", attacker->data.name.c_str(), (int)reflectedDmg), GOLD);
+		}
+	}
+
+	if (attackElem != ELEM_NONE && GetRandomValue(1, 100) <= 35) {
+		if (HasStatusImmunity(attackElem)) {
+			std::string immFmt = DataManager::uiStrings.count("LOG_STATUS_IMMUNE") ? DataManager::uiStrings["LOG_STATUS_IMMUNE"] : "★ 耐性モディファイアで状態異常を無効化した！ ★";
+			UI::AddSystemLog(immFmt, GREEN);
+		}
+		else {
+			status.ApplyStatus(attackElem, 3.5f, finalDmg);
+			std::string logKey = "";
+			if (attackElem == ELEM_HELLFIRE) logKey = "LOG_PLAYER_BURN";
+			else if (attackElem == ELEM_ROT) logKey = "LOG_PLAYER_ROT";
+			else if (attackElem == ELEM_SOUL) logKey = "LOG_PLAYER_CHILL";
+			else if (attackElem == ELEM_ABYSS) logKey = "LOG_PLAYER_CURSE";
+			if (!logKey.empty() && DataManager::uiStrings.count(logKey)) {
+				UI::AddSystemLog(DataManager::uiStrings[logKey], GetElementColor(attackElem));
+			}
+		}
+	}
+
+	return finalDmg;
+}
+
+void Player::ApplyLifesteal(int damageDealt, EffectManager& fx) {
+	if (damageDealt <= 0 || lifestealRate <= 0.0001f) return;
+
+	float healAmount = (float)damageDealt * lifestealRate;
+	int finalHeal = (int)fmaxf(1.0f, roundf(healAmount));
+
+	if (hp < maxHp) {
+		hp = fminf(maxHp, hp + (float)finalHeal);
+		fx.SpawnEffect(Vector3Add(position, { 0, 0.4f, 0 }), { 0, 1, 0 }, FX_HIT, GREEN);
+		fx.SpawnDamageText(Vector3Add(position, { 0.3f, 0.5f, 0 }), finalHeal, false);
+	}
+}
+
+void Player::EquipSkillToSlot(int slotIndex, SkillType type) {
+	if (slotIndex < 0 || slotIndex >= 5) return;
+	for (int i = 0; i < 5; i++) {
+		if (equippedActiveSkills[i] == type) {
+			equippedActiveSkills[i] = equippedActiveSkills[slotIndex];
+			break;
+		}
+	}
+	equippedActiveSkills[slotIndex] = type;
+	AudioManager::PlaySE(SE_CLICK);
+}
+
+float Player::GetSlotSkillCooldown(int slotIndex) const {
+	if (slotIndex < 0 || slotIndex >= 5) return 0.0f;
+	SkillType t = equippedActiveSkills[slotIndex];
+	return skillCooldownTimers[t];
+}
+
+float Player::GetSlotSkillMaxCooldown(int slotIndex) const {
+	if (slotIndex < 0 || slotIndex >= 5) return 1.0f;
+	SkillType t = equippedActiveSkills[slotIndex];
+	return skillMaxCooldowns[t];
+}
+
+SkillType Player::GetSlotSkillType(int slotIndex) const {
+	if (slotIndex < 0 || slotIndex >= 5) return SKILL_PASSIVE;
+	return equippedActiveSkills[slotIndex];
+}
+
+bool Player::TriggerSlotSkill(int slotIndex, std::vector<Enemy>& enemies, Dungeon& d, EffectManager& fx) {
+	if (slotIndex < 0 || slotIndex >= 5) return false;
+	SkillType type = equippedActiveSkills[slotIndex];
+	if (!IsSkillUnlocked(type)) return false;
+	if (skillCooldownTimers[type] > 0.0f) return false;
+
+	float cdMultiplier = 1.0f - cooldownReduction;
+	if (cdMultiplier < 0.2f) cdMultiplier = 0.2f;
+
+	switch (type) {
+	case SKILL_ACTIVE_SMASH:
+		if (attackTimer <= 0 && !isChargingSmash) {
+			isChargingSmash = true;
+			smashChargeMax = 0.6f;
+			smashChargeTimer = smashChargeMax;
+			smashChargeDir = lastAimDir;
+			attackTimer = 0.7f;
+			AudioManager::PlaySE(SE_CLICK);
+			return true;
+		}
+		break;
+	case SKILL_ACTIVE_KONGO:
+		kongoTimer = 10.0f;
+		skillCooldownTimers[type] = skillMaxCooldowns[type] * cdMultiplier;
+		AudioManager::PlaySE(SE_SKILL);
+		fx.SpawnEffect(position, { 0,1,0 }, FX_HIT, GOLD);
+		RecalculateStats();
+		return true;
+	case SKILL_ACTIVE_ZOUKYOU:
+		zoukyouTimer = 10.0f;
+		skillCooldownTimers[type] = skillMaxCooldowns[type] * cdMultiplier;
+		AudioManager::PlaySE(SE_SKILL);
+		fx.SpawnEffect(position, { 0,1,0 }, FX_HIT, RED);
+		RecalculateStats();
+		return true;
+	case SKILL_ACTIVE_STEALTH:
+		stealthTimer = 10.0f;
+		skillCooldownTimers[type] = skillMaxCooldowns[type] * cdMultiplier;
+		isStealth = true;
+		AudioManager::PlaySE(SE_SKILL);
+		fx.SpawnEffect(position, { 0,1,0 }, FX_HIT, BLUE);
+		return true;
+	case SKILL_ACTIVE_HEAL:
+		hp += (maxHp * 0.3f) + healBonus;
+		if (hp > maxHp) hp = maxHp;
+		skillCooldownTimers[type] = skillMaxCooldowns[type] * cdMultiplier;
+		AudioManager::PlaySE(SE_HEAL);
+		fx.SpawnEffect(position, { 0,1,0 }, FX_HIT, GREEN);
+		return true;
+	case SKILL_ACTIVE_WHIRLWIND:
+		PerformWhirlwind(enemies, d, fx);
+		skillCooldownTimers[type] = skillMaxCooldowns[type] * cdMultiplier;
+		return true;
+	case SKILL_ACTIVE_SHADOWSTEP:
+		PerformShadowstep(lastAimDir, d, fx);
+		skillCooldownTimers[type] = skillMaxCooldowns[type] * cdMultiplier;
+		return true;
+	case SKILL_ACTIVE_CATACLYSM:
+		PerformCataclysm(enemies, d, fx);
+		skillCooldownTimers[type] = skillMaxCooldowns[type] * cdMultiplier;
+		return true;
+	default:
+		break;
+	}
+	return false;
+}
+
+void Player::PerformWhirlwind(std::vector<Enemy>& enemies, Dungeon& d, EffectManager& fx) {
+	AudioManager::PlaySE(SE_ATTACK);
+	float whirlRadius = 3.4f;
+
+	int weaponElem = equippedData[activeSlot].element;
+	Color effCol = (weaponElem != ELEM_NONE) ? GetElementColor(weaponElem) : GOLD;
+	fx.SpawnEffect(position, { 0, 1, 0 }, FX_SMASH, effCol, whirlRadius);
+	fx.ShakeScreen(0.2f, 0.4f);
+
+	int hitCount = 0;
+	int totalDmg = 0;
+
+	for (auto& e : enemies) {
+		float dist = Vector3Distance(position, e.position);
+		if (dist <= whirlRadius + e.radius) {
+			if (!d.HasLineOfSight(position, e.position)) continue;
+
+			DamageResult res = CalculateDamageToEnemy(e, dist, currentWeapon, false);
+			int spinDmg = (int)((float)res.damage * 1.8f);
+
+			e.hp -= spinDmg;
+			totalDmg += spinDmg;
+			Vector3 knockDir = Vector3Normalize(Vector3Subtract(e.position, position));
+			e.ApplyKnockback(knockDir, 2.0f, d);
+
+			fx.SpawnDamageText(e.position, spinDmg, res.isCrit);
+			fx.SpawnEffect(e.position, { 0, 0, 0 }, FX_HIT, effCol);
+			hitCount++;
+		}
+	}
+
+	if (hitCount > 0) {
+		fx.TriggerHitStop(0.08f);
+		ApplyLifesteal(totalDmg, fx);
+	}
+	attackTimer = 0.45f;
+}
+
+void Player::PerformShadowstep(Vector3 aimDir, Dungeon& d, EffectManager& fx) {
+	Vector3 oldPos = position;
+	Vector3 dirNorm = Vector3Normalize(aimDir);
+	Vector3 finalPos = position;
+
+	for (float step = 0.5f; step <= 5.0f; step += 0.5f) {
+		Vector3 checkPos = Vector3Add(position, Vector3Scale(dirNorm, step));
+		if (!d.CheckCollisionRadius(checkPos, radius)) {
+			finalPos = checkPos;
+		}
+		else {
+			break;
+		}
+	}
+
+	position = finalPos;
+	shadowstepCritBuffTimer = 2.5f;
+
+	fx.SpawnEffect(oldPos, { 0, 1, 0 }, FX_HIT, PURPLE, 1.5f);
+	fx.SpawnEffect(position, { 0, 1, 0 }, FX_SMASH, DARKPURPLE, 2.0f);
+	AudioManager::PlaySE(SE_SKILL);
+
+	UI::AddSystemLog(T("LOG_SHADOWSTEP", "★ 影歩発動！ 次の攻撃が確定会心！ ★"), PURPLE);
+}
+
+void Player::PerformCataclysm(std::vector<Enemy>& enemies, Dungeon& d, EffectManager& fx) {
+	AudioManager::PlaySE(SE_REFORGE);
+	float aoeR = 4.8f;
+	fx.SpawnEffect(position, { 0, 1, 0 }, FX_EXPLOSION, RED, aoeR);
+	fx.ShakeScreen(0.35f, 0.7f);
+
+	bool detonatedAny = false;
+	int totalDmg = 0;
+
+	for (auto& e : enemies) {
+		float dist = Vector3Distance(position, e.position);
+		if (dist <= aoeR + e.radius) {
+			if (!d.HasLineOfSight(position, e.position)) continue;
+
+			DamageResult res = CalculateDamageToEnemy(e, dist, currentWeapon, false);
+			int baseDmg = (int)((float)res.damage * 1.5f);
+
+			if (e.status.HasAnyStatus()) {
+				baseDmg = (int)((float)baseDmg * 2.2f);
+				fx.SpawnEffect(e.position, { 0, 1, 0 }, FX_EXPLOSION, Player::GetElementColor(e.data.element != ELEM_NONE ? e.data.element : ELEM_HELLFIRE), 3.0f);
+				detonatedAny = true;
+			}
+
+			e.hp -= baseDmg;
+			totalDmg += baseDmg;
+			fx.SpawnDamageText(e.position, baseDmg, true);
+			fx.SpawnEffect(e.position, { 0, 0, 0 }, FX_HIT, GOLD);
+		}
+	}
+
+	if (totalDmg > 0) {
+		ApplyLifesteal(totalDmg, fx);
+	}
+
+	if (detonatedAny) {
+		UI::AddSystemLog(T("LOG_CATACLYSM", "★ 壊滅！ 状態異常を起爆した！ ★"), GOLD);
+	}
+	attackTimer = 0.5f;
 }
 
 float Player::GetItemTotalAtkBonus(const ItemData& item) {
@@ -158,11 +459,10 @@ float Player::GetPlayerElementResistance(int elem) {
 			totalRes += 0.15f;
 		}
 	}
-	// パッシブ「属性コート」等による耐性加算
 	for (const auto& node : skillTree) {
 		if (node.unlocked && node.id == 26) totalRes += 0.15f;
 	}
-	if (totalRes > 0.75f) totalRes = 0.75f; // 最大上限75%
+	if (totalRes > 0.75f) totalRes = 0.75f;
 	return totalRes;
 }
 
@@ -184,18 +484,13 @@ bool Player::HasStatusImmunity(int element) const {
 	return false;
 }
 
-// =============================================================================
-// ★ 6段階新パイプライン（キーストーン＆特化パッシブ完全統合）
-// =============================================================================
 DamageResult Player::CalculateDamageToEnemy(const Enemy& target, float distance, WeaponType wType, bool isSkill) {
 	DamageResult res;
 
-	// [ステップ1: 基礎ダメージ算出 ＆ 乱数振れ幅]
 	float totalBonus = GetItemTotalAtkBonus(equippedData[activeSlot]);
 	float baseAtk = attackPower + totalBonus;
 	if (isSkill) baseAtk *= 2.5f;
 
-	// キーストーン5（属性暴走）: 物理基礎-25%
 	if (hasElementalOverload) baseAtk *= 0.75f;
 
 	float variance = 0.0f;
@@ -207,9 +502,8 @@ DamageResult Player::CalculateDamageToEnemy(const Enemy& target, float distance,
 
 	float baseDmg = baseAtk * (1.0f + variance);
 
-	// [ステップ2: 武器種・間合い補正 (Sweet Spot)]
 	float distFactor = 1.0f;
-	float masteryBonus = hasMasteryMaster ? 0.25f : 0.0f; // キーストーン3「武芸百般」
+	float masteryBonus = hasMasteryMaster ? 0.25f : 0.0f;
 
 	if (wType == SPEAR) {
 		if (distance >= 3.8f && distance <= 5.2f) {
@@ -237,40 +531,41 @@ DamageResult Player::CalculateDamageToEnemy(const Enemy& target, float distance,
 
 	float preMitigationDamage = baseDmg * distFactor;
 
-	// [ステップ3: 防御減衰 & 貫通]
 	float targetDef = target.defense;
 	targetDef *= (1.0f - target.status.GetDefenseReductionRate());
 
 	float effectivePen = armorPenetration;
-	if (hasElementalOverload) effectivePen += 0.15f; // 属性暴走
+	if (hasElementalOverload) effectivePen += 0.15f;
 	float effectiveDef = targetDef * (1.0f - effectivePen);
 	if (effectiveDef < 0.0f) effectiveDef = 0.0f;
 
 	float defMitigation = effectiveDef / (effectiveDef + 100.0f + (float)target.level * 5.0f);
 	float postArmorDamage = preMitigationDamage * (1.0f - defMitigation);
 
-	// [ステップ4: 属性相性 & 耐性計算]
 	int weaponElem = equippedData[activeSlot].element;
 	float elemMulti = GetElementMultiplier(weaponElem, target.data.element);
 
-	// 属性特効ボーナスの加算
 	if (elemMulti > 1.1f) {
-		if (hasElementalOverload) elemMulti = 2.0f; // 属性暴走時は確定2.0倍
+		if (hasElementalOverload) elemMulti = 2.0f;
 		else elemMulti += elemPotencyBonus;
 	}
 	res.elemMultiplier = elemMulti;
 	float postElementDamage = postArmorDamage * elemMulti;
 
-	// [ステップ5: クリティカル判定]
 	float effectiveCritRate = critRate;
 	float effectiveCritDmg = critMultiplier;
 
 	if (hasGlassCannon) {
-		effectiveCritDmg += 0.50f; // 硝子の大砲: 会心威力+0.5x
-		postElementDamage *= 1.40f; // 硝子の大砲: 与ダメ+40%
+		effectiveCritDmg += 0.50f;
+		postElementDamage *= 1.40f;
 	}
 
-	if (target.status.chill.timer > 0.0f) effectiveCritRate += 0.25f; // 凍傷時会心率+25%
+	if (shadowstepCritBuffTimer > 0.0f) {
+		effectiveCritRate = 1.0f;
+		shadowstepCritBuffTimer = 0.0f;
+	}
+
+	if (target.status.chill.timer > 0.0f) effectiveCritRate += 0.25f;
 	if (res.isSweetSpot && wType == SPEAR) effectiveCritRate += 0.30f;
 	if (isSkill) effectiveCritRate += 0.10f;
 
@@ -280,7 +575,6 @@ DamageResult Player::CalculateDamageToEnemy(const Enemy& target, float distance,
 		postElementDamage *= effectiveCritDmg;
 	}
 
-	// [ステップ6: 状態異常特効]
 	if (target.status.HasAnyStatus()) {
 		postElementDamage *= (1.0f + statusDamageBonus);
 		res.isStatusPunish = true;
@@ -363,7 +657,6 @@ int Player::GetItemTier(const ItemData& item) {
 	return tier;
 }
 
-// ★ 全43ノード対応の再計算処理（キーストーン補正の積算）
 void Player::RecalculateStats() {
 	float bHp = 100.0f + (level - 1) * 20.0f;
 	float bAtk = 12.0f + (level - 1) * 2.0f;
@@ -391,7 +684,6 @@ void Player::RecalculateStats() {
 	hasElementalOverload = false;
 	hasUndyingWill = false;
 
-	// スキルツリーのアンロックノード全積算
 	for (const auto& node : skillTree) {
 		if (node.unlocked) {
 			bAtk += node.atkAdd;
@@ -413,7 +705,6 @@ void Player::RecalculateStats() {
 			if (node.id == 29) axeSweetBonus += 0.25f;
 			if (node.id == 38) wandSweetBonus += 0.30f;
 
-			// キーストーンの有効化
 			if (node.keystoneType == 1) hasGlassCannon = true;
 			if (node.keystoneType == 2) hasUnstoppableColossus = true;
 			if (node.keystoneType == 3) hasMasteryMaster = true;
@@ -439,28 +730,23 @@ void Player::RecalculateStats() {
 		if (m.id == 7) { critRate += 0.12f; critMultiplier += 0.35f; armorPenetration += 0.15f; }
 	}
 
-	// キーストーンの最終割合補正
-	if (hasGlassCannon) bHp *= 0.65f;        // 硝子の大砲: 最大HP-35%
-	if (hasBloodPact) bHp *= 0.80f;          // 血の契約: 最大HP-20%
+	if (hasGlassCannon) bHp *= 0.65f;
+	if (hasBloodPact) bHp *= 0.80f;
 	if (hasUnstoppableColossus) {
-		bDef *= 1.50f;                       // 不動の巨兵: 常時防御+50%
-		bSpd *= 0.80f;                       // 不動の巨兵: 移動速度-20%
+		bDef *= 1.50f;
+		bSpd *= 0.80f;
 	}
 
 	maxHp = bHp; attackPower = bAtk; defense = bDef; baseSpeed = bSpd;
 	if (hp > maxHp) hp = maxHp;
 }
 
-// =============================================================================
-// ★ skills.json からのスキルツリー動的初期化
-// =============================================================================
 void Player::InitSkillTree() {
 	skillTree.clear();
 	if (!DataManager::masterSkills.empty()) {
 		skillTree = DataManager::masterSkills;
 	}
 	else {
-		// 万が一JSONロード前・未存在時の安全な起点フォールバック
 		skillTree.push_back({ 0, T("SKILL_NAME_START", "START"), {600, 400}, {}, true, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, T("SKILL_DESC_START", "Skill Tree Start"), SKILL_PASSIVE, 0.0f });
 	}
 }
@@ -492,17 +778,22 @@ void Player::UnlockSkill(int id) {
 	}
 }
 
-bool Player::IsSkillUnlocked(SkillType t) { for (auto& n : skillTree) if (n.type == t && n.unlocked) return true; return false; }
+bool Player::IsSkillUnlocked(SkillType t) {
+	for (auto& n : skillTree) {
+		if (n.type == t && n.unlocked) return true;
+	}
+	return false;
+}
+
 float Player::GetSkillCooldown(SkillType t) {
 	if (t == SKILL_ACTIVE_DASH) return dashCooldownTimer;
-	if (t == SKILL_ACTIVE_SMASH) return smashCooldownTimer;
-	if (t == SKILL_ACTIVE_STEALTH) return stealthCooldownTimer;
-	if (t == SKILL_ACTIVE_KONGO) return kongoCooldownTimer;
-	if (t == SKILL_ACTIVE_ZOUKYOU) return zoukyouCooldownTimer;
-	if (t == SKILL_ACTIVE_HEAL) return healCooldownTimer;
-	return 0.0f;
+	return skillCooldownTimers[t];
 }
-float Player::GetSkillMaxCooldown(SkillType t) { for (auto& n : skillTree) if (n.type == t) return n.maxCooldown; return 1.0f; }
+
+float Player::GetSkillMaxCooldown(SkillType t) {
+	if (t == SKILL_ACTIVE_DASH) return 3.0f;
+	return skillMaxCooldowns[t];
+}
 
 void Player::AddExp(int a, EffectManager& fx) { exp += a; while (exp >= expToNext) LevelUp(fx); }
 void Player::LevelUp(EffectManager& fx) {
@@ -535,9 +826,6 @@ void Player::UpdateHuntQuest(int eId) { for (auto& q : activeQuests) if (!q.isCo
 bool Player::CheckGatherQuest(int itemId, int count) { int sum = 0; for (auto& i : inventoryItems) if (i.id == itemId) sum += i.count; return sum >= count; }
 void Player::CompleteQuest(int qId) { for (auto it = activeQuests.begin(); it != activeQuests.end(); ++it) if (it->questId == qId) { QuestData d = DataManager::GetQuestData(qId); gold += d.rewardGold; if (d.rewardItemId != -1) { ItemData r = DataManager::GetItemConfigCopy(d.rewardItemId); r.count = d.rewardItemCount; AddToInventory(r); } clearedQuests.push_back(qId); activeQuests.erase(it); AudioManager::PlaySE(SE_REFORGE); return; } }
 
-// =============================================================================
-// 通常攻撃の実行処理（吸血・反射・間合いバフ適用）
-// =============================================================================
 void Player::PerformAttack(Vector3 ad, std::vector<Enemy>& enemies, Dungeon& d, EffectManager& fx) {
 	AudioManager::PlaySE(SE_ATTACK);
 	Vector3 origin = Vector3Add(position, { 0, 0.75f, 0 });
@@ -590,7 +878,6 @@ void Player::PerformAttack(Vector3 ad, std::vector<Enemy>& enemies, Dungeon& d, 
 					e.hp -= dmgRes.damage;
 					totalDmgDealt += dmgRes.damage;
 
-					// 不動の巨兵（キーストーン2）以外はノックバック適用
 					e.ApplyKnockback(ad, dmgRes.isCrit ? 1.8f : 1.0f, d);
 
 					Color hitCol = (weaponElem != ELEM_NONE) ? GetElementColor(weaponElem) : (dmgRes.isCrit ? GOLD : RED);
@@ -615,15 +902,15 @@ void Player::PerformAttack(Vector3 ad, std::vector<Enemy>& enemies, Dungeon& d, 
 					}
 
 					if (dmgRes.isSweetSpot) {
-						UI::AddSystemLog(T("LOG_SWEET_SPOT", "★ SWEET SPOT! ★"), GOLD);
+						UI::AddSystemLog(T("LOG_SWEET_SPOT", "★ スイートスポット命中！ ★"), GOLD);
 					}
 
 					if (dmgRes.elemMultiplier > 1.1f) {
-						std::string weakFmt = DataManager::uiStrings.count("LOG_WEAKNESS_HIT") ? DataManager::uiStrings["LOG_WEAKNESS_HIT"] : "★ %s WEAKNESS! %d DMG! ★";
+						std::string weakFmt = DataManager::uiStrings.count("LOG_WEAKNESS_HIT") ? DataManager::uiStrings["LOG_WEAKNESS_HIT"] : "★ %s に %d の特効ダメージ！ ★";
 						UI::AddSystemLog(TextFormat(weakFmt.c_str(), e.data.name.c_str(), dmgRes.damage), hitCol);
 					}
 					else if (dmgRes.elemMultiplier < 0.9f) {
-						std::string resFmt = DataManager::uiStrings.count("LOG_RESISTED_ATTACK") ? DataManager::uiStrings["LOG_RESISTED_ATTACK"] : "[RESIST] %s: %d DMG";
+						std::string resFmt = DataManager::uiStrings.count("LOG_RESISTED_ATTACK") ? DataManager::uiStrings["LOG_RESISTED_ATTACK"] : "[耐性] %s に攻撃を軽減された！ (%d ダメージ)";
 						UI::AddSystemLog(TextFormat(resFmt.c_str(), e.data.name.c_str(), dmgRes.damage), LIGHTGRAY);
 					}
 					else if (dmgRes.isCrit) {
@@ -640,13 +927,8 @@ void Player::PerformAttack(Vector3 ad, std::vector<Enemy>& enemies, Dungeon& d, 
 			}
 		}
 
-		// ★ 吸血（ライフスティール）処理
-		if (hitAny && totalDmgDealt > 0 && lifestealRate > 0.001f) {
-			float lHeal = (float)totalDmgDealt * lifestealRate;
-			if (lHeal >= 1.0f) {
-				hp = fminf(maxHp, hp + lHeal);
-				fx.SpawnEffect(position, { 0, 1, 0 }, FX_HIT, GREEN);
-			}
+		if (hitAny && totalDmgDealt > 0) {
+			ApplyLifesteal(totalDmgDealt, fx);
 		}
 
 		if (hitAny) {
@@ -668,9 +950,6 @@ void Player::PerformAttack(Vector3 ad, std::vector<Enemy>& enemies, Dungeon& d, 
 	}
 }
 
-// =============================================================================
-// 強撃(SMASH)の実行処理（吸血処理統合）
-// =============================================================================
 void Player::PerformSmash(Vector3 ad, std::vector<Enemy>& enemies, Dungeon& d, EffectManager& fx) {
 	AudioManager::PlaySE(SE_SKILL);
 	fx.SpawnEffect(Vector3Add(position, { 0, 0.8f, 0 }), ad, FX_SMASH, RED, 4.2f);
@@ -708,13 +987,8 @@ void Player::PerformSmash(Vector3 ad, std::vector<Enemy>& enemies, Dungeon& d, E
 		}
 	}
 
-	// 強撃時の吸血処理
-	if (hitAny && totalDmgDealt > 0 && lifestealRate > 0.001f) {
-		float lHeal = (float)totalDmgDealt * lifestealRate;
-		if (lHeal >= 1.0f) {
-			hp = fminf(maxHp, hp + lHeal);
-			fx.SpawnEffect(position, { 0, 1, 0 }, FX_HIT, GREEN);
-		}
+	if (hitAny && totalDmgDealt > 0) {
+		ApplyLifesteal(totalDmgDealt, fx);
 	}
 
 	if (hitAny) {
@@ -734,31 +1008,30 @@ void Player::Update(Camera3D& cam, Dungeon& d, std::vector<Enemy>& enemies, Effe
 	float dt = GetFrameTime();
 
 	if (dashCooldownTimer > 0) dashCooldownTimer -= dt;
-	if (smashCooldownTimer > 0) smashCooldownTimer -= dt;
-	if (stealthCooldownTimer > 0) stealthCooldownTimer -= dt;
-	if (kongoCooldownTimer > 0) kongoCooldownTimer -= dt;
-	if (zoukyouCooldownTimer > 0) zoukyouCooldownTimer -= dt;
-	if (healCooldownTimer > 0) healCooldownTimer -= dt;
-
 	if (dashTimer > 0) dashTimer -= dt;
+
+	for (int i = 0; i < 10; i++) {
+		if (skillCooldownTimers[i] > 0.0f) skillCooldownTimers[i] -= dt;
+	}
+
+	smashCooldownTimer = skillCooldownTimers[SKILL_ACTIVE_SMASH];
+	kongoCooldownTimer = skillCooldownTimers[SKILL_ACTIVE_KONGO];
+	zoukyouCooldownTimer = skillCooldownTimers[SKILL_ACTIVE_ZOUKYOU];
+	stealthCooldownTimer = skillCooldownTimers[SKILL_ACTIVE_STEALTH];
+	healCooldownTimer = skillCooldownTimers[SKILL_ACTIVE_HEAL];
+
 	if (stealthTimer > 0) stealthTimer -= dt; else isStealth = false;
 	if (kongoTimer > 0) { kongoTimer -= dt; if (kongoTimer <= 0) RecalculateStats(); }
 	if (zoukyouTimer > 0) { zoukyouTimer -= dt; if (zoukyouTimer <= 0) RecalculateStats(); }
 
-	// ★ 不撓不屈（キーストーン6: 食いしばり無敵タイマー）
 	if (undyingTimer > 0.0f) {
 		undyingTimer -= dt;
 		if (undyingTimer < 0.0f) undyingTimer = 0.0f;
 	}
 
-	// 致命傷時の不撓不屈判定
-	if (hp <= 0.0f && hasUndyingWill && !undyingUsed) {
-		hp = 1.0f;
-		undyingTimer = 3.0f; // 3秒間完全無敵
-		undyingUsed = true;
-		AudioManager::PlaySE(SE_SAVE);
-		fx.SpawnEffect(position, { 0, 1, 0 }, FX_EXPLOSION, GOLD, 3.5f);
-		UI::AddSystemLog("★ 不撓不屈発動！ 3秒間無敵！ ★", GOLD);
+	if (shadowstepCritBuffTimer > 0.0f) {
+		shadowstepCritBuffTimer -= dt;
+		if (shadowstepCritBuffTimer < 0.0f) shadowstepCritBuffTimer = 0.0f;
 	}
 
 	bool prevHadStatus = status.HasAnyStatus();
@@ -777,7 +1050,8 @@ void Player::Update(Camera3D& cam, Dungeon& d, std::vector<Enemy>& enemies, Effe
 
 			float cdMultiplier = 1.0f - cooldownReduction;
 			if (cdMultiplier < 0.2f) cdMultiplier = 0.2f;
-			smashCooldownTimer = GetSkillMaxCooldown(SKILL_ACTIVE_SMASH) * cdMultiplier;
+			skillCooldownTimers[SKILL_ACTIVE_SMASH] = skillMaxCooldowns[SKILL_ACTIVE_SMASH] * cdMultiplier;
+			smashCooldownTimer = skillCooldownTimers[SKILL_ACTIVE_SMASH];
 
 			attackTimer = 0.5f;
 			animTime = 0;
@@ -869,43 +1143,27 @@ void Player::Update(Camera3D& cam, Dungeon& d, std::vector<Enemy>& enemies, Effe
 		attackTimer = 0.5f; animTime = 0;
 	}
 
-	float cdMultiplier = 1.0f - cooldownReduction;
-	if (cdMultiplier < 0.2f) cdMultiplier = 0.2f;
-
 	bool btnDash = IsKeyPressed(DataManager::keyConfig.dash) || IsGamepadButtonPressed(0, DataManager::keyConfig.padDash);
-	bool btnSmash = IsKeyPressed(DataManager::keyConfig.smash) || IsGamepadButtonPressed(0, DataManager::keyConfig.padSmash);
-	bool btnKongo = IsKeyPressed(DataManager::keyConfig.kongo) || IsGamepadButtonPressed(0, DataManager::keyConfig.padKongo);
-	bool btnZoukyou = IsKeyPressed(DataManager::keyConfig.zoukyou) || IsGamepadButtonPressed(0, DataManager::keyConfig.padZoukyou);
-	bool btnStealth = IsKeyPressed(DataManager::keyConfig.stealth) || IsGamepadButtonPressed(0, DataManager::keyConfig.padStealth);
-	bool btnHeal = IsKeyPressed(DataManager::keyConfig.heal) || IsGamepadButtonPressed(0, DataManager::keyConfig.padHeal);
+	bool btnSlot1 = IsKeyPressed(DataManager::keyConfig.smash) || IsGamepadButtonPressed(0, DataManager::keyConfig.padSmash);
+	bool btnSlot2 = IsKeyPressed(DataManager::keyConfig.kongo) || IsGamepadButtonPressed(0, DataManager::keyConfig.padKongo);
+	bool btnSlot3 = IsKeyPressed(DataManager::keyConfig.zoukyou) || IsGamepadButtonPressed(0, DataManager::keyConfig.padZoukyou);
+	bool btnSlot4 = IsKeyPressed(DataManager::keyConfig.stealth) || IsGamepadButtonPressed(0, DataManager::keyConfig.padStealth);
+	bool btnSlot5 = IsKeyPressed(DataManager::keyConfig.heal) || IsGamepadButtonPressed(0, DataManager::keyConfig.padHeal);
 	bool btnSwap = IsKeyPressed(DataManager::keyConfig.swapWeapon) || IsGamepadButtonPressed(0, DataManager::keyConfig.padSwap);
 
 	if (btnDash && IsSkillUnlocked(SKILL_ACTIVE_DASH) && dashCooldownTimer <= 0) {
-		dashTimer = 0.35f; dashCooldownTimer = GetSkillMaxCooldown(SKILL_ACTIVE_DASH) * cdMultiplier; AudioManager::PlaySE(SE_SKILL);
+		float cdMultiplier = 1.0f - cooldownReduction;
+		if (cdMultiplier < 0.2f) cdMultiplier = 0.2f;
+		dashTimer = 0.35f;
+		dashCooldownTimer = 3.0f * cdMultiplier;
+		AudioManager::PlaySE(SE_SKILL);
 	}
 
-	if (btnSmash && IsSkillUnlocked(SKILL_ACTIVE_SMASH) && smashCooldownTimer <= 0 && attackTimer <= 0 && !isChargingSmash) {
-		isChargingSmash = true;
-		smashChargeMax = 0.6f;
-		smashChargeTimer = smashChargeMax;
-		smashChargeDir = lastAimDir;
-		attackTimer = 0.7f;
-		AudioManager::PlaySE(SE_CLICK);
-	}
-
-	if (btnKongo && IsSkillUnlocked(SKILL_ACTIVE_KONGO) && kongoCooldownTimer <= 0) {
-		kongoTimer = 10.0f; kongoCooldownTimer = GetSkillMaxCooldown(SKILL_ACTIVE_KONGO) * cdMultiplier; AudioManager::PlaySE(SE_SKILL); fx.SpawnEffect(position, { 0,1,0 }, FX_HIT, GOLD); RecalculateStats();
-	}
-	if (btnZoukyou && IsSkillUnlocked(SKILL_ACTIVE_ZOUKYOU) && zoukyouCooldownTimer <= 0) {
-		zoukyouTimer = 10.0f; zoukyouCooldownTimer = GetSkillMaxCooldown(SKILL_ACTIVE_ZOUKYOU) * cdMultiplier; AudioManager::PlaySE(SE_SKILL); fx.SpawnEffect(position, { 0,1,0 }, FX_HIT, RED); RecalculateStats();
-	}
-	if (btnStealth && IsSkillUnlocked(SKILL_ACTIVE_STEALTH) && stealthCooldownTimer <= 0) {
-		stealthTimer = 10.0f; stealthCooldownTimer = GetSkillMaxCooldown(SKILL_ACTIVE_STEALTH) * cdMultiplier; isStealth = true; AudioManager::PlaySE(SE_SKILL); fx.SpawnEffect(position, { 0,1,0 }, FX_HIT, BLUE);
-	}
-	if (btnHeal && IsSkillUnlocked(SKILL_ACTIVE_HEAL) && healCooldownTimer <= 0) {
-		hp += (maxHp * 0.3f) + healBonus; if (hp > maxHp) hp = maxHp;
-		healCooldownTimer = GetSkillMaxCooldown(SKILL_ACTIVE_HEAL) * cdMultiplier; AudioManager::PlaySE(SE_HEAL); fx.SpawnEffect(position, { 0,1,0 }, FX_HIT, GREEN);
-	}
+	if (btnSlot1) TriggerSlotSkill(0, enemies, d, fx);
+	if (btnSlot2) TriggerSlotSkill(1, enemies, d, fx);
+	if (btnSlot3) TriggerSlotSkill(2, enemies, d, fx);
+	if (btnSlot4) TriggerSlotSkill(3, enemies, d, fx);
+	if (btnSlot5) TriggerSlotSkill(4, enemies, d, fx);
 
 	if (btnSwap && !isChargingSmash) { activeSlot = 1 - activeSlot; currentWeapon = equippedWeapons[activeSlot]; }
 
@@ -948,9 +1206,9 @@ void Player::Draw(bool debug) {
 
 	gm.model.transform = MatrixMultiply(MatrixRotateX(-90 * DEG2RAD), MatrixRotateY(modelRotation * DEG2RAD));
 
-	// 不撓不屈（無敵中）は黄金に光り輝く
 	Color pCol = WHITE;
 	if (undyingTimer > 0.0f) pCol = (GetRandomValue(0, 10) < 5) ? GOLD : WHITE;
+	else if (shadowstepCritBuffTimer > 0.0f) pCol = (GetRandomValue(0, 10) < 5) ? PURPLE : WHITE;
 	else if (isStealth) pCol = Fade(BLUE, 0.4f);
 
 	DrawModel(gm.model, drawPos, scale, pCol);
@@ -959,66 +1217,55 @@ void Player::Draw(bool debug) {
 		status.DrawAura(position, radius);
 	}
 
-	if (currentWeapon != NONE && !isDead) {
-		int handIdx = -1;
-		for (int i = 0; i < gm.model.boneCount; i++) {
-			std::string bName = gm.model.bones[i].name;
-			for (auto& c : bName) c = (char)tolower(c);
+	if (currentWeapon != NONE && !isDead && gm.handBoneIndex != -1) {
+		Matrix boneMat = GetPlayerBoneGlobalMatrix(gm.model, anim, frame, gm.handBoneIndex);
 
-			if (bName.find("hand_r") != std::string::npos ||
-				bName.find("handright") != std::string::npos ||
-				bName.find("hand.r") != std::string::npos) {
-				handIdx = i;
-				break;
-			}
+		Matrix playerWorld = MatrixMultiply(
+			MatrixMultiply(MatrixScale(scale, scale, scale), gm.model.transform),
+			MatrixTranslate(drawPos.x, drawPos.y, drawPos.z)
+		);
+
+		Matrix weaponScale = MatrixScale(customWeaponScale, customWeaponScale, customWeaponScale);
+
+		Matrix offsetMatrix = MatrixMultiply(
+			MatrixRotateXYZ({ customWeaponOffsetRot.x * DEG2RAD, customWeaponOffsetRot.y * DEG2RAD, customWeaponOffsetRot.z * DEG2RAD }),
+			MatrixTranslate(customWeaponOffsetPos.x, customWeaponOffsetPos.y, customWeaponOffsetPos.z)
+		);
+
+		Matrix finalTransform = MatrixMultiply(weaponScale, offsetMatrix);
+		finalTransform = MatrixMultiply(finalTransform, boneMat);
+		finalTransform = MatrixMultiply(finalTransform, playerWorld);
+
+		int equipId = equippedData[activeSlot].id;
+		std::string baseKey = (currentWeapon == SWORD) ? "Wpn_Sword" : (currentWeapon == AXE ? "Wpn_Axe" : (currentWeapon == WAND ? "Wpn_Wand" : "Wpn_Spear"));
+		std::string finalKey = baseKey;
+
+		std::string customName = equippedData[activeSlot].modelName;
+		if (!customName.empty() && DataManager::loadedModels.count(customName) > 0) {
+			finalKey = customName;
+		}
+		else {
+			if (equipId >= 400 && equipId < 500) { if (DataManager::loadedModels.count(baseKey + "_Legend")) finalKey = baseKey + "_Legend"; }
+			if (DataManager::loadedModels.count("Wpn_" + std::to_string(equipId))) finalKey = "Wpn_" + std::to_string(equipId);
 		}
 
-		if (handIdx != -1) {
-			Matrix boneMat = GetPlayerBoneGlobalMatrix(gm.model, anim, frame, handIdx);
+		rlDisableBackfaceCulling();
 
-			Matrix playerWorld = MatrixMultiply(
-				MatrixMultiply(MatrixScale(scale, scale, scale), gm.model.transform),
-				MatrixTranslate(drawPos.x, drawPos.y, drawPos.z)
-			);
-
-			Matrix weaponScale = MatrixScale(customWeaponScale, customWeaponScale, customWeaponScale);
-
-			Matrix offsetMatrix = MatrixMultiply(
-				MatrixRotateXYZ({ customWeaponOffsetRot.x * DEG2RAD, customWeaponOffsetRot.y * DEG2RAD, customWeaponOffsetRot.z * DEG2RAD }),
-				MatrixTranslate(customWeaponOffsetPos.x, customWeaponOffsetPos.y, customWeaponOffsetPos.z)
-			);
-
-			Matrix finalTransform = MatrixMultiply(weaponScale, offsetMatrix);
-			finalTransform = MatrixMultiply(finalTransform, boneMat);
-			finalTransform = MatrixMultiply(finalTransform, playerWorld);
-
-			int equipId = equippedData[activeSlot].id;
-			std::string baseKey = (currentWeapon == SWORD) ? "Wpn_Sword" : (currentWeapon == AXE ? "Wpn_Axe" : (currentWeapon == WAND ? "Wpn_Wand" : "Wpn_Spear"));
-			std::string finalKey = baseKey;
-
-			std::string customName = equippedData[activeSlot].modelName;
-			if (!customName.empty() && DataManager::loadedModels.count(customName) > 0) {
-				finalKey = customName;
-			}
-			else {
-				if (equipId >= 400 && equipId < 500) { if (DataManager::loadedModels.count(baseKey + "_Legend")) finalKey = baseKey + "_Legend"; }
-				if (DataManager::loadedModels.count("Wpn_" + std::to_string(equipId))) finalKey = "Wpn_" + std::to_string(equipId);
-			}
-
-			if (DataManager::loadedModels.count(finalKey)) {
-				Model& wm = DataManager::loadedModels[finalKey].model;
-				wm.transform = finalTransform;
-				DrawModel(wm, { 0,0,0 }, 1.0f, WHITE);
-				wm.transform = MatrixIdentity();
-			}
-			else {
-				Model& wm = DataManager::fallbackWeaponModel;
-				wm.transform = finalTransform;
-				DrawModel(wm, { 0,0,0 }, 1.0f, RED);
-				DrawModelWires(wm, { 0,0,0 }, 1.0f, MAROON);
-				wm.transform = MatrixIdentity();
-			}
+		if (DataManager::loadedModels.count(finalKey)) {
+			Model& wm = DataManager::loadedModels[finalKey].model;
+			wm.transform = finalTransform;
+			DrawModel(wm, { 0,0,0 }, 1.0f, WHITE);
+			wm.transform = MatrixIdentity();
 		}
+		else {
+			Model& wm = DataManager::fallbackWeaponModel;
+			wm.transform = finalTransform;
+			DrawModel(wm, { 0,0,0 }, 1.0f, RED);
+			DrawModelWires(wm, { 0,0,0 }, 1.0f, MAROON);
+			wm.transform = MatrixIdentity();
+		}
+
+		rlEnableBackfaceCulling();
 	}
 	gm.model.transform = MatrixIdentity();
 

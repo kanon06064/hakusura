@@ -12,7 +12,7 @@
 #include <algorithm>
 #include <cctype>
 
-Matrix GetBoneMatrix(Model model, ModelAnimation anim, int frame, int boneIndex) {
+static Matrix GetBoneMatrix(Model model, ModelAnimation anim, int frame, int boneIndex) {
     if (boneIndex < 0 || boneIndex >= model.boneCount) return MatrixIdentity();
     Transform boneTransform = anim.framePoses[frame][boneIndex];
     Matrix mat = MatrixMultiply(
@@ -20,6 +20,45 @@ Matrix GetBoneMatrix(Model model, ModelAnimation anim, int frame, int boneIndex)
         MatrixTranslate(boneTransform.translation.x, boneTransform.translation.y, boneTransform.translation.z)
     );
     return mat;
+}
+
+static void DrawTelegraphCircle(Vector3 center, float radius, float progress, Color outlineCol, Color fillCol, Color chargeCol) {
+    center.y = 0.12f;
+    DrawCylinderWires(center, radius, radius, 0.04f, 32, outlineCol);
+    DrawCylinder(center, radius, radius, 0.03f, 32, fillCol);
+    if (progress > 0.001f) {
+        float gR = radius * progress;
+        DrawCylinder(center, gR, gR, 0.05f, 32, chargeCol);
+    }
+}
+
+static void DrawTelegraphLane(Vector3 origin, Vector3 dir, float length, float width, float progress, Color outlineCol, Color chargeCol) {
+    dir = Vector3Normalize(dir);
+    Vector3 side = { -dir.z, 0.0f, dir.x };
+    float halfW = width * 0.5f;
+
+    Vector3 p1 = Vector3Add(origin, Vector3Scale(side, halfW));
+    Vector3 p2 = Vector3Add(origin, Vector3Add(Vector3Scale(dir, length), Vector3Scale(side, halfW)));
+    Vector3 p3 = Vector3Add(origin, Vector3Add(Vector3Scale(dir, length), Vector3Scale(side, -halfW)));
+    Vector3 p4 = Vector3Add(origin, Vector3Scale(side, -halfW));
+    p1.y = p2.y = p3.y = p4.y = 0.12f;
+
+    DrawLine3D(p1, p2, outlineCol);
+    DrawLine3D(p2, p3, outlineCol);
+    DrawLine3D(p3, p4, outlineCol);
+    DrawLine3D(p4, p1, outlineCol);
+
+    if (progress > 0.001f) {
+        float chargeLen = length * progress;
+        Vector3 cp2 = Vector3Add(origin, Vector3Add(Vector3Scale(dir, chargeLen), Vector3Scale(side, halfW)));
+        Vector3 cp3 = Vector3Add(origin, Vector3Add(Vector3Scale(dir, chargeLen), Vector3Scale(side, -halfW)));
+        cp2.y = cp3.y = 0.13f;
+
+        DrawTriangle3D(p1, p4, cp3, chargeCol);
+        DrawTriangle3D(p1, cp3, cp2, chargeCol);
+        DrawTriangle3D(cp3, p4, p1, chargeCol);
+        DrawTriangle3D(cp2, cp3, p1, chargeCol);
+    }
 }
 
 bool Enemy::IsPlant() const {
@@ -53,12 +92,11 @@ Enemy::Enemy(Vector3 sp, EnemyData d, int fl) {
     detectRange = d.detect;
     attackRange = d.atkRange;
 
-    // ★ 敵の防御力（defense）の初期化（レベルスケール ＆ 重装・ボス補正）
     defense = d.def;
     if (defense <= 0.0f) {
         defense = (float)level * 1.3f;
-        if (eType == E_AXE) defense *= 1.4f; // 斧持ち・重装タイプ
-        if (d.id >= 15) defense *= 1.6f;     // 強敵・ボスタイプ
+        if (eType == E_AXE) defense *= 1.4f;
+        if (d.id >= 15) defense *= 1.6f;
     }
 
     if (IsPlant()) {
@@ -100,16 +138,12 @@ Enemy::Enemy(Vector3 sp, EnemyData d, int fl) {
     delayedHpTimer = 0.0f;
 }
 
-// ★ プレイヤーへの被ダメージ計算（漸近防御減衰式 ＆ 属性耐性）
 float Enemy::CalculateDamageToPlayer(const Player& p, float rawDmg, int attackElem) {
     float pDef = p.defense;
     if (pDef < 0.0f) pDef = 0.0f;
-
-    // プレイヤー防御軽減率 = 防御 / (防御 + 100 + Lv * 5)
     float defMitigation = pDef / (pDef + 100.0f + (float)p.level * 5.0f);
     float postArmorDamage = rawDmg * (1.0f - defMitigation);
 
-    // プレイヤーの防具属性耐性 (1部位につき15%、最大60%)
     float resist = 0.0f;
     if (attackElem != ELEM_NONE) {
         resist = const_cast<Player&>(p).GetPlayerElementResistance(attackElem);
@@ -121,9 +155,12 @@ float Enemy::CalculateDamageToPlayer(const Player& p, float rawDmg, int attackEl
 
 void Enemy::StartDeath() {
     if (isDying) return;
-    isDying = true; animFrameCounter = 0;
+    isDying = true;
+    animFrameCounter = 0;
     std::string key = data.modelName;
-    if (key.empty() || DataManager::loadedModels.count(key) == 0) { isDead = true; }
+    if (key.empty() || DataManager::loadedModels.count(key) == 0) {
+        isDead = true;
+    }
 }
 
 void Enemy::ApplyKnockback(Vector3 dir, float f, Dungeon& d) {
@@ -188,7 +225,9 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
     bool canSee = d.HasLineOfSight(position, p.position);
 
     float effectiveDetect = p.isStealth ? 1.5f : detectRange;
-    if (state == STATE_CHASE || state == STATE_ATTACK) { if (p.isStealth) effectiveDetect = 3.0f; }
+    if (state == STATE_CHASE || state == STATE_ATTACK) {
+        if (p.isStealth) effectiveDetect = 3.0f;
+    }
 
     // =========================================================================
     // ボスAI
@@ -198,11 +237,14 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
         else { state = STATE_PATROL; }
 
         if (state == STATE_ATTACK) {
-            stuckCount = 0; patrolTarget = p.position;
+            stuckCount = 0;
+            patrolTarget = p.position;
 
             if (bossAttackType == 0) {
                 if (attackTimer <= 0.0f) {
-                    bossAttackType = GetRandomValue(1, 4); bossComboStep = 0; animFrameCounter = 0;
+                    bossAttackType = GetRandomValue(1, 4);
+                    bossComboStep = 0;
+                    animFrameCounter = 0;
                     bossTargetDir = Vector3Normalize(Vector3Subtract(p.position, position));
                     lastAttackDir = bossTargetDir;
 
@@ -224,106 +266,84 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
                 }
             }
             else {
-                // 植物ボスの攻撃処理
                 if (IsPlant()) {
                     bossActionTimer -= dt;
 
-                    if (bossAttackType == 1) {
-                        if (bossActionTimer <= 0.0f) {
-                            animFrameCounter = 0; AudioManager::PlaySE(SE_ENEMY_ATTACK);
-                            Vector3 spawnPos = Vector3Add(position, { 0, 0.75f, 0 });
-                            float bDmg = 24.0f + level * 2.5f;
+                    if (bossAttackType == 1 && bossActionTimer <= 0.0f) {
+                        animFrameCounter = 0;
+                        AudioManager::PlaySE(SE_ENEMY_ATTACK);
+                        Vector3 spawnPos = Vector3Add(position, { 0, 0.75f, 0 });
+                        float bDmg = 24.0f + level * 2.5f;
 
-                            for (int i = -2; i <= 2; i++) {
-                                float angle = i * 16.0f * DEG2RAD; float c = cosf(angle), s = sinf(angle);
-                                Vector3 dir = { bossTargetDir.x * c - bossTargetDir.z * s, 0.0f, bossTargetDir.x * s + bossTargetDir.z * c };
-                                fx.SpawnProjectile(spawnPos, dir, 12.0f, 2, false, bDmg, ELEM_ROT);
-                            }
-                            bossAttackType = 0; attackTimer = 1.6f;
+                        for (int i = -2; i <= 2; i++) {
+                            float angle = i * 16.0f * DEG2RAD; float c = cosf(angle), s = sinf(angle);
+                            Vector3 dir = { bossTargetDir.x * c - bossTargetDir.z * s, 0.0f, bossTargetDir.x * s + bossTargetDir.z * c };
+                            fx.SpawnProjectile(spawnPos, dir, 12.0f, 2, false, bDmg, ELEM_ROT);
                         }
+                        bossAttackType = 0; attackTimer = 1.6f;
                     }
-                    else if (bossAttackType == 2) {
-                        if (bossActionTimer <= 0.0f) {
-                            animFrameCounter = 0; AudioManager::PlaySE(SE_ENEMY_ATTACK);
-                            Vector3 spawnPos = Vector3Add(position, { 0, 0.75f, 0 });
-                            float bDmg = 18.0f + level * 2.0f;
+                    else if (bossAttackType == 2 && bossActionTimer <= 0.0f) {
+                        animFrameCounter = 0;
+                        AudioManager::PlaySE(SE_ENEMY_ATTACK);
+                        Vector3 spawnPos = Vector3Add(position, { 0, 0.75f, 0 });
+                        float bDmg = 18.0f + level * 2.0f;
 
-                            for (int i = 0; i < 16; i++) {
-                                float angle = i * 22.5f * DEG2RAD;
-                                Vector3 dir = { cosf(angle), 0.0f, sinf(angle) };
-                                fx.SpawnProjectile(spawnPos, dir, 9.5f, 2, false, bDmg, ELEM_ROT);
-                            }
-                            fx.ShakeScreen(0.2f, 0.4f);
-                            bossAttackType = 0; attackTimer = 2.0f;
+                        for (int i = 0; i < 16; i++) {
+                            float angle = i * 22.5f * DEG2RAD;
+                            Vector3 dir = { cosf(angle), 0.0f, sinf(angle) };
+                            fx.SpawnProjectile(spawnPos, dir, 9.5f, 2, false, bDmg, ELEM_ROT);
                         }
+                        fx.ShakeScreen(0.2f, 0.4f);
+                        bossAttackType = 0; attackTimer = 2.0f;
                     }
-                    else if (bossAttackType == 3) {
-                        if (bossActionTimer <= 0.0f) {
-                            animFrameCounter = 0; AudioManager::PlaySE(SE_SKILL);
-                            fx.ShakeScreen(0.35f, 0.6f);
+                    else if (bossAttackType == 3 && bossActionTimer <= 0.0f) {
+                        animFrameCounter = 0;
+                        AudioManager::PlaySE(SE_SKILL);
+                        fx.ShakeScreen(0.35f, 0.6f);
 
-                            fx.SpawnHazardArea(p.position, 2.8f, 8.0f, 16.0f + level * 2.0f, GREEN, ELEM_ROT);
-
-                            for (int k = 0; k < 2; k++) {
-                                float offAngle = (float)GetRandomValue(0, 360) * DEG2RAD;
-                                float offDist = (float)GetRandomValue(3, 7);
-                                Vector3 randPos = Vector3Add(position, { cosf(offAngle) * offDist, 0, sinf(offAngle) * offDist });
-                                if (!d.IsWall(randPos.x, randPos.z)) {
-                                    fx.SpawnHazardArea(randPos, 2.5f, 8.0f, 14.0f + level * 1.8f, DARKGREEN, ELEM_ROT);
-                                }
+                        fx.SpawnHazardArea(p.position, 2.8f, 8.0f, 16.0f + level * 2.0f, GREEN, ELEM_ROT);
+                        for (int k = 0; k < 2; k++) {
+                            float offAngle = (float)GetRandomValue(0, 360) * DEG2RAD;
+                            float offDist = (float)GetRandomValue(3, 7);
+                            Vector3 randPos = Vector3Add(position, { cosf(offAngle) * offDist, 0, sinf(offAngle) * offDist });
+                            if (!d.IsWall(randPos.x, randPos.z)) {
+                                fx.SpawnHazardArea(randPos, 2.5f, 8.0f, 14.0f + level * 1.8f, DARKGREEN, ELEM_ROT);
                             }
-
-                            UI::AddSystemLog("★ POISON HAZARD AREA CREATED! ★", GREEN);
-                            bossAttackType = 0; attackTimer = 2.2f;
                         }
+
+                        UI::AddSystemLog("★ POISON HAZARD AREA CREATED! ★", GREEN);
+                        bossAttackType = 0; attackTimer = 2.2f;
                     }
-                    else if (bossAttackType == 4) {
-                        if (bossActionTimer <= 0.0f) {
-                            animFrameCounter = 0; AudioManager::PlaySE(SE_ENEMY_ATTACK);
-                            for (int i = 0; i < 12; i++) {
-                                float angle = i * 30.0f * DEG2RAD; Vector3 dir = { cosf(angle), 0.0f, sinf(angle) };
-                                fx.SpawnEffect(Vector3Add(position, { 0, 0.5f, 0 }), dir, FX_SMASH, GREEN);
-                            }
-                            fx.ShakeScreen(0.4f, 0.7f);
+                    else if (bossAttackType == 4 && bossActionTimer <= 0.0f) {
+                        animFrameCounter = 0;
+                        AudioManager::PlaySE(SE_ENEMY_ATTACK);
+                        for (int i = 0; i < 12; i++) {
+                            float angle = i * 30.0f * DEG2RAD;
+                            Vector3 dir = { cosf(angle), 0.0f, sinf(angle) };
+                            fx.SpawnEffect(Vector3Add(position, { 0, 0.5f, 0 }), dir, FX_SMASH, GREEN);
+                        }
+                        fx.ShakeScreen(0.4f, 0.7f);
 
-                            float aoeRadius = 7.5f;
-                            if (Vector3Distance(position, p.position) < aoeRadius) {
-                                float rawDmg = 30.0f + level * 3.0f;
-                                // ★ 新・防御減衰式で被ダメ算出
-                                float finalDmg = CalculateDamageToPlayer(p, rawDmg, ELEM_ROT);
-                                p.hp -= finalDmg;
-
-                                fx.SpawnDamageText(p.position, (int)finalDmg);
-                                fx.SpawnEffect(p.position, { 0,0,0 }, FX_HIT, RED);
-                                fx.TriggerDamageFlash(0.35f);
-
-                                std::string aoeFmt = DataManager::uiStrings.count("LOG_BOSS_AOE") ? DataManager::uiStrings["LOG_BOSS_AOE"] : "BOSS EXPLOSION HIT: %d DMG!";
+                        float aoeRadius = 7.5f;
+                        if (Vector3Distance(position, p.position) < aoeRadius) {
+                            float rawDmg = 30.0f + level * 3.0f;
+                            float finalDmg = p.TakeDamage(rawDmg, ELEM_ROT, this, fx);
+                            if (finalDmg > 0.0f) {
+                                std::string aoeFmt = DataManager::uiStrings.count("LOG_BOSS_AOE") ? DataManager::uiStrings["LOG_BOSS_AOE"] : "ボスの範囲攻撃！ %d の大ダメージを受けた！";
                                 UI::AddSystemLog(TextFormat(aoeFmt.c_str(), (int)finalDmg), RED);
-
-                                if (GetRandomValue(1, 100) <= 40) {
-                                    if (p.HasStatusImmunity(ELEM_ROT)) {
-                                        std::string immFmt = DataManager::uiStrings.count("LOG_STATUS_IMMUNE") ? DataManager::uiStrings["LOG_STATUS_IMMUNE"] : "★ STATUS IMMUNED! ★";
-                                        UI::AddSystemLog(immFmt, GREEN);
-                                    }
-                                    else {
-                                        p.status.ApplyStatus(ELEM_ROT, 3.5f, finalDmg);
-                                        std::string rotKey = "LOG_PLAYER_ROT";
-                                        if (DataManager::uiStrings.count(rotKey)) {
-                                            UI::AddSystemLog(DataManager::uiStrings[rotKey], Player::GetElementColor(ELEM_ROT));
-                                        }
-                                    }
-                                }
                             }
-                            bossAttackType = 0; attackTimer = 2.5f;
                         }
+                        bossAttackType = 0; attackTimer = 2.5f;
                     }
                 }
-                // 通常ボスの攻撃処理
                 else {
                     if (bossAttackType == 1) {
                         bossActionTimer -= dt;
                         if (bossActionTimer <= 0.0f) {
-                            animFrameCounter = 0; bossComboStep++; AudioManager::PlaySE(SE_ENEMY_ATTACK);
+                            animFrameCounter = 0;
+                            bossComboStep++;
+                            AudioManager::PlaySE(SE_ENEMY_ATTACK);
+
                             Vector3 spawnPos = Vector3Add(position, { 0, 0.8f, 0 });
                             Color atkCol = (data.element != ELEM_NONE) ? Player::GetElementColor(data.element) : GOLD;
                             fx.SpawnEffect(spawnPos, bossTargetDir, FX_SLASH, atkCol);
@@ -332,48 +352,23 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
                             float distToPlayer = Vector2Distance({ hitCenter.x, hitCenter.z }, { p.position.x, p.position.z });
 
                             if (distToPlayer < 2.6f) {
-                                float rawDmg = 16.0f + level * 2.5f; if (bossComboStep == 3) rawDmg *= 1.5f;
-                                // ★ 新・防御減衰式で被ダメ算出
-                                float finalDmg = CalculateDamageToPlayer(p, rawDmg, data.element);
-                                p.hp -= finalDmg;
+                                float rawDmg = 16.0f + level * 2.5f;
+                                if (bossComboStep == 3) rawDmg *= 1.5f;
 
-                                fx.SpawnDamageText(p.position, (int)finalDmg);
-                                fx.SpawnEffect(p.position, { 0,0,0 }, FX_HIT, RED);
-
-                                float resist = (data.element != ELEM_NONE) ? const_cast<Player&>(p).GetPlayerElementResistance(data.element) : 0.0f;
-                                if (resist > 0.05f) {
-                                    std::string resFmt = DataManager::uiStrings.count("LOG_RESISTED_HIT") ? DataManager::uiStrings["LOG_RESISTED_HIT"] : "★ RESISTED! (-%d%%) ★";
-                                    UI::AddSystemLog(TextFormat(resFmt.c_str(), (int)(resist * 100)), SKYBLUE);
-                                }
-                                else {
-                                    std::string comboFmt = DataManager::uiStrings.count("LOG_BOSS_COMBO") ? DataManager::uiStrings["LOG_BOSS_COMBO"] : "BOSS COMBO HIT: %d DMG!";
+                                float finalDmg = p.TakeDamage(rawDmg, data.element, this, fx);
+                                if (finalDmg > 0.0f) {
+                                    std::string comboFmt = DataManager::uiStrings.count("LOG_BOSS_COMBO") ? DataManager::uiStrings["LOG_BOSS_COMBO"] : "ボスの連続攻撃！ %d のダメージを受けた！";
                                     UI::AddSystemLog(TextFormat(comboFmt.c_str(), (int)finalDmg), RED);
-                                }
-
-                                if (data.element != ELEM_NONE && GetRandomValue(1, 100) <= 30) {
-                                    if (p.HasStatusImmunity(data.element)) {
-                                        std::string immFmt = DataManager::uiStrings.count("LOG_STATUS_IMMUNE") ? DataManager::uiStrings["LOG_STATUS_IMMUNE"] : "★ STATUS IMMUNED! ★";
-                                        UI::AddSystemLog(immFmt, GREEN);
-                                    }
-                                    else {
-                                        p.status.ApplyStatus(data.element, 3.5f, finalDmg);
-                                        std::string logKey = "";
-                                        if (data.element == ELEM_HELLFIRE) logKey = "LOG_PLAYER_BURN";
-                                        else if (data.element == ELEM_ROT) logKey = "LOG_PLAYER_ROT";
-                                        else if (data.element == ELEM_SOUL) logKey = "LOG_PLAYER_CHILL";
-                                        else if (data.element == ELEM_ABYSS) logKey = "LOG_PLAYER_CURSE";
-                                        if (!logKey.empty() && DataManager::uiStrings.count(logKey)) {
-                                            UI::AddSystemLog(DataManager::uiStrings[logKey], Player::GetElementColor(data.element));
-                                        }
-                                    }
                                 }
 
                                 if (bossComboStep >= 3) fx.ShakeScreen(0.3f, 0.6f);
                                 else fx.ShakeScreen(0.15f, 0.35f);
-                                fx.TriggerDamageFlash(0.25f);
                             }
 
-                            if (bossComboStep >= 3) { bossAttackType = 0; attackTimer = 1.5f; }
+                            if (bossComboStep >= 3) {
+                                bossAttackType = 0;
+                                attackTimer = 1.5f;
+                            }
                             else {
                                 bossActionTimer = 0.55f;
                                 bossTargetDir = Vector3Normalize(Vector3Subtract(p.position, position));
@@ -385,7 +380,8 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
                     else if (bossAttackType == 2) {
                         bossActionTimer -= dt;
                         if (bossActionTimer <= 0.0f) {
-                            animFrameCounter = 0; AudioManager::PlaySE(SE_ENEMY_ATTACK);
+                            animFrameCounter = 0;
+                            AudioManager::PlaySE(SE_ENEMY_ATTACK);
                             Vector3 spawnPos = Vector3Add(position, { 0, 0.75f, 0 });
                             float bDmg = 22.0f + level * 2.5f;
                             int elem = (data.element != ELEM_NONE) ? data.element : ELEM_ABYSS;
@@ -395,52 +391,54 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
                                 Vector3 dir = { bossTargetDir.x * c - bossTargetDir.z * s, 0.0f, bossTargetDir.x * s + bossTargetDir.z * c };
                                 fx.SpawnProjectile(spawnPos, dir, 12.0f, 1, false, bDmg, elem);
                             }
-                            bossAttackType = 0; attackTimer = 1.5f;
+                            bossAttackType = 0;
+                            attackTimer = 1.5f;
                         }
                     }
                     else if (bossAttackType == 3) {
                         bossActionTimer -= dt;
                         if (bossComboStep == 0) {
-                            if (bossActionTimer <= 0.0f) { bossComboStep = 1; bossActionTimer = 0.6f; animFrameCounter = 0; AudioManager::PlaySE(SE_ENEMY_ATTACK); }
+                            if (bossActionTimer <= 0.0f) {
+                                bossComboStep = 1;
+                                bossActionTimer = 0.6f;
+                                animFrameCounter = 0;
+                                AudioManager::PlaySE(SE_ENEMY_ATTACK);
+                            }
                         }
                         else if (bossComboStep == 1) {
-                            float oldSpeed = speed; speed = speed * 3.5f;
+                            float oldSpeed = speed;
+                            speed = speed * 3.5f;
                             bool hitWall = MoveSmart(Vector3Add(position, Vector3Scale(bossTargetDir, 10.0f)), d);
                             speed = oldSpeed;
 
                             float distToPlayer = Vector2Distance({ position.x, position.z }, { p.position.x, p.position.z });
                             if (distToPlayer < radius + p.radius + 0.8f) {
                                 float rawDmg = 22.0f + level * 2.8f;
-                                // ★ 新・防御減衰式で被ダメ算出
-                                float finalDmg = CalculateDamageToPlayer(p, rawDmg, data.element);
-                                p.hp -= finalDmg;
+                                float finalDmg = p.TakeDamage(rawDmg, data.element, this, fx);
 
-                                fx.SpawnDamageText(p.position, (int)finalDmg);
-                                fx.SpawnEffect(p.position, { 0,0,0 }, FX_HIT, RED);
-
-                                float resist = (data.element != ELEM_NONE) ? const_cast<Player&>(p).GetPlayerElementResistance(data.element) : 0.0f;
-                                if (resist > 0.05f) {
-                                    std::string resFmt = DataManager::uiStrings.count("LOG_RESISTED_HIT") ? DataManager::uiStrings["LOG_RESISTED_HIT"] : "★ RESISTED! (-%d%%) ★";
-                                    UI::AddSystemLog(TextFormat(resFmt.c_str(), (int)(resist * 100)), SKYBLUE);
-                                }
-                                else {
-                                    std::string dashFmt = DataManager::uiStrings.count("LOG_BOSS_DASH") ? DataManager::uiStrings["LOG_BOSS_DASH"] : "BOSS TACKLE HIT: %d DMG!";
+                                if (finalDmg > 0.0f) {
+                                    std::string dashFmt = DataManager::uiStrings.count("LOG_BOSS_DASH") ? DataManager::uiStrings["LOG_BOSS_DASH"] : "ボスの突進攻撃！ %d のダメージを受けた！";
                                     UI::AddSystemLog(TextFormat(dashFmt.c_str(), (int)finalDmg), RED);
                                 }
 
                                 fx.ShakeScreen(0.35f, 0.7f);
-                                fx.TriggerDamageFlash(0.35f);
-                                bossAttackType = 0; attackTimer = 2.0f;
+                                bossAttackType = 0;
+                                attackTimer = 2.0f;
                             }
-                            if (hitWall || bossActionTimer <= 0.0f) { bossAttackType = 0; attackTimer = 2.0f; }
+                            if (hitWall || bossActionTimer <= 0.0f) {
+                                bossAttackType = 0;
+                                attackTimer = 2.0f;
+                            }
                         }
                     }
                     else if (bossAttackType == 4) {
                         bossActionTimer -= dt;
                         if (bossActionTimer <= 0.0f) {
-                            animFrameCounter = 0; AudioManager::PlaySE(SE_ENEMY_ATTACK);
+                            animFrameCounter = 0;
+                            AudioManager::PlaySE(SE_ENEMY_ATTACK);
                             for (int i = 0; i < 12; i++) {
-                                float angle = i * 30.0f * DEG2RAD; Vector3 dir = { cosf(angle), 0.0f, sinf(angle) };
+                                float angle = i * 30.0f * DEG2RAD;
+                                Vector3 dir = { cosf(angle), 0.0f, sinf(angle) };
                                 fx.SpawnEffect(Vector3Add(position, { 0, 0.5f, 0 }), dir, FX_SMASH, PURPLE);
                             }
                             fx.ShakeScreen(0.4f, 0.7f);
@@ -448,26 +446,15 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
                             float aoeRadius = 7.0f;
                             if (Vector3Distance(position, p.position) < aoeRadius) {
                                 float rawDmg = 28.0f + level * 3.0f;
-                                // ★ 新・防御減衰式で被ダメ算出
-                                float finalDmg = CalculateDamageToPlayer(p, rawDmg, data.element);
-                                p.hp -= finalDmg;
+                                float finalDmg = p.TakeDamage(rawDmg, data.element, this, fx);
 
-                                fx.SpawnDamageText(p.position, (int)finalDmg);
-                                fx.SpawnEffect(p.position, { 0,0,0 }, FX_HIT, RED);
-
-                                float resist = (data.element != ELEM_NONE) ? const_cast<Player&>(p).GetPlayerElementResistance(data.element) : 0.0f;
-                                if (resist > 0.05f) {
-                                    std::string resFmt = DataManager::uiStrings.count("LOG_RESISTED_HIT") ? DataManager::uiStrings["LOG_RESISTED_HIT"] : "★ RESISTED! (-%d%%) ★";
-                                    UI::AddSystemLog(TextFormat(resFmt.c_str(), (int)(resist * 100)), SKYBLUE);
-                                }
-                                else {
-                                    std::string aoeFmt = DataManager::uiStrings.count("LOG_BOSS_AOE") ? DataManager::uiStrings["LOG_BOSS_AOE"] : "BOSS EXPLOSION HIT: %d DMG!";
+                                if (finalDmg > 0.0f) {
+                                    std::string aoeFmt = DataManager::uiStrings.count("LOG_BOSS_AOE") ? DataManager::uiStrings["LOG_BOSS_AOE"] : "ボスの範囲攻撃！ %d の大ダメージを受けた！";
                                     UI::AddSystemLog(TextFormat(aoeFmt.c_str(), (int)finalDmg), RED);
                                 }
-
-                                fx.TriggerDamageFlash(0.35f);
                             }
-                            bossAttackType = 0; attackTimer = 2.5f;
+                            bossAttackType = 0;
+                            attackTimer = 2.5f;
                         }
                     }
                 }
@@ -578,44 +565,14 @@ void Enemy::Update(Player& p, Dungeon& d, EffectManager& fx) {
                             float rawDmg = 14.0f + level * 2.4f;
                             rawDmg *= (1.0f - status.GetAttackReductionRate());
 
-                            // ★ 新・防御減衰式で被ダメ算出
-                            float finalDmg = CalculateDamageToPlayer(p, rawDmg, data.element);
-                            p.hp -= finalDmg;
-
-                            fx.SpawnDamageText(p.position, (int)finalDmg);
-                            fx.SpawnEffect(p.position, { 0,0,0 }, FX_HIT, RED);
-
-                            float resist = (data.element != ELEM_NONE) ? const_cast<Player&>(p).GetPlayerElementResistance(data.element) : 0.0f;
-                            if (resist > 0.05f) {
-                                std::string resFmt = DataManager::uiStrings.count("LOG_RESISTED_HIT") ? DataManager::uiStrings["LOG_RESISTED_HIT"] : "★ RESISTED! (-%d%%) ★";
-                                UI::AddSystemLog(TextFormat(resFmt.c_str(), (int)(resist * 100)), SKYBLUE);
-                            }
-                            else {
-                                std::string takenFmt = DataManager::uiStrings.count("LOG_DMG_TAKEN") ? DataManager::uiStrings["LOG_DMG_TAKEN"] : "%s HIT: %d DMG!";
+                            float finalDmg = p.TakeDamage(rawDmg, data.element, this, fx);
+                            if (finalDmg > 0.0f) {
+                                std::string takenFmt = DataManager::uiStrings.count("LOG_DMG_TAKEN") ? DataManager::uiStrings["LOG_DMG_TAKEN"] : "%s の攻撃！ %d のダメージを受けた！";
                                 UI::AddSystemLog(TextFormat(takenFmt.c_str(), data.name.c_str(), (int)finalDmg), RED);
-                            }
-
-                            if (data.element != ELEM_NONE && GetRandomValue(1, 100) <= 30) {
-                                if (p.HasStatusImmunity(data.element)) {
-                                    std::string immFmt = DataManager::uiStrings.count("LOG_STATUS_IMMUNE") ? DataManager::uiStrings["LOG_STATUS_IMMUNE"] : "★ STATUS IMMUNED! ★";
-                                    UI::AddSystemLog(immFmt, GREEN);
-                                }
-                                else {
-                                    p.status.ApplyStatus(data.element, 3.5f, finalDmg);
-                                    std::string logKey = "";
-                                    if (data.element == ELEM_HELLFIRE) logKey = "LOG_PLAYER_BURN";
-                                    else if (data.element == ELEM_ROT) logKey = "LOG_PLAYER_ROT";
-                                    else if (data.element == ELEM_SOUL) logKey = "LOG_PLAYER_CHILL";
-                                    else if (data.element == ELEM_ABYSS) logKey = "LOG_PLAYER_CURSE";
-                                    if (!logKey.empty() && DataManager::uiStrings.count(logKey)) {
-                                        UI::AddSystemLog(DataManager::uiStrings[logKey], Player::GetElementColor(data.element));
-                                    }
-                                }
                             }
 
                             if (eType == E_AXE) fx.ShakeScreen(0.2f, 0.45f);
                             else fx.ShakeScreen(0.15f, 0.3f);
-                            fx.TriggerDamageFlash(0.22f);
                         }
 
                         attackTimer = 1.5f;
@@ -740,16 +697,11 @@ void Enemy::Draw(bool debug, Camera3D cam, Font font, Vector3 playerPos) {
             status.DrawAura(position, radius);
         }
 
-        int handBoneIndex = -1; int weaponBoneIndex = -1;
-        for (int i = 0; i < gm.model.boneCount; i++) {
-            std::string bName(gm.model.bones[i].name); std::string lowerName = bName;
-            std::transform(lowerName.begin(), lowerName.end(), lowerName.begin(), ::tolower);
-            if (lowerName.find("sword") != std::string::npos || lowerName.find("spear") != std::string::npos || lowerName.find("dagger") != std::string::npos) { weaponBoneIndex = i; }
-            if (lowerName.find("hand_r") != std::string::npos || lowerName.find("handright") != std::string::npos || lowerName.find("handaright") != std::string::npos) { handBoneIndex = i; }
-        }
+        int targetBoneIndex = -1;
+        if (gm.handBoneIndex != -1) targetBoneIndex = gm.handBoneIndex;
+        else if (gm.weaponBoneIndex != -1) targetBoneIndex = gm.weaponBoneIndex;
 
-        int targetBoneIndex = (weaponBoneIndex != -1) ? weaponBoneIndex : handBoneIndex;
-        if (targetBoneIndex != -1) {
+        if (targetBoneIndex != -1 && !data.weaponModelName.empty() && DataManager::loadedModels.count(data.weaponModelName) > 0) {
             Matrix matScale = MatrixScale(scale, scale, scale);
             Matrix matTrans = MatrixTranslate(drawPos.x, drawPos.y, drawPos.z);
             Matrix modelBaseTransform = MatrixMultiply(MatrixMultiply(gm.model.transform, matScale), matTrans);
@@ -757,23 +709,22 @@ void Enemy::Draw(bool debug, Camera3D cam, Font font, Vector3 playerPos) {
             Matrix boneMatrix = GetBoneMatrix(gm.model, anim, frame, targetBoneIndex);
             Matrix boneWorldTransform = MatrixMultiply(boneMatrix, modelBaseTransform);
 
-            if (!data.weaponModelName.empty() && DataManager::loadedModels.count(data.weaponModelName) > 0) {
-                GameModel& wGm = DataManager::loadedModels[data.weaponModelName];
-                wGm.model.transform = boneWorldTransform;
+            GameModel& wGm = DataManager::loadedModels[data.weaponModelName];
+            wGm.model.transform = boneWorldTransform;
 
-                if (wGm.animCount > 0 && wGm.anims != nullptr) {
-                    UpdateModelAnimation(wGm.model, wGm.anims[0], frame % wGm.anims[0].frameCount);
-                }
-                DrawModel(wGm.model, { 0,0,0 }, 1.0f, WHITE);
-                wGm.model.transform = MatrixIdentity();
+            if (wGm.animCount > 0 && wGm.anims != nullptr) {
+                UpdateModelAnimation(wGm.model, wGm.anims[0], frame % wGm.anims[0].frameCount);
             }
+            DrawModel(wGm.model, { 0,0,0 }, 1.0f, WHITE);
+            wGm.model.transform = MatrixIdentity();
         }
         gm.model.transform = MatrixIdentity();
     }
     else {
         Color c = IsPlant() ? DARKGREEN : ((eType == E_SWORD) ? MAROON : (eType == E_SPEAR) ? ORANGE : (eType == E_AXE) ? PURPLE : (eType == E_ARCHER) ? DARKGREEN : (eType == E_MAGE) ? PINK : (eType == E_TRAP) ? DARKGRAY : GRAY);
         Vector3 drawPos = { position.x, position.y - 0.4f, position.z };
-        DrawCube(drawPos, 1, 1.2f, 1, c); DrawCubeWires(drawPos, 1, 1.2f, 1, BLACK);
+        DrawCube(drawPos, 1, 1.2f, 1, c);
+        DrawCubeWires(drawPos, 1, 1.2f, 1, BLACK);
     }
 
     if (debug) {
@@ -783,69 +734,29 @@ void Enemy::Draw(bool debug, Camera3D cam, Font font, Vector3 playerPos) {
         if (hasModel) DrawCubeWires(position, 2.0f, 2.0f, 2.0f, RED);
     }
 
-    // 通常敵のAoE予兆描画
     if (!isDying && !isBoss && isChargingAttack) {
-        float progress = 1.0f - (attackChargeTimer / attackChargeMax);
-        progress = fmaxf(0.0f, fminf(1.0f, progress));
+        float progress = fmaxf(0.0f, fminf(1.0f, 1.0f - (attackChargeTimer / attackChargeMax)));
 
         if (IsPlant() && normalAttackPattern == 3) {
-            Vector3 trapPos = playerPos; trapPos.y = 0.12f;
-            DrawCylinderWires(trapPos, 1.8f, 1.8f, 0.04f, 24, Fade(GREEN, 0.9f));
-            DrawCylinder(trapPos, 1.8f * progress, 1.8f * progress, 0.03f, 24, Fade(LIME, 0.4f));
+            DrawTelegraphCircle(playerPos, 1.8f, progress, Fade(GREEN, 0.9f), Fade(LIME, 0.15f), Fade(LIME, 0.45f));
         }
         else if (eType == E_ARCHER || eType == E_MAGE || eType == E_TRAP || (IsPlant() && normalAttackPattern == 1)) {
-            float totalLen = 14.0f; float w = 0.8f;
-            Vector3 dir = Vector3Normalize(lastAttackDir);
-            Vector3 side = { -dir.z, 0.0f, dir.x };
             Color laneCol = IsPlant() ? GREEN : RED;
-
-            Vector3 p1 = Vector3Add(position, Vector3Scale(side, w / 2.0f));
-            Vector3 p2 = Vector3Add(position, Vector3Add(Vector3Scale(dir, totalLen), Vector3Scale(side, w / 2.0f)));
-            Vector3 p3 = Vector3Add(position, Vector3Add(Vector3Scale(dir, totalLen), Vector3Scale(side, -w / 2.0f)));
-            Vector3 p4 = Vector3Add(position, Vector3Scale(side, -w / 2.0f));
-            p1.y = p2.y = p3.y = p4.y = 0.12f;
-
-            DrawLine3D(p1, p2, Fade(laneCol, 0.8f)); DrawLine3D(p2, p3, Fade(laneCol, 0.8f));
-            DrawLine3D(p3, p4, Fade(laneCol, 0.8f)); DrawLine3D(p4, p1, Fade(laneCol, 0.8f));
-
-            float chargeLen = totalLen * progress;
-            Vector3 cp2 = Vector3Add(position, Vector3Add(Vector3Scale(dir, chargeLen), Vector3Scale(side, w / 2.0f)));
-            Vector3 cp3 = Vector3Add(position, Vector3Add(Vector3Scale(dir, chargeLen), Vector3Scale(side, -w / 2.0f)));
-            cp2.y = cp3.y = 0.13f;
-            DrawTriangle3D(p1, p4, cp3, Fade(laneCol, 0.35f)); DrawTriangle3D(p1, cp3, cp2, Fade(laneCol, 0.35f));
-            DrawTriangle3D(cp3, p4, p1, Fade(laneCol, 0.35f)); DrawTriangle3D(cp2, cp3, p1, Fade(laneCol, 0.35f));
+            DrawTelegraphLane(position, lastAttackDir, 14.0f, 0.8f, progress, Fade(laneCol, 0.8f), Fade(laneCol, 0.35f));
         }
         else if (IsPlant() && normalAttackPattern == 2) {
             for (int i = -1; i <= 1; i++) {
                 float angle = i * 18.0f * DEG2RAD; float c = cosf(angle), s = sinf(angle);
                 Vector3 dir = { lastAttackDir.x * c - lastAttackDir.z * s, 0.0f, lastAttackDir.x * s + lastAttackDir.z * c };
-                float totalLen = 10.0f; float w = 0.6f;
-                Vector3 side = { -dir.z, 0.0f, dir.x };
-
-                Vector3 p1 = Vector3Add(position, Vector3Scale(side, w / 2.0f));
-                Vector3 p2 = Vector3Add(position, Vector3Add(Vector3Scale(dir, totalLen), Vector3Scale(side, w / 2.0f)));
-                Vector3 p3 = Vector3Add(position, Vector3Add(Vector3Scale(dir, totalLen), Vector3Scale(side, -w / 2.0f)));
-                Vector3 p4 = Vector3Add(position, Vector3Scale(side, -w / 2.0f));
-                p1.y = p2.y = p3.y = p4.y = 0.12f;
-
-                DrawLine3D(p1, p2, Fade(LIME, 0.7f)); DrawLine3D(p2, p3, Fade(LIME, 0.7f));
-                DrawLine3D(p3, p4, Fade(LIME, 0.7f)); DrawLine3D(p4, p1, Fade(LIME, 0.7f));
+                DrawTelegraphLane(position, dir, 10.0f, 0.6f, progress, Fade(LIME, 0.7f), Fade(LIME, 0.35f));
             }
         }
         else if (eType == E_SWORD || eType == E_AXE || eType == E_SPEAR) {
-            float aoeRadius = attackRange * 0.9f;
             Vector3 hitCenter = Vector3Add(position, Vector3Scale(lastAttackDir, attackRange * 0.5f));
-            hitCenter.y = 0.12f;
-
-            DrawCylinderWires(hitCenter, aoeRadius, aoeRadius, 0.04f, 32, Fade(RED, 0.95f));
-            float fillAlpha = 0.10f + (progress * 0.55f);
-            DrawCylinder(hitCenter, aoeRadius, aoeRadius, 0.03f, 32, Fade(RED, fillAlpha));
-            float gaugeRadius = aoeRadius * progress;
-            DrawCylinder(hitCenter, gaugeRadius, gaugeRadius, 0.05f, 32, Fade(ORANGE, 0.5f + progress * 0.4f));
+            DrawTelegraphCircle(hitCenter, attackRange * 0.9f, progress, Fade(RED, 0.95f), Fade(RED, 0.15f + progress * 0.45f), Fade(ORANGE, 0.5f + progress * 0.4f));
         }
     }
 
-    // ボスのAoE予兆描画
     if (!isDying && isBoss && bossAttackType != 0) {
         float maxTime = 1.0f;
         if (IsPlant()) {
@@ -865,9 +776,7 @@ void Enemy::Draw(bool debug, Camera3D cam, Font font, Vector3 playerPos) {
         if (!IsPlant() && bossAttackType == 3 && bossComboStep == 1) showTelegraph = false;
 
         if (showTelegraph) {
-            float progress = 1.0f - (bossActionTimer / maxTime);
-            progress = fmaxf(0.0f, fminf(1.0f, progress));
-
+            float progress = fmaxf(0.0f, fminf(1.0f, 1.0f - (bossActionTimer / maxTime)));
             Color outlineColor = IsPlant() ? Fade(LIME, 0.95f) : Fade(RED, 0.95f);
             Color fillColor = IsPlant() ? Fade(DARKGREEN, 0.3f + progress * 0.4f) : Fade(PURPLE, 0.12f + progress * 0.45f);
             Color chargeColor = IsPlant() ? Fade(GREEN, 0.5f + progress * 0.4f) : Fade(RED, 0.45f + progress * 0.45f);
@@ -876,100 +785,31 @@ void Enemy::Draw(bool debug, Camera3D cam, Font font, Vector3 playerPos) {
                 for (int i = -2; i <= 2; i++) {
                     float angle = i * 16.0f * DEG2RAD; float c = cosf(angle), s = sinf(angle);
                     Vector3 dir = { bossTargetDir.x * c - bossTargetDir.z * s, 0.0f, bossTargetDir.x * s + bossTargetDir.z * c };
-                    float totalLen = 16.0f; float w = 1.2f;
-                    Vector3 side = { -dir.z, 0.0f, dir.x };
-
-                    Vector3 p1 = Vector3Add(position, Vector3Scale(side, w / 2.0f));
-                    Vector3 p2 = Vector3Add(position, Vector3Add(Vector3Scale(dir, totalLen), Vector3Scale(side, w / 2.0f)));
-                    Vector3 p3 = Vector3Add(position, Vector3Add(Vector3Scale(dir, totalLen), Vector3Scale(side, -w / 2.0f)));
-                    Vector3 p4 = Vector3Add(position, Vector3Scale(side, -w / 2.0f));
-                    p1.y = p2.y = p3.y = p4.y = 0.12f;
-
-                    DrawLine3D(p1, p2, outlineColor); DrawLine3D(p2, p3, outlineColor);
-                    DrawLine3D(p3, p4, outlineColor); DrawLine3D(p4, p1, outlineColor);
-
-                    float chargeLen = totalLen * progress;
-                    Vector3 cp2 = Vector3Add(position, Vector3Add(Vector3Scale(dir, chargeLen), Vector3Scale(side, w / 2.0f)));
-                    Vector3 cp3 = Vector3Add(position, Vector3Add(Vector3Scale(dir, chargeLen), Vector3Scale(side, -w / 2.0f)));
-                    cp2.y = cp3.y = 0.13f;
-                    DrawTriangle3D(p1, p4, cp3, chargeColor); DrawTriangle3D(p1, cp3, cp2, chargeColor);
-                    DrawTriangle3D(cp3, p4, p1, chargeColor); DrawTriangle3D(cp2, cp3, p1, chargeColor);
+                    DrawTelegraphLane(position, dir, 16.0f, 1.2f, progress, outlineColor, chargeColor);
                 }
             }
             else if (IsPlant() && bossAttackType == 2) {
-                float totalRadius = 10.0f;
-                Vector3 center = { position.x, 0.12f, position.z };
-                DrawCylinderWires(center, totalRadius, totalRadius, 0.04f, 36, outlineColor);
-                DrawCylinderWires(center, totalRadius * progress, totalRadius * progress, 0.05f, 36, chargeColor);
-                DrawCylinder(center, totalRadius * progress, totalRadius * progress, 0.02f, 36, Fade(LIME, 0.25f));
+                DrawTelegraphCircle(position, 10.0f, progress, outlineColor, Fade(LIME, 0.15f), chargeColor);
             }
             else if (IsPlant() && bossAttackType == 3) {
-                Vector3 center = { playerPos.x, 0.12f, playerPos.z };
-                float r = 2.8f;
-                DrawCylinderWires(center, r, r, 0.04f, 32, outlineColor);
-                DrawCylinder(center, r * progress, r * progress, 0.04f, 32, chargeColor);
+                DrawTelegraphCircle(playerPos, 2.8f, progress, outlineColor, Fade(DARKGREEN, 0.2f), chargeColor);
             }
             else if (bossAttackType == 4) {
-                float totalRadius = 7.5f;
-                Vector3 center = { position.x, 0.12f, position.z };
-                DrawCylinder(center, totalRadius, totalRadius, 0.04f, 36, fillColor);
-                DrawCylinder(center, totalRadius * progress, totalRadius * progress, 0.05f, 36, chargeColor);
-                DrawCylinderWires(center, totalRadius, totalRadius, 0.04f, 36, outlineColor);
+                DrawTelegraphCircle(position, 7.5f, progress, outlineColor, fillColor, chargeColor);
             }
-            else if (!IsPlant()) {
-                if (bossAttackType == 1) {
-                    float comboRadius = 2.5f;
-                    Vector3 hitCenter = Vector3Add(position, Vector3Scale(bossTargetDir, 2.0f));
-                    hitCenter.y = 0.12f;
-                    DrawCylinder(hitCenter, comboRadius, comboRadius, 0.04f, 32, Fade(RED, 0.3f));
-                    DrawCylinder(hitCenter, comboRadius * progress, comboRadius * progress, 0.05f, 32, Fade(ORANGE, 0.7f));
-                    DrawCylinderWires(hitCenter, comboRadius, comboRadius, 0.04f, 32, outlineColor);
+            else if (!IsPlant() && bossAttackType == 1) {
+                Vector3 hitCenter = Vector3Add(position, Vector3Scale(bossTargetDir, 2.0f));
+                DrawTelegraphCircle(hitCenter, 2.5f, progress, outlineColor, Fade(RED, 0.25f), Fade(ORANGE, 0.7f));
+            }
+            else if (!IsPlant() && bossAttackType == 2) {
+                for (int i = -1; i <= 1; i++) {
+                    float angle = i * 20.0f * DEG2RAD; float c = cosf(angle), s = sinf(angle);
+                    Vector3 dir = { bossTargetDir.x * c - bossTargetDir.z * s, 0.0f, bossTargetDir.x * s + bossTargetDir.z * c };
+                    DrawTelegraphLane(position, dir, 18.0f, 1.4f, progress, outlineColor, chargeColor);
                 }
-                else if (bossAttackType == 2) {
-                    for (int i = -1; i <= 1; i++) {
-                        float angle = i * 20.0f * DEG2RAD; float c = cosf(angle), s = sinf(angle);
-                        Vector3 dir = { bossTargetDir.x * c - bossTargetDir.z * s, 0.0f, bossTargetDir.x * s + bossTargetDir.z * c };
-                        float totalLen = 18.0f; float w = 1.4f;
-                        Vector3 side = { -dir.z, 0.0f, dir.x };
-
-                        Vector3 p1 = Vector3Add(position, Vector3Scale(side, w / 2.0f));
-                        Vector3 p2 = Vector3Add(position, Vector3Add(Vector3Scale(dir, totalLen), Vector3Scale(side, w / 2.0f)));
-                        Vector3 p3 = Vector3Add(position, Vector3Add(Vector3Scale(dir, totalLen), Vector3Scale(side, -w / 2.0f)));
-                        Vector3 p4 = Vector3Add(position, Vector3Scale(side, -w / 2.0f));
-                        p1.y = p2.y = p3.y = p4.y = 0.12f;
-
-                        DrawLine3D(p1, p2, outlineColor); DrawLine3D(p2, p3, outlineColor);
-                        DrawLine3D(p3, p4, outlineColor); DrawLine3D(p4, p1, outlineColor);
-
-                        float chargeLen = totalLen * progress;
-                        Vector3 cp2 = Vector3Add(position, Vector3Add(Vector3Scale(dir, chargeLen), Vector3Scale(side, w / 2.0f)));
-                        Vector3 cp3 = Vector3Add(position, Vector3Add(Vector3Scale(dir, chargeLen), Vector3Scale(side, -w / 2.0f)));
-                        cp2.y = cp3.y = 0.13f;
-                        DrawTriangle3D(p1, p4, cp3, chargeColor); DrawTriangle3D(p1, cp3, cp2, chargeColor);
-                        DrawTriangle3D(cp3, p4, p1, chargeColor); DrawTriangle3D(cp2, cp3, p1, chargeColor);
-                    }
-                }
-                else if (bossAttackType == 3) {
-                    float totalLen = 12.75f; float w = 5.5f;
-                    Vector3 dir = Vector3Normalize(bossTargetDir);
-                    Vector3 side = { -dir.z, 0.0f, dir.x };
-
-                    Vector3 p1 = Vector3Add(position, Vector3Scale(side, w / 2.0f));
-                    Vector3 p2 = Vector3Add(position, Vector3Add(Vector3Scale(dir, totalLen), Vector3Scale(side, w / 2.0f)));
-                    Vector3 p3 = Vector3Add(position, Vector3Add(Vector3Scale(dir, totalLen), Vector3Scale(side, -w / 2.0f)));
-                    Vector3 p4 = Vector3Add(position, Vector3Scale(side, -w / 2.0f));
-                    p1.y = p2.y = p3.y = p4.y = 0.12f;
-
-                    DrawLine3D(p1, p2, outlineColor); DrawLine3D(p2, p3, outlineColor);
-                    DrawLine3D(p3, p4, outlineColor); DrawLine3D(p4, p1, outlineColor);
-
-                    float chargeLen = totalLen * progress;
-                    Vector3 cp2 = Vector3Add(position, Vector3Add(Vector3Scale(dir, chargeLen), Vector3Scale(side, w / 2.0f)));
-                    Vector3 cp3 = Vector3Add(position, Vector3Add(Vector3Scale(dir, chargeLen), Vector3Scale(side, -w / 2.0f)));
-                    cp2.y = cp3.y = 0.13f;
-                    DrawTriangle3D(p1, p4, cp3, chargeColor); DrawTriangle3D(p1, cp3, cp2, chargeColor);
-                    DrawTriangle3D(cp3, p4, p1, chargeColor); DrawTriangle3D(cp2, cp3, p1, chargeColor);
-                }
+            }
+            else if (!IsPlant() && bossAttackType == 3) {
+                DrawTelegraphLane(position, bossTargetDir, 12.75f, 5.5f, progress, outlineColor, chargeColor);
             }
         }
     }

@@ -29,7 +29,7 @@ void StatusManager::ApplyStatus(int element, float duration, float power) {
         curse.type = STATUS_CURSE;
         curse.timer = duration;
         curse.maxTimer = duration;
-        curse.power = 0.25f; // “GUŒ‚—Í -25%
+        curse.power = 0.25f; // UŒ‚—Í -25%
         break;
     }
 }
@@ -40,7 +40,7 @@ void StatusManager::Update(float dt, float& currentHp, EffectManager& fx, Vector
         burn.timer -= dt;
         burn.tickTimer -= dt;
         if (burn.tickTimer <= 0.0f) {
-            burn.tickTimer = 0.5f; // 0.5•b‚²‚Æ‚É¬ƒ_ƒ[ƒW
+            burn.tickTimer = 0.5f;
             int dotDmg = (int)fmaxf(3.0f, burn.power * 0.15f);
             currentHp -= (float)dotDmg;
             fx.SpawnDamageText(pos, dotDmg);
@@ -69,15 +69,15 @@ void StatusManager::Update(float dt, float& currentHp, EffectManager& fx, Vector
 }
 
 float StatusManager::GetSpeedMultiplier() const {
-    return (chill.timer > 0.0f) ? 0.50f : 1.0f; // “€‚ÅˆÚ“®‘¬“x”¼Œ¸
+    return (chill.timer > 0.0f) ? 0.50f : 1.0f;
 }
 
 float StatusManager::GetDefenseReductionRate() const {
-    return (rot.timer > 0.0f) ? rot.power : 0.0f; // —n‰ğ‚Å–hŒä—Í30%Œ¸
+    return (rot.timer > 0.0f) ? rot.power : 0.0f;
 }
 
 float StatusManager::GetAttackReductionRate() const {
-    return (curse.timer > 0.0f) ? curse.power : 0.0f; // Šã‚Å“GUŒ‚—Í25%Œ¸
+    return (curse.timer > 0.0f) ? curse.power : 0.0f;
 }
 
 bool StatusManager::HasAnyStatus() const {
@@ -88,23 +88,19 @@ void StatusManager::DrawAura(Vector3 pos, float radius) {
     float time = (float)GetTime();
     Vector3 auraPos = { pos.x, 0.08f, pos.z };
 
-    // ‰ŠãF‘«Œ³‚É‰ñ“]‚·‚é[g‚ÌƒŠƒ“ƒO
     if (burn.timer > 0.0f) {
         float r = radius * 1.2f + sinf(time * 6.0f) * 0.1f;
         DrawCylinderWires(auraPos, r, r, 0.03f, 16, Fade(RED, 0.7f));
     }
-    // —n‰ğF“Å—Î‚Ì–A—§‚ÂƒŠƒ“ƒO
     if (rot.timer > 0.0f) {
         float r = radius * 1.3f + cosf(time * 5.0f) * 0.15f;
         DrawCylinderWires(auraPos, r, r, 0.03f, 16, Fade(GREEN, 0.7f));
     }
-    // “€F—â‹CE•X‚Ì‘“‚¢ƒŠƒ“ƒO
     if (chill.timer > 0.0f) {
         float r = radius * 1.1f;
         DrawCylinder(auraPos, r, r, 0.02f, 16, Fade(SKYBLUE, 0.35f));
         DrawCylinderWires(auraPos, r, r, 0.03f, 16, Fade(WHITE, 0.8f));
     }
-    // ŠãF[•£‚Ì‡‚ÌèÉƒŠƒ“ƒO
     if (curse.timer > 0.0f) {
         float r = radius * 1.4f + sinf(time * 3.0f) * 0.2f;
         DrawCylinder(auraPos, r, r, 0.02f, 16, Fade(PURPLE, 0.3f));

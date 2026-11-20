@@ -15,6 +15,8 @@ int UI::DrawMenu(Player& p, Dungeon& d, MenuTab& tab, Font font) {
     int eventCode = 0;
     int sw = GetScreenWidth(), sh = GetScreenHeight();
 
+    static int pinnedSkillIdx = -1;
+
     DrawRectangle(50, 30, sw - 100, sh - 60, Fade(DARKGRAY, 0.95f));
     DrawRectangleLinesEx({ 50, 30, (float)sw - 100, (float)sh - 60 }, 2, GRAY);
 
@@ -24,7 +26,10 @@ int UI::DrawMenu(Player& p, Dungeon& d, MenuTab& tab, Font font) {
     for (int i = 0; i < 7; i++) {
         Rectangle r = { 65.0f + (float)i * 155, 50.0f, 142.0f, 42.0f };
         Color tabColor = (tab == i) ? BLUE : DARKGRAY;
-        if (UI::DrawButton(r, T(tKeys[i], tDefs[i]).c_str(), font, tabColor)) { tab = (MenuTab)i; }
+        if (UI::DrawButton(r, T(tKeys[i], tDefs[i]).c_str(), font, tabColor)) {
+            tab = (MenuTab)i;
+            pinnedSkillIdx = -1;
+        }
     }
 
     bool clickInput = IsMouseButtonPressed(0) || IsGamepadButtonPressed(0, GAMEPAD_BUTTON_RIGHT_FACE_DOWN);
@@ -162,13 +167,15 @@ int UI::DrawMenu(Player& p, Dungeon& d, MenuTab& tab, Font font) {
         if (UI::DrawButton({ rightX + 40, pageBtnY, 80, 35 }, "<<", font, GRAY) && equipPage > 0) equipPage--;
         if (UI::DrawButton({ rightX + 240, pageBtnY, 80, 35 }, ">>", font, GRAY) && equipPage < maxP - 1) equipPage++;
     }
-    // =========================================================================
-    // ★ SKILL タブ（全43ノード対応 ＆ キーストーン大ノード描画）
-    // =========================================================================
     else if (tab == SKILL) {
         Rectangle viewArea = { 100, 120, (float)sw - 200, (float)sh - 170 };
         DrawTextEx(font, T("CAM_CONTROL", "Right Click & Drag to Move").c_str(), { 120, (float)sh - 85 }, 16, 1, LIGHTGRAY);
-        DrawTextEx(font, TextFormat(T("HUD_GOLD_SP", "SP: %d").c_str(), p.skillPoints), { (float)sw - 220, 130 }, 20, 1, YELLOW);
+
+        std::string spText = TextFormat(T("SKILL_SP_ONLY", "所持SP: %d").c_str(), p.skillPoints);
+        Vector2 spSize = MeasureTextEx(font, spText.c_str(), 20, 1);
+        DrawRectangle((int)sw - 120 - (int)spSize.x, 130, (int)spSize.x + 20, 32, Fade(BLACK, 0.8f));
+        DrawRectangleLines((int)sw - 120 - (int)spSize.x, 130, (int)spSize.x + 20, 32, GOLD);
+        DrawTextEx(font, spText.c_str(), { (float)sw - 110 - spSize.x, 136 }, 20, 1, YELLOW);
 
         if (rightDownInput && !showDetail) {
             Vector2 delta = GetMouseDelta();
@@ -181,7 +188,6 @@ int UI::DrawMenu(Player& p, Dungeon& d, MenuTab& tab, Font font) {
 
         BeginScissorMode((int)viewArea.x, (int)viewArea.y, (int)viewArea.width, (int)viewArea.height);
 
-        // 1. ノード間の接続ライン（前提条件線）描画
         for (const auto& node : p.skillTree) {
             Vector2 startPos = Vector2Add(node.uiPos, skillOffset);
             for (int reqId : node.reqIds) {
@@ -200,13 +206,11 @@ int UI::DrawMenu(Player& p, Dungeon& d, MenuTab& tab, Font font) {
 
         int hoveredSkillIdx = -1;
 
-        // 2. 全43ノードの本体描画
         for (int i = 0; i < (int)p.skillTree.size(); i++) {
             auto& node = p.skillTree[i];
             bool available = p.IsSkillAvailable(node.id);
             Vector2 drawPos = Vector2Add(node.uiPos, skillOffset);
 
-            // ノード半径: キーストーンは大ノード(46px)、一般は35px
             float nodeRadius = (node.keystoneType > 0) ? 46.0f : 34.0f;
 
             Color nodeColor = node.unlocked ? YELLOW : (available ? GREEN : DARKGRAY);
@@ -220,7 +224,6 @@ int UI::DrawMenu(Player& p, Dungeon& d, MenuTab& tab, Font font) {
             Rectangle nodeRect = { drawPos.x - nodeRadius, drawPos.y - nodeRadius, nodeRadius * 2, nodeRadius * 2 };
             UI::RegisterInteractable(nodeRect);
 
-            // ★ キーストーンは大ノード（八角形＋二重枠）で圧倒的差別化
             if (node.keystoneType > 0) {
                 DrawPoly(drawPos, 8, nodeRadius, 0, nodeColor);
                 DrawPolyLines(drawPos, 8, nodeRadius, 0, node.unlocked ? GOLD : RAYWHITE);
@@ -231,50 +234,109 @@ int UI::DrawMenu(Player& p, Dungeon& d, MenuTab& tab, Font font) {
                 DrawPolyLines(drawPos, 6, nodeRadius, 0, RAYWHITE);
             }
 
-            // ノード名称
+            if (pinnedSkillIdx == i) {
+                DrawPolyLines(drawPos, (node.keystoneType > 0) ? 8 : 6, nodeRadius + 5.0f, 0, SKYBLUE);
+            }
+
             Vector2 tSize = MeasureTextEx(font, node.name.c_str(), (node.keystoneType > 0) ? 13 : 11, 1);
             DrawTextEx(font, node.name.c_str(), { drawPos.x - tSize.x / 2.0f, drawPos.y - tSize.y / 2.0f }, (node.keystoneType > 0) ? 13 : 11, 1, node.unlocked ? BLACK : WHITE);
 
             if (!node.unlocked) {
-                std::string spTxt = TextFormat("SP:%d", node.cost);
-                Vector2 spSize = MeasureTextEx(font, spTxt.c_str(), 10, 1);
-                DrawTextEx(font, spTxt.c_str(), { drawPos.x - spSize.x / 2.0f, drawPos.y + nodeRadius * 0.45f }, 10, 1, WHITE);
+                std::string spNodeTxt = TextFormat("SP:%d", node.cost);
+                Vector2 spNodeSize = MeasureTextEx(font, spNodeTxt.c_str(), 10, 1);
+                DrawTextEx(font, spNodeTxt.c_str(), { drawPos.x - spNodeSize.x / 2.0f, drawPos.y + nodeRadius * 0.45f }, 10, 1, WHITE);
             }
 
-            // クリック判定
             if (!showDetail && CheckCollisionPointRec(GetMousePosition(), viewArea)) {
                 if (CheckCollisionPointCircle(GetMousePosition(), drawPos, nodeRadius)) {
                     hoveredSkillIdx = i;
-                    if (available && clickInput) p.UnlockSkill(node.id);
+                    if (clickInput) {
+                        if (available) {
+                            p.UnlockSkill(node.id);
+                        }
+                        else if (node.unlocked && node.type != SKILL_PASSIVE) {
+                            pinnedSkillIdx = i;
+                            AudioManager::PlaySE(SE_CLICK);
+                        }
+                    }
                 }
             }
         }
         EndScissorMode();
 
-        // 3. マウスホバー時のスキル詳細ポップアップ
-        if (hoveredSkillIdx != -1) {
-            auto& node = p.skillTree[hoveredSkillIdx];
-            Vector2 mPos = GetMousePosition();
+        int activePopupIdx = (pinnedSkillIdx != -1) ? pinnedSkillIdx : hoveredSkillIdx;
 
-            int popW = (node.keystoneType > 0) ? 360 : 310;
-            int popH = (node.keystoneType > 0) ? 130 : 105;
-            float px = mPos.x + 15; float py = mPos.y + 15;
-            if (px + popW > sw - 60) px = mPos.x - popW - 10;
-            if (py + popH > sh - 40) py = mPos.y - popH - 10;
+        if (activePopupIdx != -1 && activePopupIdx < (int)p.skillTree.size()) {
+            auto& node = p.skillTree[activePopupIdx];
+            Vector2 drawPos = Vector2Add(node.uiPos, skillOffset);
 
-            DrawRectangle(px, py, popW, popH, Fade(BLACK, 0.92f));
-            DrawRectangleLinesEx({ px, py, (float)popW, (float)popH }, (node.keystoneType > 0) ? 3 : 2, (node.keystoneType > 0) ? GOLD : SKYBLUE);
+            Vector2 mPos = (pinnedSkillIdx != -1) ? Vector2{ drawPos.x + 45.0f, drawPos.y - 50.0f } : GetMousePosition();
 
+            Vector2 descSize = MeasureTextEx(font, node.desc.c_str(), 14, 1);
             std::string headerName = node.name;
             if (node.keystoneType > 0) headerName = "【KEYSTONE】" + headerName;
-            DrawTextEx(font, headerName.c_str(), { px + 12, py + 10 }, 20, 1, (node.keystoneType > 0) ? GOLD : WHITE);
+            Vector2 headerSize = MeasureTextEx(font, headerName.c_str(), 20, 1);
 
-            DrawTextEx(font, TextFormat(T("SKILL_COST", "Cost: %d SP").c_str(), node.cost), { px + 12, py + 34 }, 14, 1, YELLOW);
-            DrawTextEx(font, node.desc.c_str(), { px + 12, py + 56 }, 14, 1, LIGHTGRAY);
+            float requiredW = fmaxf(headerSize.x + 130.0f, descSize.x + 36.0f);
+            int popW = (int)fmaxf((node.keystoneType > 0 ? 400.0f : 360.0f), requiredW);
 
-            if (node.unlocked) DrawTextEx(font, T("SKILL_UNLOCKED", "UNLOCKED").c_str(), { px + popW - 95, py + 12 }, 15, 1, GREEN);
-            else if (p.IsSkillAvailable(node.id)) DrawTextEx(font, T("SKILL_AVAILABLE", "AVAILABLE").c_str(), { px + popW - 105, py + 12 }, 15, 1, SKYBLUE);
-            else DrawTextEx(font, T("SKILL_LOCKED", "LOCKED").c_str(), { px + popW - 85, py + 12 }, 15, 1, RED);
+            bool isActiveSkill = (node.type != SKILL_PASSIVE && node.type != SKILL_ACTIVE_DASH);
+            int popH = (node.keystoneType > 0) ? 125 : (isActiveSkill ? 145 : 105);
+
+            float px = (pinnedSkillIdx != -1) ? mPos.x : (mPos.x + 15);
+            float py = (pinnedSkillIdx != -1) ? mPos.y : (mPos.y + 15);
+            if (px + popW > sw - 60) px = (pinnedSkillIdx != -1) ? (drawPos.x - popW - 45.0f) : (mPos.x - popW - 10);
+            if (py + popH > sh - 40) py = sh - popH - 45.0f;
+            if (py < 125) py = 125;
+
+            Rectangle popRec = { px, py, (float)popW, (float)popH };
+            DrawRectangleRec(popRec, Fade(BLACK, 0.94f));
+            DrawRectangleLinesEx(popRec, (node.keystoneType > 0) ? 3 : 2, (pinnedSkillIdx != -1) ? GOLD : ((node.keystoneType > 0) ? GOLD : SKYBLUE));
+
+            DrawTextEx(font, headerName.c_str(), { px + 14, py + 12 }, 20, 1, (node.keystoneType > 0) ? GOLD : WHITE);
+            DrawTextEx(font, TextFormat(T("SKILL_COST", "Cost: %d SP").c_str(), node.cost), { px + 14, py + 38 }, 14, 1, YELLOW);
+            DrawTextEx(font, node.desc.c_str(), { px + 14, py + 62 }, 14, 1, LIGHTGRAY);
+
+            if (node.unlocked) DrawTextEx(font, T("SKILL_UNLOCKED", "UNLOCKED").c_str(), { px + popW - 100, py + 14 }, 15, 1, GREEN);
+            else if (p.IsSkillAvailable(node.id)) DrawTextEx(font, T("SKILL_AVAILABLE", "AVAILABLE").c_str(), { px + popW - 110, py + 14 }, 15, 1, SKYBLUE);
+            else DrawTextEx(font, T("SKILL_LOCKED", "LOCKED").c_str(), { px + popW - 90, py + 14 }, 15, 1, RED);
+
+            if (pinnedSkillIdx != -1) {
+                Rectangle closeBtn = { px + popW - 32, py + 6, 24, 24 };
+                if (UI::DrawButton(closeBtn, "X", font, DARKGRAY, true)) {
+                    pinnedSkillIdx = -1;
+                }
+            }
+
+            if (isActiveSkill && node.unlocked) {
+                float slotBtnY = py + 95.0f;
+                DrawLine(px + 10, slotBtnY - 8, px + popW - 10, slotBtnY - 8, DARKGRAY);
+
+                int curEquippedSlot = -1;
+                for (int s = 0; s < 5; s++) {
+                    if (p.GetSlotSkillType(s) == node.type) {
+                        curEquippedSlot = s + 1;
+                        break;
+                    }
+                }
+
+                if (curEquippedSlot != -1) {
+                    std::string eqTxt = TextFormat(T("EQUIPPED_SLOT", "[Slot %d]").c_str(), curEquippedSlot);
+                    DrawTextEx(font, eqTxt.c_str(), { px + 14, slotBtnY + 8 }, 14, 1, GREEN);
+                }
+                else {
+                    DrawTextEx(font, T("SET_SLOT", "Set Slot:").c_str(), { px + 14, slotBtnY + 8 }, 14, 1, WHITE);
+                }
+
+                float startBtnX = px + popW - 185;
+                for (int s = 0; s < 5; s++) {
+                    Rectangle btnR = { startBtnX + s * 34.0f, slotBtnY + 2, 30, 32 };
+                    Color bCol = (curEquippedSlot == s + 1) ? GREEN : DARKBLUE;
+                    if (UI::DrawButton(btnR, TextFormat("%d", s + 1), font, bCol, true)) {
+                        p.EquipSkillToSlot(s, node.type);
+                    }
+                }
+            }
         }
     }
     else if (tab == INVENTORY) {
@@ -450,11 +512,11 @@ int UI::DrawMenu(Player& p, Dungeon& d, MenuTab& tab, Font font) {
             {"Move Right",   "KEY_RIGHT",&DataManager::keyConfig.moveRight, nullptr},
             {"Attack",       "KEY_ATK", nullptr, &DataManager::keyConfig.padAttack},
             {"Dash",         "KEY_DASH",&DataManager::keyConfig.dash, &DataManager::keyConfig.padDash},
-            {"Smash",        "KEY_SMASH",&DataManager::keyConfig.smash, &DataManager::keyConfig.padSmash},
-            {"Kongo",        "KEY_KONGO",&DataManager::keyConfig.kongo, &DataManager::keyConfig.padKongo},
-            {"Zoukyou",      "KEY_ZOUKYOU",&DataManager::keyConfig.zoukyou, &DataManager::keyConfig.padZoukyou},
-            {"Stealth",      "KEY_STEALTH",&DataManager::keyConfig.stealth, &DataManager::keyConfig.padStealth},
-            {"Heal",         "KEY_HEAL",&DataManager::keyConfig.heal, &DataManager::keyConfig.padHeal},
+            {"Slot 1 Skill", "KEY_SMASH",&DataManager::keyConfig.smash, &DataManager::keyConfig.padSmash},
+            {"Slot 2 Skill", "KEY_KONGO",&DataManager::keyConfig.kongo, &DataManager::keyConfig.padKongo},
+            {"Slot 3 Skill", "KEY_ZOUKYOU",&DataManager::keyConfig.zoukyou, &DataManager::keyConfig.padZoukyou},
+            {"Slot 4 Skill", "KEY_STEALTH",&DataManager::keyConfig.stealth, &DataManager::keyConfig.padStealth},
+            {"Slot 5 Skill", "KEY_HEAL",&DataManager::keyConfig.heal, &DataManager::keyConfig.padHeal},
             {"Swap Weapon",  "KEY_SWAP",&DataManager::keyConfig.swapWeapon, &DataManager::keyConfig.padSwap},
         };
 

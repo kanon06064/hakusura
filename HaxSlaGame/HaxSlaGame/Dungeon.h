@@ -24,8 +24,6 @@ public:
     int currentDungeonId;
 
     std::vector<Vector3> treasureSpots;
-
-    //  各フロアに配置される素材採取スポット一覧
     std::vector<GatherSpot> gatherSpots;
 
     bool isHome;
@@ -41,7 +39,8 @@ public:
     bool CheckCollisionRadius(Vector3 pos, float radius);
     bool HasLineOfSight(Vector3 start, Vector3 end);
     bool IsDiscovered(float x, float z);
-    void UpdateVisibility(Vector3 playerPos);
+
+    void UpdateVisibility(Vector3 playerPos, bool forceUpdate = false);
     void CastVisibilityRay(int x0, int y0, int x1, int y1);
 
     Vector3 GetStartPosition();
@@ -51,6 +50,9 @@ private:
     std::vector<std::vector<int>> map;
     std::vector<std::vector<bool>> discovered;
     std::vector<Room> rooms;
+
+    int lastVisGridX;
+    int lastVisGridZ;
 
     void GenerateRestFloor();
     void GenerateBossFloor();

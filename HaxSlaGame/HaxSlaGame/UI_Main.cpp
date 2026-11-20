@@ -454,7 +454,6 @@ void UI::DrawBossHUD(const Enemy& boss, Font font) {
     DrawTextEx(font, hpStr.c_str(), { hpTextX, hpTextY }, 13, 1, WHITE);
 }
 
-// ★ ボス撃破バナー：日本語対応 ＆ センタリング描画
 void UI::DrawBossDefeatedBanner(float bannerTimer, Font font, bool isFinalBoss) {
     if (bannerTimer <= 0.0f) return;
 
@@ -476,7 +475,6 @@ void UI::DrawBossDefeatedBanner(float bannerTimer, Font font, bool isFinalBoss) 
     DrawLineEx({ 0, (float)bandY }, { (float)sw, (float)bandY }, 2, Fade(GOLD, 0.9f * alpha));
     DrawLineEx({ 0, (float)bandY + bandHeight }, { (float)sw, (float)bandY + bandHeight }, 2, Fade(GOLD, 0.9f * alpha));
 
-    // メインタイトル（例: 「ボス討伐完了」）
     std::string mainTitle = T("BOSS_BANNER_TITLE", "ボス討伐完了");
     Vector2 mainSize = MeasureTextEx(font, mainTitle.c_str(), 42, 2);
     float mainX = (float)sw / 2.0f - mainSize.x / 2.0f;
@@ -485,7 +483,6 @@ void UI::DrawBossDefeatedBanner(float bannerTimer, Font font, bool isFinalBoss) 
     DrawTextEx(font, mainTitle.c_str(), { mainX + 3, mainY + 3 }, 42, 2, Fade(BLACK, 0.95f * alpha));
     DrawTextEx(font, mainTitle.c_str(), { mainX, mainY }, 42, 2, Fade(GOLD, alpha));
 
-    // サブタイトル（通常ボス: 「階層の主を討ち滅ぼした」 / 魔王: 「深淵の魔王を完全に討ち滅ぼした」）
     std::string subTitle = isFinalBoss ? T("BOSS_BANNER_SUB_FINAL", "深淵の魔王を完全に討ち滅ぼした") : T("BOSS_BANNER_SUB_NORMAL", "階層の主を討ち滅ぼした");
     Vector2 subSize = MeasureTextEx(font, subTitle.c_str(), 20, 1);
     float subX = (float)sw / 2.0f - subSize.x / 2.0f;
@@ -641,36 +638,54 @@ void UI::DrawHUD(Player& p, std::vector<Enemy>& enemies, Dungeon& d, Camera3D& c
 
     DrawTextEx(font, TextFormat(T("HUD_GOLD_SP", "Gold: %d   SP: %d").c_str(), p.gold, p.skillPoints), { 25, (float)sh - 48 }, 20, 1, YELLOW);
 
+    // 右下スキルパレット（スロット1〜5装備スキル動的連動）
     int iconSize = 52;
     int startX = sw - 370;
     int startY = sh - 75;
 
-    struct SkillIcon { SkillType type; const char* labelKey; std::string key; std::string padKey; };
-    SkillIcon icons[] = {
-        { SKILL_ACTIVE_SMASH, "SMASH", getKeyStr(DataManager::keyConfig.smash), UI::GetPadBtnStr(DataManager::keyConfig.padSmash) },
-        { SKILL_ACTIVE_KONGO, "KONGO", getKeyStr(DataManager::keyConfig.kongo), UI::GetPadBtnStr(DataManager::keyConfig.padKongo) },
-        { SKILL_ACTIVE_ZOUKYOU, "ATKUP", getKeyStr(DataManager::keyConfig.zoukyou), UI::GetPadBtnStr(DataManager::keyConfig.padZoukyou) },
-        { SKILL_ACTIVE_STEALTH, "HIDE", getKeyStr(DataManager::keyConfig.stealth), UI::GetPadBtnStr(DataManager::keyConfig.padStealth) },
-        { SKILL_ACTIVE_HEAL, "HEAL", getKeyStr(DataManager::keyConfig.heal), UI::GetPadBtnStr(DataManager::keyConfig.padHeal) },
-        { SKILL_ACTIVE_DASH, "DASH", getKeyStr(DataManager::keyConfig.dash), UI::GetPadBtnStr(DataManager::keyConfig.padDash) }
-    };
+    auto getSkillLabelKey = [](SkillType t) -> const char* {
+        switch (t) {
+        case SKILL_ACTIVE_SMASH: return "SMASH";
+        case SKILL_ACTIVE_KONGO: return "KONGO";
+        case SKILL_ACTIVE_ZOUKYOU: return "ATKUP";
+        case SKILL_ACTIVE_STEALTH: return "HIDE";
+        case SKILL_ACTIVE_HEAL: return "HEAL";
+        case SKILL_ACTIVE_WHIRLWIND: return "WHIRLWIND";
+        case SKILL_ACTIVE_SHADOWSTEP: return "SHADOWSTEP";
+        case SKILL_ACTIVE_CATACLYSM: return "CATACLYSM";
+        default: return "NONE";
+        }
+        };
 
     bool padActive = IsGamepadAvailable(0);
 
     for (int i = 0; i < 6; i++) {
         int x = startX + i * (iconSize + 8);
-        bool unlocked = p.IsSkillUnlocked(icons[i].type);
+
+        SkillType sType = (i < 5) ? p.GetSlotSkillType(i) : SKILL_ACTIVE_DASH;
+        bool unlocked = p.IsSkillUnlocked(sType);
+
         Color baseCol = unlocked ? DARKBLUE : DARKGRAY;
+        if (sType == SKILL_ACTIVE_WHIRLWIND) baseCol = MAROON;
+        else if (sType == SKILL_ACTIVE_SHADOWSTEP) baseCol = PURPLE;
+        else if (sType == SKILL_ACTIVE_CATACLYSM) baseCol = Color{ 160, 40, 20, 255 };
 
         DrawRectangle(x, startY, iconSize, iconSize, baseCol);
         DrawRectangleLines(x, startY, iconSize, iconSize, RAYWHITE);
 
-        std::string displayKey = padActive ? icons[i].padKey : icons[i].key;
+        std::string displayKey = "";
+        if (i == 0) displayKey = padActive ? UI::GetPadBtnStr(DataManager::keyConfig.padSmash) : getKeyStr(DataManager::keyConfig.smash);
+        else if (i == 1) displayKey = padActive ? UI::GetPadBtnStr(DataManager::keyConfig.padKongo) : getKeyStr(DataManager::keyConfig.kongo);
+        else if (i == 2) displayKey = padActive ? UI::GetPadBtnStr(DataManager::keyConfig.padZoukyou) : getKeyStr(DataManager::keyConfig.zoukyou);
+        else if (i == 3) displayKey = padActive ? UI::GetPadBtnStr(DataManager::keyConfig.padStealth) : getKeyStr(DataManager::keyConfig.stealth);
+        else if (i == 4) displayKey = padActive ? UI::GetPadBtnStr(DataManager::keyConfig.padHeal) : getKeyStr(DataManager::keyConfig.heal);
+        else if (i == 5) displayKey = padActive ? UI::GetPadBtnStr(DataManager::keyConfig.padDash) : getKeyStr(DataManager::keyConfig.dash);
+
         DrawTextEx(font, displayKey.c_str(), { (float)x + 4, (float)startY + 3 }, 14, 1, YELLOW);
 
         if (unlocked) {
-            float cd = p.GetSkillCooldown(icons[i].type);
-            float maxCd = p.GetSkillMaxCooldown(icons[i].type);
+            float cd = (i < 5) ? p.GetSlotSkillCooldown(i) : p.dashCooldownTimer;
+            float maxCd = (i < 5) ? p.GetSlotSkillMaxCooldown(i) : 3.0f;
 
             if (cd > 0) {
                 float ratio = cd / maxCd;
@@ -678,8 +693,9 @@ void UI::DrawHUD(Player& p, std::vector<Enemy>& enemies, Dungeon& d, Camera3D& c
                 DrawTextEx(font, TextFormat("%.1f", cd), { (float)x + 6, (float)startY + 20 }, 18, 1, YELLOW);
             }
             else {
-                std::string label = T(icons[i].labelKey, icons[i].labelKey);
-                DrawTextEx(font, label.c_str(), { (float)x + 4, (float)startY + 32 }, 13, 1, GREEN);
+                const char* labelKey = (i < 5) ? getSkillLabelKey(sType) : "DASH";
+                std::string label = T(labelKey, labelKey);
+                DrawTextEx(font, label.c_str(), { (float)x + 4, (float)startY + 32 }, 12, 1, GREEN);
             }
         }
         else {

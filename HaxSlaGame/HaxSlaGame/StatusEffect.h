@@ -31,7 +31,7 @@ public:
     // 毎フレームの更新（Dotダメージの発生など）
     void Update(float dt, float& currentHp, class EffectManager& fx, Vector3 pos);
 
-    // 敵の足元にオーラ/パーティクルを描画
+    // 足元にオーラ/パーティクルを描画
     void DrawAura(Vector3 pos, float radius);
 
     // デバフ倍率の取得

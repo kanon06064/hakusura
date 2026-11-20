@@ -1,32 +1,34 @@
 #pragma once
 #include "Definitions.h"
 #include <vector>
-#include <map>
+#include <unordered_map>
 #include <string>
 
 class Player;
 
+// 3Dモデルとそのテクスチャ、アニメーション、事前解決されたボーンインデックス
 struct GameModel {
     Model model;
     Texture2D texture;
-    ModelAnimation* anims;
-    int animCount;
-    bool loaded;
+    ModelAnimation* anims = nullptr;
+    int animCount = 0;
+    bool loaded = false;
+
+    // 高速化・アタッチ用ボーンインデックス
+    int weaponBoneIndex = -1;
+    int handBoneIndex = -1;
 };
 
 class DataManager {
 public:
     static std::vector<EnemyData> allEnemyData;
     static std::vector<ItemData> itemConfigs;
-    static std::map<std::string, std::string> uiStrings;
+    static std::unordered_map<std::string, std::string> uiStrings;
     static std::vector<Modifier> modifiers;
     static std::vector<CraftRecipe> recipes;
     static std::vector<QuestData> quests;
-
-    // ★ 新規: skills.json からロードしたマスターデータ一覧
     static std::vector<SkillNode> masterSkills;
-
-    static std::map<std::string, GameModel> loadedModels;
+    static std::unordered_map<std::string, GameModel> loadedModels;
 
     static Model batModel;
     static Texture2D batTexture;
@@ -58,4 +60,6 @@ public:
     static SaveHeader GetSaveHeader(int slot);
 
     static void DeleteSave(int slot);
+
+    static void CacheBoneIndices(GameModel& gm);
 };

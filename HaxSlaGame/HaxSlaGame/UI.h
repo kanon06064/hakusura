@@ -4,7 +4,6 @@
 #include <vector>
 #include <string>
 
-// 画面左下に表示されるシステムログの構造体
 struct SystemLogMessage {
     std::string text;
     Color color;
@@ -19,11 +18,9 @@ class Game;
 
 class UI {
 public:
-    // --- 各種画面の描画関数 ---
     static void DrawHUD(class Player& p, std::vector<class Enemy>& enemies, class Dungeon& d, Camera3D& cam, int floor, int dungeonId, bool debug, Font font);
     static int DrawMenu(class Player& p, class Dungeon& d, MenuTab& tab, Font font);
 
-    // ★ ボス戦専用HUD：画面上部大型HPバー ＆ 勝利バナー（魔王フラグ対応）
     static void DrawBossHUD(const class Enemy& boss, Font font);
     static void DrawBossDefeatedBanner(float bannerTimer, Font font, bool isFinalBoss = false);
 
@@ -42,19 +39,16 @@ public:
 
     static bool DrawButton(Rectangle rect, const char* label, Font font, Color baseCol, bool forceInteractable = false);
 
-    // --- システムログ関連 ---
     static void AddSystemLog(const std::string& text, Color color = WHITE);
     static void UpdateSystemLogs(float deltaTime);
     static void DrawSystemLogs(Font font);
 
     static std::string GetPadBtnStr(int btn);
 
-    // --- ゲームパッドのUIナビゲーション機構 ---
     static void ClearInteractables();
     static void RegisterInteractable(Rectangle r);
     static void UpdatePadNavigation();
 
-    // --- UI状態管理変数 ---
     static int itemPage, equipPage, storageInvPage, storageBoxPage, itemSubTab;
     static int selectedDungeonTab;
     static int questScroll;

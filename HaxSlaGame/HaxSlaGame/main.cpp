@@ -3,13 +3,13 @@
 #include <stdlib.h>
 
 int main() {
-    // 乱数のシード(種)を現在の時間で初期化し、実行ごとにランダムな結果が得られるようにする
+    // 乱数シードの初期化
     srand((unsigned int)time(NULL));
 
     // Gameクラスのインスタンス生成
     Game game;
 
-    // ゲームのメインループを開始 (ウィンドウを閉じるまでここから抜けない)
+    // ゲームのメインループ開始
     game.Run();
 
     return 0;

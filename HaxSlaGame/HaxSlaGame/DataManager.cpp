@@ -2,26 +2,39 @@
 #include "Player.h"
 #include "AudioManager.h"
 #include "raylib.h"
+#include "rlgl.h"
 #include <fstream>
 #include <iostream>
 #include <cstdio>
+#include <algorithm>
+#include <cctype>
+#include <vector>
+#include <cstring>
 #include <nlohmann/json.hpp>
 
 using json = nlohmann::json;
 
 std::vector<EnemyData> DataManager::allEnemyData;
 std::vector<ItemData> DataManager::itemConfigs;
-std::map<std::string, std::string> DataManager::uiStrings;
+std::unordered_map<std::string, std::string> DataManager::uiStrings;
 std::vector<Modifier> DataManager::modifiers;
 std::vector<CraftRecipe> DataManager::recipes;
 std::vector<QuestData> DataManager::quests;
-std::vector<SkillNode> DataManager::masterSkills; // ★ 実体の定義
-std::map<std::string, GameModel> DataManager::loadedModels;
+std::vector<SkillNode> DataManager::masterSkills;
+std::unordered_map<std::string, GameModel> DataManager::loadedModels;
 
-Model DataManager::batModel = { 0 }; Texture2D DataManager::batTexture = { 0 }; ModelAnimation* DataManager::batAnims = nullptr; int DataManager::batAnimCount = 0; bool DataManager::isBatModelLoaded = false;
+Model DataManager::batModel = { 0 };
+Texture2D DataManager::batTexture = { 0 };
+ModelAnimation* DataManager::batAnims = nullptr;
+int DataManager::batAnimCount = 0;
+bool DataManager::isBatModelLoaded = false;
 Texture2D DataManager::titleBg = { 0 };
 Model DataManager::fallbackWeaponModel = { 0 };
 KeyConfig DataManager::keyConfig;
+
+// 自然な立体感（光と影）を生み出す内蔵ライトシェーダー
+static Shader dungeonShader = { 0 };
+static bool isShaderLoaded = false;
 
 static std::string FindRes(const std::string& name, const std::string& ext, const std::string& subDir) {
     std::string path1 = "resources/" + subDir + "/" + name + ext;
@@ -30,11 +43,102 @@ static std::string FindRes(const std::string& name, const std::string& ext, cons
 }
 
 static json ItemToJson(const ItemData& item) {
-    return { {"id", item.id}, {"name", item.name}, {"type", item.type}, {"model", item.modelName}, {"heal", item.heal}, {"atkBonus", item.atkBonus}, {"defBonus", item.defBonus}, {"hpBonus", item.hpBonus}, {"speedBonus", item.speedBonus}, {"weaponSubtype", item.weaponSubtype}, {"count", item.count}, {"modifierId", item.modifierId}, {"dropChance", item.dropChance},{"element", item.element} };
+    return {
+        {"id", item.id}, {"name", item.name}, {"type", item.type}, {"model", item.modelName},
+        {"heal", item.heal}, {"atkBonus", item.atkBonus}, {"defBonus", item.defBonus},
+        {"hpBonus", item.hpBonus}, {"speedBonus", item.speedBonus}, {"weaponSubtype", item.weaponSubtype},
+        {"count", item.count}, {"modifierId", item.modifierId}, {"dropChance", item.dropChance},
+        {"element", item.element}
+    };
 }
 
 static ItemData JsonToItem(const json& j) {
-    ItemData d; d.id = j.value("id", -1); d.name = j.value("name", ""); d.type = j.value("type", ""); d.modelName = j.value("model", ""); d.heal = j.value("heal", 0.0f); d.atkBonus = j.value("atkBonus", 0.0f); d.defBonus = j.value("defBonus", 0.0f); d.hpBonus = j.value("hpBonus", 0.0f); d.speedBonus = j.value("speedBonus", 0.0f); d.weaponSubtype = j.value("weaponSubtype", -1); d.count = j.value("count", 1); d.modifierId = j.value("modifierId", 0); d.dropChance = j.value("dropChance", 0.0f); d.element = j.value("element", 0); return d;
+    ItemData d;
+    d.id = j.value("id", -1);
+    d.name = j.value("name", "");
+    d.type = j.value("type", "");
+    d.modelName = j.value("model", "");
+    d.heal = j.value("heal", 0.0f);
+    d.atkBonus = j.value("atkBonus", 0.0f);
+    d.defBonus = j.value("defBonus", 0.0f);
+    d.hpBonus = j.value("hpBonus", 0.0f);
+    d.speedBonus = j.value("speedBonus", 0.0f);
+    d.weaponSubtype = j.value("weaponSubtype", -1);
+    d.count = j.value("count", 1);
+    d.modifierId = j.value("modifierId", 0);
+    d.dropChance = j.value("dropChance", 0.0f);
+    d.element = j.value("element", 0);
+    return d;
+}
+
+void DataManager::CacheBoneIndices(GameModel& gm) {
+    gm.weaponBoneIndex = -1;
+    gm.handBoneIndex = -1;
+    if (gm.model.boneCount <= 0 || gm.model.bones == nullptr) return;
+
+    for (int i = 0; i < gm.model.boneCount; i++) {
+        std::string bName(gm.model.bones[i].name);
+        for (auto& c : bName) c = (char)tolower(c);
+
+        if (bName.find("sword") != std::string::npos ||
+            bName.find("spear") != std::string::npos ||
+            bName.find("dagger") != std::string::npos) {
+            gm.weaponBoneIndex = i;
+        }
+        if (bName.find("hand_r") != std::string::npos ||
+            bName.find("handright") != std::string::npos ||
+            bName.find("handaright") != std::string::npos) {
+            gm.handBoneIndex = i;
+        }
+    }
+}
+
+// モデルに光と影（ライティングシェーダー）を割り当てる関数
+static void ApplyLightingToModel(Model& model) {
+    if (!isShaderLoaded) {
+        // 斜め上から照らす太陽光シェーダー（GLSL）
+        const char* vs =
+            "#version 330\n"
+            "in vec3 vertexPosition;\n"
+            "in vec2 vertexTexCoord;\n"
+            "in vec3 vertexNormal;\n"
+            "in vec4 vertexColor;\n"
+            "out vec2 fragTexCoord;\n"
+            "out vec4 fragColor;\n"
+            "out vec3 fragNormal;\n"
+            "uniform mat4 mvp;\n"
+            "uniform mat4 matModel;\n"
+            "void main() {\n"
+            "    fragTexCoord = vertexTexCoord;\n"
+            "    fragColor = vertexColor;\n"
+            "    fragNormal = normalize(vec3(matModel * vec4(vertexNormal, 0.0)));\n"
+            "    gl_Position = mvp * vec4(vertexPosition, 1.0);\n"
+            "}\n";
+
+        const char* fs =
+            "#version 330\n"
+            "in vec2 fragTexCoord;\n"
+            "in vec4 fragColor;\n"
+            "in vec3 fragNormal;\n"
+            "out vec4 finalColor;\n"
+            "uniform sampler2D texture0;\n"
+            "uniform vec4 colDiffuse;\n"
+            "void main() {\n"
+            "    vec4 baseCol = colDiffuse * fragColor;\n"
+            "    vec3 lightDir = normalize(vec3(0.5, 1.0, 0.4));\n" // 斜め上からの光
+            "    float diff = max(dot(fragNormal, lightDir), 0.0);\n"
+            "    float ambient = 0.45;\n" // 最低限の環境光（暗くなりすぎ防止）
+            "    float light = ambient + diff * 0.65;\n"
+            "    finalColor = vec4(baseCol.rgb * light, baseCol.a);\n"
+            "}\n";
+
+        dungeonShader = LoadShaderFromMemory(vs, fs);
+        isShaderLoaded = true;
+    }
+
+    for (int m = 0; m < model.materialCount; m++) {
+        model.materials[m].shader = dungeonShader;
+    }
 }
 
 void DataManager::LoadConfig() {
@@ -119,15 +223,64 @@ void DataManager::LoadAllData() {
     fallbackWeaponModel = LoadModelFromMesh(GenMeshCube(0.1f, 1.2f, 0.2f));
 
     try {
-        std::ifstream iF("items.json"); if (iF.is_open()) { json j; iF >> j; itemConfigs.clear(); for (auto& i : j) itemConfigs.push_back(JsonToItem(i)); }
-        std::ifstream rF("recipes.json"); if (rF.is_open()) { json j; rF >> j; recipes.clear(); for (auto& r : j) { CraftRecipe cr; cr.resultItemId = r.value("resultId", 0); cr.cost = r.value("cost", 0); if (r.contains("materials")) for (auto& m : r["materials"]) cr.materials.push_back({ m.value("id", 0), m.value("count", 1) }); recipes.push_back(cr); } }
-        std::ifstream eF("enemies.json"); if (eF.is_open()) { json j; eF >> j; allEnemyData.clear(); for (auto& i : j) { EnemyData d; d.id = i.value("id", 0); d.name = i.value("name", ""); d.modelName = i.value("model", ""); d.weaponModelName = i.value("weaponModel", ""); d.type = i.value("type", 0); d.hp = i.value("hp", 0.0f); d.speed = i.value("speed", 0.0f); d.minFloor = i.value("minFloor", 1); d.atkRange = i.value("atkRange", 2.0f); d.exp = i.value("exp", 0); d.gold = i.value("gold", 0); if (i.contains("drops")) d.drops = i["drops"].get<std::vector<int>>(); d.element = i.value("element", 0); if (i.contains("tint") && i["tint"].is_array() && i["tint"].size() >= 3) { d.tint = Color{ (unsigned char)i["tint"][0], (unsigned char)i["tint"][1], (unsigned char)i["tint"][2], 255 }; } else { d.tint = WHITE; } allEnemyData.push_back(d); } }
-        std::ifstream uF("ui_text.json"); if (uF.is_open()) { json j; uF >> j; uiStrings.clear(); for (auto& el : j.items()) uiStrings[el.key()] = el.value().get<std::string>(); }
+        std::ifstream iF("items.json");
+        if (iF.is_open()) {
+            json j; iF >> j; itemConfigs.clear();
+            for (auto& i : j) itemConfigs.push_back(JsonToItem(i));
+        }
+
+        std::ifstream rF("recipes.json");
+        if (rF.is_open()) {
+            json j; rF >> j; recipes.clear();
+            for (auto& r : j) {
+                CraftRecipe cr;
+                cr.resultItemId = r.value("resultId", 0);
+                cr.cost = r.value("cost", 0);
+                if (r.contains("materials")) {
+                    for (auto& m : r["materials"]) cr.materials.push_back({ m.value("id", 0), m.value("count", 1) });
+                }
+                recipes.push_back(cr);
+            }
+        }
+
+        std::ifstream eF("enemies.json");
+        if (eF.is_open()) {
+            json j; eF >> j; allEnemyData.clear();
+            for (auto& i : j) {
+                EnemyData d;
+                d.id = i.value("id", 0);
+                d.name = i.value("name", "");
+                d.modelName = i.value("model", "");
+                d.weaponModelName = i.value("weaponModel", "");
+                d.type = i.value("type", 0);
+                d.hp = i.value("hp", 0.0f);
+                d.def = i.value("def", 0.0f);
+                d.speed = i.value("speed", 0.0f);
+                d.minFloor = i.value("minFloor", 1);
+                d.atkRange = i.value("atkRange", 2.0f);
+                d.exp = i.value("exp", 0);
+                d.gold = i.value("gold", 0);
+                if (i.contains("drops")) d.drops = i["drops"].get<std::vector<int>>();
+                d.element = i.value("element", 0);
+                if (i.contains("tint") && i["tint"].is_array() && i["tint"].size() >= 3) {
+                    d.tint = Color{ (unsigned char)i["tint"][0], (unsigned char)i["tint"][1], (unsigned char)i["tint"][2], 255 };
+                }
+                else {
+                    d.tint = WHITE;
+                }
+                allEnemyData.push_back(d);
+            }
+        }
+
+        std::ifstream uF("ui_text.json");
+        if (uF.is_open()) {
+            json j; uF >> j; uiStrings.clear();
+            for (auto& el : j.items()) uiStrings[el.key()] = el.value().get<std::string>();
+        }
 
         std::ifstream mF("modifiers.json");
         if (mF.is_open()) {
-            json j; mF >> j;
-            modifiers.clear();
+            json j; mF >> j; modifiers.clear();
             for (auto& i : j) {
                 Modifier m;
                 m.id = i.value("id", 0);
@@ -141,24 +294,35 @@ void DataManager::LoadAllData() {
             }
         }
 
-        std::ifstream qF("quests.json"); if (qF.is_open()) { json j; qF >> j; quests.clear(); for (auto& q : j) { QuestData qd; qd.id = q.value("id", 0); qd.title = q.value("title", ""); qd.description = q.value("description", ""); std::string t = q.value("type", "HUNT"); qd.type = (t == "GATHER") ? QUEST_GATHER : QUEST_HUNT; qd.targetId = q.value("targetId", 0); qd.targetCount = q.value("targetCount", 0); qd.rewardGold = q.value("rewardGold", 0); qd.rewardItemId = q.value("rewardItemId", -1); qd.rewardItemCount = q.value("rewardItemCount", 0); quests.push_back(qd); } }
+        std::ifstream qF("quests.json");
+        if (qF.is_open()) {
+            json j; qF >> j; quests.clear();
+            for (auto& q : j) {
+                QuestData qd;
+                qd.id = q.value("id", 0);
+                qd.title = q.value("title", "");
+                qd.description = q.value("description", "");
+                std::string t = q.value("type", "HUNT");
+                qd.type = (t == "GATHER") ? QUEST_GATHER : QUEST_HUNT;
+                qd.targetId = q.value("targetId", 0);
+                qd.targetCount = q.value("targetCount", 0);
+                qd.rewardGold = q.value("rewardGold", 0);
+                qd.rewardItemId = q.value("rewardItemId", -1);
+                qd.rewardItemCount = q.value("rewardItemCount", 0);
+                quests.push_back(qd);
+            }
+        }
 
-        // =====================================================================
-        // ★ skills.json から全43ノードのスキルツリーマスターデータを読み込む
-        // =====================================================================
         std::ifstream sF("skills.json");
         if (sF.is_open()) {
-            json j; sF >> j;
-            masterSkills.clear();
+            json j; sF >> j; masterSkills.clear();
             for (auto& sn : j) {
                 SkillNode node;
                 node.id = sn.value("id", 0);
                 node.name = sn.value("name", "");
                 node.uiPos = { sn.value("x", 0.0f), sn.value("y", 0.0f) };
-                if (sn.contains("reqIds")) {
-                    node.reqIds = sn["reqIds"].get<std::vector<int>>();
-                }
-                node.unlocked = (node.id == 0); // 起点(ID:0)のみ最初から解放
+                if (sn.contains("reqIds")) node.reqIds = sn["reqIds"].get<std::vector<int>>();
+                node.unlocked = (node.id == 0);
                 node.cost = sn.value("cost", 1);
                 node.atkAdd = sn.value("atk", 0.0f);
                 node.defAdd = sn.value("def", 0.0f);
@@ -183,76 +347,175 @@ void DataManager::LoadAllData() {
     }
     catch (const std::exception& e) { std::cerr << "JSON Load Error: " << e.what() << std::endl; }
 
+    // 敵モデルのロード
     for (const auto& enemy : allEnemyData) {
         std::string name = enemy.modelName;
         if (!name.empty() && loadedModels.count(name) == 0) {
-            std::string iqmPath = FindRes(name, ".iqm", "IQM"); std::string texPath = FindRes(name + "_Albedo", ".png", "Texture"); if (!FileExists(texPath.c_str())) texPath = FindRes("Albedo", ".png", "Texture");
+            std::string iqmPath = FindRes(name, ".iqm", "IQM");
+            std::string texPath = FindRes(name + "_Albedo", ".png", "Texture");
+            if (!FileExists(texPath.c_str())) texPath = FindRes("Albedo", ".png", "Texture");
+
             if (FileExists(iqmPath.c_str()) && FileExists(texPath.c_str())) {
-                GameModel gm; gm.model = LoadModel(iqmPath.c_str()); gm.texture = LoadTexture(texPath.c_str());
-                for (int m = 0; m < gm.model.materialCount; m++) { SetMaterialTexture(&gm.model.materials[m], MATERIAL_MAP_DIFFUSE, gm.texture); }
-                gm.anims = LoadModelAnimations(iqmPath.c_str(), &gm.animCount); gm.loaded = true; loadedModels[name] = gm;
+                GameModel gm;
+                gm.model = LoadModel(iqmPath.c_str());
+                gm.texture = LoadTexture(texPath.c_str());
+                for (int m = 0; m < gm.model.materialCount; m++) {
+                    SetMaterialTexture(&gm.model.materials[m], MATERIAL_MAP_DIFFUSE, gm.texture);
+                    gm.model.materials[m].maps[MATERIAL_MAP_DIFFUSE].color = WHITE;
+                }
+                gm.anims = LoadModelAnimations(iqmPath.c_str(), &gm.animCount);
+                gm.loaded = true;
+                CacheBoneIndices(gm);
+                loadedModels[name] = gm;
             }
         }
+
         std::string wName = enemy.weaponModelName;
         if (!wName.empty() && loadedModels.count(wName) == 0) {
-            std::string wIqmPath = FindRes(wName, ".iqm", "IQM"); if (!FileExists(wIqmPath.c_str())) wIqmPath = FindRes(wName, ".obj", "OBJ"); std::string wTexPath = FindRes(wName + "_Albedo", ".png", "Texture"); if (!FileExists(wTexPath.c_str())) wTexPath = FindRes("Albedo", ".png", "Texture");
-            if (FileExists(wIqmPath.c_str())) {
-                GameModel wGm; wGm.model = LoadModel(wIqmPath.c_str());
+            std::string wIqmPath = FindRes(wName, ".iqm", "IQM");
+            if (!FileExists(wIqmPath.c_str())) wIqmPath = FindRes(wName, ".obj", "OBJ");
+            std::string wTexPath = FindRes(wName + "_Albedo", ".png", "Texture");
+            if (!FileExists(wTexPath.c_str())) wTexPath = FindRes("Albedo", ".png", "Texture");
+
+            if (FileExists(wIqmPath.c_str()) || FileExists(FindRes(wName, ".obj", "OBJ").c_str())) {
+                std::string loadPath = FileExists(wIqmPath.c_str()) ? wIqmPath : FindRes(wName, ".obj", "OBJ");
+                GameModel wGm;
+                wGm.model = LoadModel(loadPath.c_str());
                 if (FileExists(wTexPath.c_str())) {
                     wGm.texture = LoadTexture(wTexPath.c_str());
-                    for (int m = 0; m < wGm.model.materialCount; m++) { SetMaterialTexture(&wGm.model.materials[m], MATERIAL_MAP_DIFFUSE, wGm.texture); }
+                    for (int m = 0; m < wGm.model.materialCount; m++) {
+                        SetMaterialTexture(&wGm.model.materials[m], MATERIAL_MAP_DIFFUSE, wGm.texture);
+                        wGm.model.materials[m].maps[MATERIAL_MAP_DIFFUSE].color = WHITE;
+                    }
                 }
-                wGm.anims = LoadModelAnimations(wIqmPath.c_str(), &wGm.animCount); wGm.loaded = true; loadedModels[wName] = wGm;
+                if (FileExists(wIqmPath.c_str())) {
+                    wGm.anims = LoadModelAnimations(wIqmPath.c_str(), &wGm.animCount);
+                }
+                else {
+                    wGm.anims = nullptr;
+                    wGm.animCount = 0;
+                }
+                wGm.loaded = true;
+                CacheBoneIndices(wGm);
+                loadedModels[wName] = wGm;
             }
         }
     }
 
+    // 環境モデル（ダンジョン床・壁・宝箱・階段など）のロード
     std::vector<std::string> envModels = {
         "Obj_Storage", "Obj_Reforge", "Obj_Craft", "Obj_Portal", "Obj_StairsDown", "Obj_StairsUp", "Obj_Heal", "Obj_QuestBoard", "Player",
         "Wpn_Sword", "Wpn_Spear", "Wpn_Axe", "Wpn_Wand",
-        "Wpn_Sword_Legend", "Wpn_Spear_Legend", "Wpn_Axe_Legend", "Wpn_Wand_Legend"
+        "Wpn_Sword_Legend", "Wpn_Spear_Legend", "Wpn_Axe_Legend", "Wpn_Wand_Legend",
+        "Dungeon_Floor", "Dungeon_Wall"
     };
     for (const auto& mName : envModels) {
-        std::string objPath = FindRes(mName, ".obj", "OBJ"); std::string iqmPath = FindRes(mName, ".iqm", "IQM"); std::string texPath = FindRes(mName + "_Albedo", ".png", "Texture");
-        std::string usePath = ""; if (FileExists(iqmPath.c_str())) usePath = iqmPath; else if (FileExists(objPath.c_str())) usePath = objPath;
+        std::string objPath = FindRes(mName, ".obj", "OBJ");
+        std::string iqmPath = FindRes(mName, ".iqm", "IQM");
+        std::string usePath = "";
+        if (FileExists(iqmPath.c_str())) usePath = iqmPath;
+        else if (FileExists(objPath.c_str())) usePath = objPath;
+
         if (!usePath.empty()) {
-            GameModel gm; gm.model = LoadModel(usePath.c_str());
-            if (!FileExists(texPath.c_str())) texPath = FindRes("Albedo", ".png", "Texture");
-            if (FileExists(texPath.c_str())) {
-                gm.texture = LoadTexture(texPath.c_str());
-                for (int m = 0; m < gm.model.materialCount; m++) { SetMaterialTexture(&gm.model.materials[m], MATERIAL_MAP_DIFFUSE, gm.texture); }
-            }
-            if (usePath == iqmPath) gm.anims = LoadModelAnimations(usePath.c_str(), &gm.animCount); else { gm.anims = nullptr; gm.animCount = 0; }
-            gm.loaded = true; loadedModels[mName] = gm;
-        }
-    }
+            GameModel gm;
+            gm.model = LoadModel(usePath.c_str());
 
-    for (auto& cfg : itemConfigs) {
-        if (cfg.type == "EQUIP") {
-            std::string wKey = cfg.modelName.empty() ? ("Wpn_" + std::to_string(cfg.id)) : cfg.modelName;
-
-            if (loadedModels.count(wKey) == 0) {
-                std::string wObj = FindRes(wKey, ".obj", "OBJ"); if (!FileExists(wObj.c_str())) wObj = FindRes(wKey, ".iqm", "IQM");
-                if (FileExists(wObj.c_str())) {
-                    GameModel gm; gm.model = LoadModel(wObj.c_str()); std::string wTex = FindRes(wKey + "_Albedo", ".png", "Texture"); if (!FileExists(wTex.c_str())) wTex = FindRes("Albedo", ".png", "Texture");
-                    if (FileExists(wTex.c_str())) {
-                        gm.texture = LoadTexture(wTex.c_str());
-                        for (int m = 0; m < gm.model.materialCount; m++) { SetMaterialTexture(&gm.model.materials[m], MATERIAL_MAP_DIFFUSE, gm.texture); }
-                    }
-                    gm.anims = nullptr; gm.animCount = 0; gm.loaded = true; loadedModels[wKey] = gm;
+            // 専用テクスチャがある場合のみバインド
+            std::string specificTex = FindRes(mName + "_Albedo", ".png", "Texture");
+            if (FileExists(specificTex.c_str())) {
+                gm.texture = LoadTexture(specificTex.c_str());
+                for (int m = 0; m < gm.model.materialCount; m++) {
+                    SetMaterialTexture(&gm.model.materials[m], MATERIAL_MAP_DIFFUSE, gm.texture);
+                    gm.model.materials[m].maps[MATERIAL_MAP_DIFFUSE].color = WHITE;
                 }
             }
+            else if (mName == "Player" || mName.find("Wpn_") != std::string::npos) {
+                // プレイヤーや武器のみ共通Albedoを適用
+                std::string fallbackTex = FindRes("Albedo", ".png", "Texture");
+                if (FileExists(fallbackTex.c_str())) {
+                    gm.texture = LoadTexture(fallbackTex.c_str());
+                    for (int m = 0; m < gm.model.materialCount; m++) {
+                        SetMaterialTexture(&gm.model.materials[m], MATERIAL_MAP_DIFFUSE, gm.texture);
+                        gm.model.materials[m].maps[MATERIAL_MAP_DIFFUSE].color = WHITE;
+                    }
+                }
+            }
+            else {
+                // ダンジョンモデルや宝箱は、自然なマテリアル色を設定して陰影を適用
+                ApplyLightingToModel(gm.model);
+            }
+
+            if (usePath == iqmPath) gm.anims = LoadModelAnimations(usePath.c_str(), &gm.animCount);
+            else { gm.anims = nullptr; gm.animCount = 0; }
+            gm.loaded = true;
+            CacheBoneIndices(gm);
+            loadedModels[mName] = gm;
         }
     }
 
-    if (loadedModels.count("Bat")) { batModel = loadedModels["Bat"].model; batTexture = loadedModels["Bat"].texture; batAnims = loadedModels["Bat"].anims; batAnimCount = loadedModels["Bat"].animCount; isBatModelLoaded = true; }
-    std::string titleBgPath = FindRes("title_bg", ".png", "Texture"); if (FileExists(titleBgPath.c_str())) { titleBg = LoadTexture(titleBgPath.c_str()); }
+    // 全アイテム（消耗品・素材・防具）のロード
+    for (auto& cfg : itemConfigs) {
+        std::string mKey = cfg.modelName;
+        if (mKey.empty() && cfg.type == "EQUIP") {
+            mKey = "Wpn_" + std::to_string(cfg.id);
+        }
+
+        if (!mKey.empty() && loadedModels.count(mKey) == 0) {
+            std::string wObj = FindRes(mKey, ".obj", "OBJ");
+            if (!FileExists(wObj.c_str())) wObj = FindRes(mKey, ".iqm", "IQM");
+
+            if (FileExists(wObj.c_str())) {
+                GameModel gm;
+                gm.model = LoadModel(wObj.c_str());
+
+                // ★ 修正: アイテムに専用テクスチャがない場合は Albedo.png を勝手に貼らず、OBJ本来のMTL色＋陰影を適用！
+                std::string wTex = FindRes(mKey + "_Albedo", ".png", "Texture");
+                if (FileExists(wTex.c_str())) {
+                    gm.texture = LoadTexture(wTex.c_str());
+                    for (int m = 0; m < gm.model.materialCount; m++) {
+                        SetMaterialTexture(&gm.model.materials[m], MATERIAL_MAP_DIFFUSE, gm.texture);
+                        gm.model.materials[m].maps[MATERIAL_MAP_DIFFUSE].color = WHITE;
+                    }
+                }
+                else {
+                    ApplyLightingToModel(gm.model);
+                }
+
+                gm.anims = nullptr;
+                gm.animCount = 0;
+                gm.loaded = true;
+                CacheBoneIndices(gm);
+                loadedModels[mKey] = gm;
+            }
+        }
+    }
+
+    if (loadedModels.count("Bat")) {
+        batModel = loadedModels["Bat"].model;
+        batTexture = loadedModels["Bat"].texture;
+        batAnims = loadedModels["Bat"].anims;
+        batAnimCount = loadedModels["Bat"].animCount;
+        isBatModelLoaded = true;
+    }
+    std::string titleBgPath = FindRes("title_bg", ".png", "Texture");
+    if (FileExists(titleBgPath.c_str())) {
+        titleBg = LoadTexture(titleBgPath.c_str());
+    }
 }
 
 void DataManager::UnloadAllData() {
-    for (auto& pair : loadedModels) { if (pair.second.loaded) { UnloadTexture(pair.second.texture); if (pair.second.anims != nullptr) UnloadModelAnimations(pair.second.anims, pair.second.animCount); UnloadModel(pair.second.model); } }
-    loadedModels.clear(); isBatModelLoaded = false; if (titleBg.id != 0) { UnloadTexture(titleBg); }
+    for (auto& pair : loadedModels) {
+        if (pair.second.loaded) {
+            UnloadTexture(pair.second.texture);
+            if (pair.second.anims != nullptr) UnloadModelAnimations(pair.second.anims, pair.second.animCount);
+            UnloadModel(pair.second.model);
+        }
+    }
+    loadedModels.clear();
+    isBatModelLoaded = false;
+    if (titleBg.id != 0) { UnloadTexture(titleBg); }
     if (fallbackWeaponModel.meshCount > 0) UnloadModel(fallbackWeaponModel);
+    if (isShaderLoaded) { UnloadShader(dungeonShader); isShaderLoaded = false; }
     masterSkills.clear();
 }
 
@@ -266,82 +529,195 @@ EnemyData DataManager::GetRandomEnemyForFloor(int floor, int dungeonId) {
         else { if (e.minFloor >= 10) ok = true; }
         if (ok) c.push_back(e);
     }
-    if (c.empty()) return allEnemyData.empty() ? EnemyData{ 0, "Slime", "", "", 0, 30, 0.05f } : allEnemyData[0];
+    if (c.empty()) return allEnemyData.empty() ? EnemyData{ 0, "Slime", "", "", 0, 30, 0, 0.05f } : allEnemyData[0];
     return c[GetRandomValue(0, (int)c.size() - 1)];
 }
 
 EnemyData DataManager::GetBossEnemy(int floor, int dungeonId) {
-    if (allEnemyData.empty()) return { 0, "Boss", "", "", 0, 1000, 0.1f };
+    if (allEnemyData.empty()) return { 0, "Boss", "", "", 0, 1000, 50, 0.1f };
     std::vector<EnemyData> bosses;
-    if (dungeonId == 0) { for (auto& e : allEnemyData) if (e.id == 7 || e.id == 8) bosses.push_back(e); if (floor == 30) { for (auto& e : allEnemyData) if (e.id == 15) return e; } }
-    else if (dungeonId == 1) { for (auto& e : allEnemyData) if (e.id == 15 || e.id == 16 || e.id == 17) bosses.push_back(e); if (floor == 50) { for (auto& e : allEnemyData) if (e.id == 17) return e; } }
-    else { for (auto& e : allEnemyData) if (e.id == 17 || e.id == 18 || e.id == 20 || e.id == 21) bosses.push_back(e); if (floor == 100) { for (auto& e : allEnemyData) if (e.id == 22) return e; } }
+    if (dungeonId == 0) {
+        for (auto& e : allEnemyData) if (e.id == 7 || e.id == 8) bosses.push_back(e);
+        if (floor == 30) { for (auto& e : allEnemyData) if (e.id == 15) return e; }
+    }
+    else if (dungeonId == 1) {
+        for (auto& e : allEnemyData) if (e.id == 15 || e.id == 16 || e.id == 17) bosses.push_back(e);
+        if (floor == 50) { for (auto& e : allEnemyData) if (e.id == 17) return e; }
+    }
+    else {
+        for (auto& e : allEnemyData) if (e.id == 17 || e.id == 18 || e.id == 20 || e.id == 21) bosses.push_back(e);
+        if (floor == 100) { for (auto& e : allEnemyData) if (e.id == 22) return e; }
+    }
 
     if (!bosses.empty()) return bosses[GetRandomValue(0, (int)bosses.size() - 1)];
     return allEnemyData[0];
 }
 
-ItemData DataManager::GetItemConfigCopy(int id) { for (auto& cfg : itemConfigs) if (cfg.id == id) return cfg; ItemData empty; empty.id = -1; return empty; }
-QuestData DataManager::GetQuestData(int id) { for (auto& q : quests) if (q.id == id) return q; QuestData empty; empty.id = -1; return empty; }
-Modifier DataManager::GetModifier(int id) { for (const auto& mod : modifiers) if (mod.id == id) return mod; for (const auto& mod : modifiers) if (mod.id == 0) return mod; return { 0, "", 0,0,0,0,0 }; }
-int DataManager::GetRandomModifierId() { if (modifiers.size() <= 1) return 0; return modifiers[GetRandomValue(1, (int)modifiers.size() - 1)].id; }
+ItemData DataManager::GetItemConfigCopy(int id) {
+    for (auto& cfg : itemConfigs) if (cfg.id == id) return cfg;
+    ItemData empty; empty.id = -1; return empty;
+}
+
+QuestData DataManager::GetQuestData(int id) {
+    for (auto& q : quests) if (q.id == id) return q;
+    QuestData empty; empty.id = -1; return empty;
+}
+
+Modifier DataManager::GetModifier(int id) {
+    for (const auto& mod : modifiers) if (mod.id == id) return mod;
+    for (const auto& mod : modifiers) if (mod.id == 0) return mod;
+    return { 0, "", 0, 0, 0, 0, 0 };
+}
+
+int DataManager::GetRandomModifierId() {
+    if (modifiers.size() <= 1) return 0;
+    return modifiers[GetRandomValue(1, (int)modifiers.size() - 1)].id;
+}
 
 void DataManager::SaveGame(int slot, Player* p, int currentFloor, int currentDungeon, int unlockedDungeon, const std::vector<int>& maxFloors, const std::vector<ItemData>& sItems, const std::vector<ItemData>& sEquip, bool isPortfolio) {
-    json root; root["floor"] = currentFloor; root["currentDungeonId"] = currentDungeon; root["unlockedDungeonId"] = unlockedDungeon;
-    root["maxFloors"] = json::array(); for (int f : maxFloors) root["maxFloors"].push_back(f);
+    json root;
+    root["floor"] = currentFloor;
+    root["currentDungeonId"] = currentDungeon;
+    root["unlockedDungeonId"] = unlockedDungeon;
+    root["maxFloors"] = json::array();
+    for (int f : maxFloors) root["maxFloors"].push_back(f);
     root["isPortfolioMode"] = isPortfolio;
 
-    root["player"] = { {"level", p->level}, {"exp", p->exp}, {"expToNext", p->expToNext}, {"hp", p->hp}, {"maxHp", p->maxHp}, {"attackPower", p->attackPower}, {"defense", p->defense}, {"skillPoints", p->skillPoints}, {"gold", p->gold} };
-    root["inventoryItems"] = json::array(); for (const auto& item : p->inventoryItems) root["inventoryItems"].push_back(ItemToJson(item));
-    root["inventoryEquip"] = json::array(); for (const auto& item : p->inventoryEquip) root["inventoryEquip"].push_back(ItemToJson(item));
-    root["equipped0"] = ItemToJson(p->equippedData[0]); root["equipped1"] = ItemToJson(p->equippedData[1]);
-    root["armor"] = json::array(); for (int i = 0; i < 5; i++) root["armor"].push_back(ItemToJson(p->equippedArmor[i]));
+    root["player"] = {
+        {"level", p->level}, {"exp", p->exp}, {"expToNext", p->expToNext},
+        {"hp", p->hp}, {"maxHp", p->maxHp}, {"attackPower", p->attackPower},
+        {"defense", p->defense}, {"skillPoints", p->skillPoints}, {"gold", p->gold}
+    };
+    root["inventoryItems"] = json::array();
+    for (const auto& item : p->inventoryItems) root["inventoryItems"].push_back(ItemToJson(item));
+    root["inventoryEquip"] = json::array();
+    for (const auto& item : p->inventoryEquip) root["inventoryEquip"].push_back(ItemToJson(item));
+    root["equipped0"] = ItemToJson(p->equippedData[0]);
+    root["equipped1"] = ItemToJson(p->equippedData[1]);
+    root["armor"] = json::array();
+    for (int i = 0; i < 5; i++) root["armor"].push_back(ItemToJson(p->equippedArmor[i]));
 
-    root["unlockedSkills"] = json::array(); for (const auto& node : p->skillTree) if (node.unlocked) root["unlockedSkills"].push_back(node.id);
+    root["unlockedSkills"] = json::array();
+    for (const auto& node : p->skillTree) if (node.unlocked) root["unlockedSkills"].push_back(node.id);
 
-    root["storageItems"] = json::array(); for (const auto& item : sItems) root["storageItems"].push_back(ItemToJson(item));
-    root["storageEquip"] = json::array(); for (const auto& item : sEquip) root["storageEquip"].push_back(ItemToJson(item));
+    root["equippedActiveSkills"] = json::array();
+    for (int s = 0; s < 5; s++) root["equippedActiveSkills"].push_back((int)p->equippedActiveSkills[s]);
 
-    root["activeQuests"] = json::array(); for (const auto& q : p->activeQuests) { root["activeQuests"].push_back({ {"id", q.questId}, {"count", q.currentCount}, {"completed", q.isCompleted} }); }
-    root["clearedQuests"] = json::array(); for (int cid : p->clearedQuests) { root["clearedQuests"].push_back(cid); }
+    root["storageItems"] = json::array();
+    for (const auto& item : sItems) root["storageItems"].push_back(ItemToJson(item));
+    root["storageEquip"] = json::array();
+    for (const auto& item : sEquip) root["storageEquip"].push_back(ItemToJson(item));
 
-    std::ofstream o("save" + std::to_string(slot) + ".json"); o << root.dump(4);
+    root["activeQuests"] = json::array();
+    for (const auto& q : p->activeQuests) {
+        root["activeQuests"].push_back({ {"id", q.questId}, {"count", q.currentCount}, {"completed", q.isCompleted} });
+    }
+    root["clearedQuests"] = json::array();
+    for (int cid : p->clearedQuests) {
+        root["clearedQuests"].push_back(cid);
+    }
+
+    std::ofstream o("save" + std::to_string(slot) + ".json");
+    o << root.dump(4);
 }
 
 bool DataManager::LoadGame(int slot, Player* p, int& currentFloor, int& currentDungeon, int& unlockedDungeon, std::vector<int>& maxFloors, std::vector<ItemData>& sItems, std::vector<ItemData>& sEquip, bool& isPortfolio) {
-    std::ifstream i("save" + std::to_string(slot) + ".json"); if (!i.is_open()) return false;
+    std::ifstream i("save" + std::to_string(slot) + ".json");
+    if (!i.is_open()) return false;
     try {
-        json root; i >> root; currentFloor = root.value("floor", 0); currentDungeon = root.value("currentDungeonId", 0); unlockedDungeon = root.value("unlockedDungeonId", 0);
-        maxFloors = { 0, 0, 0 }; if (root.contains("maxFloors")) { int idx = 0; for (auto& f : root["maxFloors"]) { if (idx < 3) maxFloors[idx] = f.get<int>(); idx++; } }
-        else { maxFloors[0] = root.value("maxReachedFloor", 0); }
+        json root; i >> root;
+        currentFloor = root.value("floor", 0);
+        currentDungeon = root.value("currentDungeonId", 0);
+        unlockedDungeon = root.value("unlockedDungeonId", 0);
+        maxFloors = { 0, 0, 0 };
+        if (root.contains("maxFloors")) {
+            int idx = 0;
+            for (auto& f : root["maxFloors"]) {
+                if (idx < 3) maxFloors[idx] = f.get<int>();
+                idx++;
+            }
+        }
+        else {
+            maxFloors[0] = root.value("maxReachedFloor", 0);
+        }
         isPortfolio = root.value("isPortfolioMode", false);
 
-        auto& jp = root["player"]; p->level = jp.value("level", 1); p->exp = jp.value("exp", 0); p->expToNext = jp.value("expToNext", 100); p->hp = jp.value("hp", 100.0f); p->maxHp = jp.value("maxHp", 100.0f); p->attackPower = jp.value("attackPower", 10.0f); p->defense = jp.value("defense", 0.0f); p->skillPoints = jp.value("skillPoints", 0); p->gold = jp.value("gold", 0);
-        p->inventoryItems.clear(); for (const auto& jItem : root["inventoryItems"]) p->inventoryItems.push_back(JsonToItem(jItem));
-        p->inventoryEquip.clear(); for (const auto& jItem : root["inventoryEquip"]) p->inventoryEquip.push_back(JsonToItem(jItem));
+        auto& jp = root["player"];
+        p->level = jp.value("level", 1);
+        p->exp = jp.value("exp", 0);
+        p->expToNext = jp.value("expToNext", 100);
+        p->hp = jp.value("hp", 100.0f);
+        p->maxHp = jp.value("maxHp", 100.0f);
+        p->attackPower = jp.value("attackPower", 10.0f);
+        p->defense = jp.value("defense", 0.0f);
+        p->skillPoints = jp.value("skillPoints", 0);
+        p->gold = jp.value("gold", 0);
 
-        p->equippedData[0] = JsonToItem(root["equipped0"]); p->equippedWeapons[0] = (p->equippedData[0].id == -1) ? NONE : (WeaponType)p->equippedData[0].weaponSubtype;
-        p->equippedData[1] = JsonToItem(root["equipped1"]); p->equippedWeapons[1] = (p->equippedData[1].id == -1) ? NONE : (WeaponType)p->equippedData[1].weaponSubtype;
+        p->inventoryItems.clear();
+        for (const auto& jItem : root["inventoryItems"]) p->inventoryItems.push_back(JsonToItem(jItem));
+        p->inventoryEquip.clear();
+        for (const auto& jItem : root["inventoryEquip"]) p->inventoryEquip.push_back(JsonToItem(jItem));
+
+        p->equippedData[0] = JsonToItem(root["equipped0"]);
+        p->equippedWeapons[0] = (p->equippedData[0].id == -1) ? NONE : (WeaponType)p->equippedData[0].weaponSubtype;
+        p->equippedData[1] = JsonToItem(root["equipped1"]);
+        p->equippedWeapons[1] = (p->equippedData[1].id == -1) ? NONE : (WeaponType)p->equippedData[1].weaponSubtype;
         p->currentWeapon = p->equippedWeapons[p->activeSlot];
 
-        if (root.contains("armor")) { int idx = 0; for (const auto& jItem : root["armor"]) { if (idx < 5) p->equippedArmor[idx] = JsonToItem(jItem); idx++; } }
-        std::vector<int> unlockedIds = root.value("unlockedSkills", std::vector<int>()); for (int uid : unlockedIds) for (auto& node : p->skillTree) if (node.id == uid) node.unlocked = true;
+        if (root.contains("armor")) {
+            int idx = 0;
+            for (const auto& jItem : root["armor"]) {
+                if (idx < 5) p->equippedArmor[idx] = JsonToItem(jItem);
+                idx++;
+            }
+        }
 
-        sItems.clear(); if (root.contains("storageItems")) for (const auto& jItem : root["storageItems"]) sItems.push_back(JsonToItem(jItem));
-        sEquip.clear(); if (root.contains("storageEquip")) for (const auto& jItem : root["storageEquip"]) sEquip.push_back(JsonToItem(jItem));
+        std::vector<int> unlockedIds = root.value("unlockedSkills", std::vector<int>());
+        for (int uid : unlockedIds) {
+            for (auto& node : p->skillTree) if (node.id == uid) node.unlocked = true;
+        }
 
-        p->activeQuests.clear(); if (root.contains("activeQuests")) { for (const auto& jq : root["activeQuests"]) { PlayerQuest pq; pq.questId = jq.value("id", 0); pq.currentCount = jq.value("count", 0); pq.isCompleted = jq.value("completed", false); p->activeQuests.push_back(pq); } }
-        p->clearedQuests.clear(); if (root.contains("clearedQuests")) { for (const auto& jc : root["clearedQuests"]) { p->clearedQuests.push_back(jc.get<int>()); } }
+        if (root.contains("equippedActiveSkills")) {
+            int sIdx = 0;
+            for (auto& s : root["equippedActiveSkills"]) {
+                if (sIdx < 5) p->equippedActiveSkills[sIdx] = (SkillType)s.get<int>();
+                sIdx++;
+            }
+        }
+
+        sItems.clear();
+        if (root.contains("storageItems")) for (const auto& jItem : root["storageItems"]) sItems.push_back(JsonToItem(jItem));
+        sEquip.clear();
+        if (root.contains("storageEquip")) for (const auto& jItem : root["storageEquip"]) sEquip.push_back(JsonToItem(jItem));
+
+        p->activeQuests.clear();
+        if (root.contains("activeQuests")) {
+            for (const auto& jq : root["activeQuests"]) {
+                PlayerQuest pq;
+                pq.questId = jq.value("id", 0);
+                pq.currentCount = jq.value("count", 0);
+                pq.isCompleted = jq.value("completed", false);
+                p->activeQuests.push_back(pq);
+            }
+        }
+        p->clearedQuests.clear();
+        if (root.contains("clearedQuests")) {
+            for (const auto& jc : root["clearedQuests"]) {
+                p->clearedQuests.push_back(jc.get<int>());
+            }
+        }
         return true;
     }
     catch (...) { return false; }
 }
 
 SaveHeader DataManager::GetSaveHeader(int slot) {
-    SaveHeader h; h.exists = false; std::ifstream i("save" + std::to_string(slot) + ".json");
+    SaveHeader h; h.exists = false;
+    std::ifstream i("save" + std::to_string(slot) + ".json");
     if (i.is_open()) {
         try {
-            json j; i >> j; h.exists = true;
+            json j; i >> j;
+            h.exists = true;
             h.floor = j.value("floor", 0);
             h.playerLevel = j["player"].value("level", 1);
             h.timestamp = "Data " + std::to_string(slot);

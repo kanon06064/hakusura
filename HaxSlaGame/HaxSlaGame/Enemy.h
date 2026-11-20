@@ -14,7 +14,6 @@ public:
     EnemyType eType;
     EnemyData data;
 
-    // ★ defense (防御力) を追加
     float hp, maxHp, defense, speed, radius, detectRange, attackRange, attackTimer, hudTimer;
     int level, expValue;
     StatusManager status;
@@ -44,8 +43,6 @@ public:
     Enemy(Vector3 sp, EnemyData d, int fl);
 
     bool IsPlant() const;
-
-    // ★ プレイヤーへの被ダメージ計算（漸近防御減衰式）
     float CalculateDamageToPlayer(const Player& p, float rawDmg, int attackElem);
 
     void Update(Player& p, Dungeon& d, EffectManager& fx);

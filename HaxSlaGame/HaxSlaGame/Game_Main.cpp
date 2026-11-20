@@ -55,10 +55,7 @@ Game::Game()
     for (const auto& mod : DataManager::modifiers) addString(mod.name);
     for (const auto& q : DataManager::quests) { addString(q.title); addString(q.description); }
 
-    // =========================================================================
-    // ★ skills.json に含まれる全スキルの名称・説明文をフォント文字抽出に自動追加！
-    // （文字化け完全防止）
-    // =========================================================================
+    // 全スキルの文字抽出
     for (const auto& sn : DataManager::masterSkills) {
         addString(sn.name);
         addString(sn.desc);
@@ -95,6 +92,10 @@ void Game::InitGame() {
     if (player) delete player;
     Vector3 startPos = dungeon.GetStartPosition(); startPos.y = 0.5f;
     player = new Player(startPos);
+
+    player->undyingUsed = false;
+    player->undyingTimer = 0.0f;
+    player->RecalculateStats();
 
     camera = { {player->position.x + 10.0f, 15.0f, player->position.z + 10.0f}, player->position, {0.0f, 1.0f, 0.0f}, 45.0f, 0 };
 
@@ -135,7 +136,7 @@ void Game::StartPortfolioMode() {
 
     unlockedDungeonId = 2; maxFloors = { 30, 50, 100 };
     SaveCurrentSlot();
-    logs.insert(logs.begin(), { T("LOG_RUSH_START", "RUSH MODE STARTED!"), 5.0f, ORANGE });
+    logs.insert(logs.begin(), { T("LOG_RUSH_START", "3層ラッシュモード開始！"), 5.0f, ORANGE });
 }
 
 void Game::InitDebugRoom() {
@@ -157,6 +158,9 @@ void Game::StartDebugRoom() { if (player) delete player; player = new Player({ 0
 void Game::LoadAndStart(int slot) {
     currentSlot = slot; InitGame();
     if (DataManager::LoadGame(slot, player, floor, currentDungeonId, unlockedDungeonId, maxFloors, storageItems, storageEquip, isPortfolioMode)) {
+        player->RecalculateStats();
+        player->undyingUsed = false;
+
         if (floor == 0) { state = STATE_HOME; dungeon.Generate(true, 0, currentDungeonId, unlockedDungeonId); AudioManager::PlayBGM(BGM_HOME); }
         else {
             state = STATE_DUNGEON;
@@ -183,6 +187,7 @@ void Game::SaveCurrentSlot() {
     if (player) { DataManager::SaveGame(currentSlot, player, floor, currentDungeonId, unlockedDungeonId, maxFloors, storageItems, storageEquip, isPortfolioMode); AudioManager::PlaySE(SE_SAVE); }
 }
 
+// 敵・ボスの動的レベルスケーリング生成
 void Game::SpawnEnemies(int count) {
     if (state == STATE_HOME) return;
     enemies.clear();
@@ -402,7 +407,10 @@ void Game::Update() {
     dungeon.UpdateVisibility(player->position);
 
     if (!stopPlayer) {
-        if (player->hp <= 0 && state != STATE_HOME) { state = STATE_GAMEOVER; AudioManager::PlayBGM(BGM_NONE); }
+        if (player->hp <= 0 && player->undyingTimer <= 0.0f && state != STATE_HOME) {
+            state = STATE_GAMEOVER;
+            AudioManager::PlayBGM(BGM_NONE);
+        }
 
         for (int i = (int)enemies.size() - 1; i >= 0; i--) {
             if (!isHitStop) {
@@ -429,7 +437,7 @@ void Game::Update() {
                     AudioManager::PlaySE(SE_SAVE);
 
                     bool isFinalBoss = isPortfolioMode ? (floor == 3) : (currentDungeonId == 2 && floor == 100);
-                    std::string logMsg = isFinalBoss ? T("BOSS_BANNER_SUB_FINAL", "DEMON LORD SLAIN!") : T("BOSS_BANNER_TITLE", "BOSS DEFEATED!");
+                    std::string logMsg = isFinalBoss ? T("BOSS_BANNER_SUB_FINAL", "深淵の魔王を完全に討ち滅ぼした") : T("BOSS_BANNER_TITLE", "ボス討伐完了");
                     logs.insert(logs.begin(), { logMsg, 5.0f, GOLD });
 
                     int maxF = (currentDungeonId == 0) ? 30 : (currentDungeonId == 1) ? 50 : 100;
@@ -438,10 +446,10 @@ void Game::Update() {
                     }
                     else if (floor == maxF) {
                         if (currentDungeonId == unlockedDungeonId && unlockedDungeonId < 2) {
-                            unlockedDungeonId++; UI::AddSystemLog(T("LOG_NEXT_DUNGEON", "NEXT DUNGEON UNLOCKED!"), LIME);
+                            unlockedDungeonId++; UI::AddSystemLog(T("LOG_NEXT_DUNGEON", "次のダンジョンが解放された！"), LIME);
                         }
                         if (currentDungeonId == 2) { state = STATE_GAMECLEAR; AudioManager::PlayBGM(BGM_NONE); }
-                        else { UI::AddSystemLog(T("LOG_DUNGEON_CLEAR", "DUNGEON CLEARED!"), GOLD); }
+                        else { UI::AddSystemLog(T("LOG_DUNGEON_CLEAR", "ダンジョンクリア！"), GOLD); }
                     }
                 }
 
@@ -525,7 +533,7 @@ void Game::Update() {
                 if (dist < 0.7f) {
                     ItemData itemToPick = item.data;
                     if (player->AddToInventory(itemToPick)) {
-                        UI::AddSystemLog(TextFormat(T("LOG_ITEM_FOUND", "Found: %s").c_str(), Player::GetFullItemName(itemToPick).c_str()), Player::GetItemRarityColor(itemToPick));
+                        UI::AddSystemLog(TextFormat(T("LOG_ITEM_FOUND", "入手: %s").c_str(), Player::GetFullItemName(itemToPick).c_str()), Player::GetItemRarityColor(itemToPick));
                         fxManager.SpawnEffect(item.pos, { 0, 1, 0 }, FX_HIT, Player::GetItemRarityColor(itemToPick));
 
                         int tier = Player::GetItemTier(itemToPick);
@@ -545,6 +553,7 @@ void Game::Update() {
         auto dist2D = [](Vector3 a, Vector3 b) { return Vector2Distance({ a.x, a.z }, { b.x, b.z }); };
         bool clickAction = IsMouseButtonPressed(0) || IsGamepadButtonPressed(0, GAMEPAD_BUTTON_RIGHT_FACE_DOWN);
 
+        // 素材採取スポットインタラクト
         if (state == STATE_DUNGEON && clickAction && player) {
             for (auto& spot : dungeon.gatherSpots) {
                 if (!spot.gathered) {
@@ -559,7 +568,7 @@ void Game::Update() {
                         fxManager.SpawnEffect(spot.pos, { 0, 1, 0 }, FX_SMASH, spot.color, 1.5f);
                         AudioManager::PlaySE(SE_SAVE);
 
-                        std::string gFmt = T("LOG_GATHER", "Gathered %s x%d!");
+                        std::string gFmt = T("LOG_GATHER", "採取成功！ %s x%d を入手！");
                         UI::AddSystemLog(TextFormat(gFmt.c_str(), mat.name.c_str(), spot.count), spot.color);
                         break;
                     }
@@ -619,13 +628,13 @@ void Game::ApplyDeathPenalty() {
     }
     if (state == STATE_GAMEOVER) {
         player->inventoryItems.clear(); logs.clear();
-        UI::AddSystemLog(T("LOG_RETURN_HOME", "Returned to Home..."), WHITE);
-        UI::AddSystemLog(T("LOG_LOST_MATS", "Lost materials."), RED);
+        UI::AddSystemLog(T("LOG_RETURN_HOME", "拠点に帰還しました。"), WHITE);
+        UI::AddSystemLog(T("LOG_LOST_MATS", "素材を失いました。"), RED);
     }
     else {
         logs.clear();
-        UI::AddSystemLog(T("LOG_CONGRATS", "CONGRATULATIONS!"), GOLD);
-        UI::AddSystemLog(T("LOG_RETURN_HOME", "Returned to Home."), WHITE);
+        UI::AddSystemLog(T("LOG_CONGRATS", "おめでとうございます！"), GOLD);
+        UI::AddSystemLog(T("LOG_RETURN_HOME", "拠点に帰還しました。"), WHITE);
     }
     player->hp = player->maxHp; ReturnHome();
 }
@@ -643,6 +652,11 @@ void Game::NextFloor() {
         }
         Vector3 startPos = dungeon.GetStartPosition(); player->position = { startPos.x, 0.5f, startPos.z };
         droppedItems.clear(); fxManager.projectiles.clear(); fxManager.effects.clear(); fxManager.damageTexts.clear();
+
+        player->undyingUsed = false;
+        player->undyingTimer = 0.0f;
+        player->RecalculateStats();
+
         AudioManager::PlayBGM(BGM_DUNGEON); return;
     }
 
@@ -658,6 +672,10 @@ void Game::NextFloor() {
 
     Vector3 startPos = dungeon.GetStartPosition(); player->position = { startPos.x, 0.5f, startPos.z };
     droppedItems.clear(); fxManager.projectiles.clear(); fxManager.effects.clear(); fxManager.damageTexts.clear();
+
+    player->undyingUsed = false;
+    player->undyingTimer = 0.0f;
+    player->RecalculateStats();
 
     SpawnEnemies(10 + floor);
     AudioManager::PlayBGM(BGM_DUNGEON);
@@ -706,6 +724,10 @@ void Game::WarpToFloor(int targetDungeon, int targetFloor) {
     Vector3 startPos = dungeon.GetStartPosition(); player->position = { startPos.x, 0.5f, startPos.z };
     droppedItems.clear(); fxManager.projectiles.clear(); fxManager.effects.clear(); fxManager.damageTexts.clear();
 
+    player->undyingUsed = false;
+    player->undyingTimer = 0.0f;
+    player->RecalculateStats();
+
     SpawnEnemies(10 + floor);
     showWarpMenu = false;
     AudioManager::PlayBGM(BGM_DUNGEON);
@@ -717,6 +739,11 @@ void Game::ReturnHome() {
     dungeon.Generate(true, 0, currentDungeonId, unlockedDungeonId);
     Vector3 startPos = dungeon.GetStartPosition(); player->position = { startPos.x, 0.5f, startPos.z };
     enemies.clear(); droppedItems.clear(); fxManager.projectiles.clear(); fxManager.effects.clear(); fxManager.damageTexts.clear();
+
+    player->undyingUsed = false;
+    player->undyingTimer = 0.0f;
+    player->RecalculateStats();
+
     AudioManager::PlayBGM(BGM_HOME);
     AudioManager::PlaySE(SE_STAIRS);
 }

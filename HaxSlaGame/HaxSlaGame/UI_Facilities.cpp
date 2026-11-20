@@ -11,9 +11,6 @@ static std::string T(const std::string& key, const std::string& def) {
     return def;
 }
 
-// ==========================================
-// クラフト (素材を消費して装備を生成する)
-// ==========================================
 void UI::DrawCraftingMenu(Player& p, Font font, bool& isOpen) {
     static bool wasOpen = false; static float openTimer = 0.0f;
     if (isOpen && !wasOpen) openTimer = 0.0f; wasOpen = isOpen; if (isOpen) openTimer += GetFrameTime();
@@ -98,9 +95,6 @@ void UI::DrawCraftingMenu(Player& p, Font font, bool& isOpen) {
     DrawDetailWindow(font, p);
 }
 
-// =============================================================================
-// 倉庫 (手持ちのアイテムを出し入れする ＆ 素材一括預け入れ搭載)
-// =============================================================================
 void UI::DrawStorage(Player& p, Font font, bool& isOpen, std::vector<ItemData>& sItems, std::vector<ItemData>& sEquip) {
     static bool wasOpen = false;
     static float openTimer = 0.0f;
@@ -274,9 +268,6 @@ void UI::DrawStorage(Player& p, Font font, bool& isOpen, std::vector<ItemData>& 
     DrawDetailWindow(font, p);
 }
 
-// =============================================================================
-// リフォージ ＆ 属性エンチャント ＆ 装備分解（Dismantle）
-// =============================================================================
 void UI::DrawReforgeMenu(Player& p, Font font, bool& isOpen) {
     static bool wasOpen = false; static float openTimer = 0.0f;
     if (isOpen && !wasOpen) openTimer = 0.0f; wasOpen = isOpen; if (isOpen) openTimer += GetFrameTime();
@@ -296,7 +287,6 @@ void UI::DrawReforgeMenu(Player& p, Font font, bool& isOpen) {
     const int perPage = 10;
     float midX = (float)sw / 2.0f;
 
-    // --- 左側：所持装備品一覧 ---
     for (int i = 0; i < (int)p.inventoryEquip.size(); i++) {
         if (i >= perPage) break;
         Rectangle r = { 80, 160.0f + i * 44, midX - 160.0f, 40 };
@@ -308,7 +298,6 @@ void UI::DrawReforgeMenu(Player& p, Font font, bool& isOpen) {
         DrawTextEx(font, Player::GetFullItemName(p.inventoryEquip[i]).c_str(), { r.x + 15, r.y + r.height / 2 - tSize.y / 2 }, 18, 1, Player::GetItemRarityColor(p.inventoryEquip[i]));
     }
 
-    // --- 右側：選択中の装備と操作パネル（リフォージ・エンチャント・分解） ---
     if (reforgeItemIdx != -1 && reforgeItemIdx < (int)p.inventoryEquip.size()) {
         ItemData& item = p.inventoryEquip[reforgeItemIdx];
         DrawRectangle(midX, 150, midX - 80, sh - 220, Fade(DARKGRAY, 0.4f));
@@ -330,9 +319,7 @@ void UI::DrawReforgeMenu(Player& p, Font font, bool& isOpen) {
         DrawTextEx(font, TextFormat(T("MOD_ATK", "Mod ATK: %.1f (%s)").c_str(), modAtk, mod.name.c_str()), { midX + 180, 225 }, 15, 1, (modAtk >= 0 ? GREEN : RED));
         DrawTextEx(font, TextFormat(T("TOTAL_ATK", "Total ATK: %.1f").c_str(), totalAtk), { midX + 380, 225 }, 16, 1, YELLOW);
 
-        // ---------------------------------------------------------------------
-        // 操作1: 通常リフォージ（モディファイア再抽選）
-        // ---------------------------------------------------------------------
+        // 1. モディファイアリフォージ
         float panel1Y = 255.0f;
         DrawLine(midX + 20, panel1Y - 8, sw - 100, panel1Y - 8, GRAY);
         DrawTextEx(font, T("TITLE_REFORGE_MOD", "[Modifier Reforge]").c_str(), { midX + 20, panel1Y }, 17, 1, WHITE);
@@ -352,9 +339,7 @@ void UI::DrawReforgeMenu(Player& p, Font font, bool& isOpen) {
             DrawTextEx(font, T("NOT_ENOUGH_GOLD", "Not Enough Gold").c_str(), { midX + 30, panel1Y + 56 }, 14, 1, RED);
         }
 
-        // ---------------------------------------------------------------------
-        // 操作2: 属性エンチャント（深淵を除外：業火・腐蝕・霊怨のみ抽選）
-        // ---------------------------------------------------------------------
+        // 2. 属性エンチャント（深淵除外：業火〜霊怨）
         float panel2Y = 350.0f;
         DrawLine(midX + 20, panel2Y - 8, sw - 100, panel2Y - 8, GRAY);
         DrawTextEx(font, T("TITLE_ENCHANT_ELEM", "[Element Enchant]").c_str(), { midX + 20, panel2Y }, 17, 1, elemCol);
@@ -387,7 +372,6 @@ void UI::DrawReforgeMenu(Player& p, Font font, bool& isOpen) {
                     }
                 }
 
-                // ★ 深淵(ELEM_ABYSS=4)を除外！業火(1)〜霊怨(3)の3すくみのみを抽選付与
                 item.element = GetRandomValue(ELEM_HELLFIRE, ELEM_SOUL);
                 AudioManager::PlaySE(SE_REFORGE);
                 UI::AddSystemLog("Enchanted: " + Player::GetFullItemName(item), Player::GetElementColor(item.element));
@@ -399,18 +383,16 @@ void UI::DrawReforgeMenu(Player& p, Font font, bool& isOpen) {
             DrawTextEx(font, reason.c_str(), { midX + 30, panel2Y + 56 }, 14, 1, RED);
         }
 
-        // ---------------------------------------------------------------------
-        //  操作3: 装備の分解（Dismantle: 魔水晶 ＆ 素材アイテムを抽出）
-        // ---------------------------------------------------------------------
+        // 3. 装備分解（Dismantle: 魔水晶＆素材抽出）
         float panel3Y = 445.0f;
         DrawLine(midX + 20, panel3Y - 8, sw - 100, panel3Y - 8, GRAY);
         DrawTextEx(font, T("DISMANTLE", "Equipment Dismantle").c_str(), { midX + 20, panel3Y }, 17, 1, ORANGE);
         DrawTextEx(font, T("DISMANTLE_DESC", "Extract Magic Crystal and Materials").c_str(), { midX + 20, panel3Y + 24 }, 14, 1, LIGHTGRAY);
 
         int tier = Player::GetItemTier(item);
-        int crystalGain = (tier >= 4) ? 2 : 1; // エピック・伝説は魔水晶2個
+        int crystalGain = (tier >= 4) ? 2 : 1;
         int subMatGain = tier + 1;
-        int subMatId = 10 + (item.id % 6); // 鉄鉱石や木材、薬草などの基礎素材
+        int subMatId = 10 + (item.id % 6);
 
         ItemData crystalCfg = DataManager::GetItemConfigCopy(17);
         ItemData subMatCfg = DataManager::GetItemConfigCopy(subMatId);
@@ -421,22 +403,19 @@ void UI::DrawReforgeMenu(Player& p, Font font, bool& isOpen) {
         if (DrawButton({ midX + 20, panel3Y + 68, 160, 38 }, T("DISMANTLE", "Dismantle").c_str(), font, locked ? Fade(MAROON, 0.5f) : MAROON) && !locked) {
             std::string itemName = Player::GetFullItemName(item);
 
-            // 魔水晶の獲得
             ItemData cItem = crystalCfg;
             cItem.count = crystalGain;
             p.AddToInventory(cItem);
 
-            // 基礎素材の獲得
             ItemData sItem = subMatCfg;
             sItem.count = subMatGain;
             p.AddToInventory(sItem);
 
-            // 装備品の消滅
             p.inventoryEquip.erase(p.inventoryEquip.begin() + reforgeItemIdx);
             reforgeItemIdx = -1;
 
-            AudioManager::PlaySE(SE_SAVE); // 重厚な分解成功SE
-            std::string logFmt = T("LOG_DISMANTLE", "%s dismantled into materials!");
+            AudioManager::PlaySE(SE_SAVE);
+            std::string logFmt = T("LOG_DISMANTLE", "%s を分解し、魔水晶x%d と %s x%d を入手！");
             UI::AddSystemLog(TextFormat(logFmt.c_str(), itemName.c_str(), crystalGain, subMatCfg.name.c_str(), subMatGain), GOLD);
         }
     }
@@ -444,9 +423,6 @@ void UI::DrawReforgeMenu(Player& p, Font font, bool& isOpen) {
     DrawDetailWindow(font, p);
 }
 
-// ==========================================
-// ワープポータル (解放済みのダンジョンと到達階層を選んで転送する)
-// ==========================================
 void UI::DrawWarpMenu(void* gamePtr, int unlockedDungeon, const std::vector<int>& maxFloors, Font font, bool& isOpen) {
     Game* game = (Game*)gamePtr;
     static bool wasOpen = false; static float openTimer = 0.0f;
@@ -512,9 +488,6 @@ void UI::DrawWarpMenu(void* gamePtr, int unlockedDungeon, const std::vector<int>
     }
 }
 
-// ==========================================
-// クエストボード (クエストの受注と報告)
-// ==========================================
 void UI::DrawQuestMenu(Player& p, Font font, bool& isOpen) {
     static bool wasOpen = false; static float openTimer = 0.0f;
     if (isOpen && !wasOpen) { openTimer = 0.0f; questScroll = 0; } wasOpen = isOpen; if (isOpen) openTimer += GetFrameTime();
